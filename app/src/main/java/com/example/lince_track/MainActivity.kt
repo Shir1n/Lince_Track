@@ -4,13 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import com.example.lince_track.ui.login.LoginScreen
 import com.example.lince_track.ui.theme.Lince_TrackTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,29 +13,15 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             Lince_TrackTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                LoginScreen(
+                    onLoginClick = { email, password ->
+                        // TODO: Lógica de autenticación
+                    },
+                    onForgotPasswordClick = {
+                        // TODO: Navegar a recuperación de contraseña
+                    }
+                )
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    Lince_TrackTheme {
-        Greeting("Android")
     }
 }

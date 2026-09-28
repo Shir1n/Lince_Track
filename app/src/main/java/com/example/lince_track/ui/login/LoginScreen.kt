@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -56,10 +57,10 @@ fun LoginScreen(
         ) {
             // Logo
             Image(
-                painter = painterResource(id = R.drawable.logo ),
+                painter = painterResource(id = R.drawable.logo_solo),
                 contentDescription = "Logo Lince Track",
                 modifier = Modifier
-                    .size(160.dp)
+                    .size(200.dp)
                     .padding(bottom = 16.dp)
             )
 
@@ -95,13 +96,16 @@ fun LoginScreen(
                     )
                 },
                 singleLine = true,
+                textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
                     unfocusedContainerColor = Color.White,
                     focusedBorderColor = Color.Black,
-                    unfocusedBorderColor = Color.Black
+                    unfocusedBorderColor = Color.Black,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -136,6 +140,7 @@ fun LoginScreen(
                     }
                 },
                 singleLine = true,
+                textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
                 visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 shape = RoundedCornerShape(10.dp),
@@ -143,7 +148,9 @@ fun LoginScreen(
                     focusedContainerColor = Color.White,
                     unfocusedContainerColor = Color.White,
                     focusedBorderColor = Color.Black,
-                    unfocusedBorderColor = Color.Black
+                    unfocusedBorderColor = Color.Black,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
