@@ -16,22 +16,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.lince_track.R
-
-// Colores extraídos de la interfaz
-val NavyBlue = Color(0xFF0F2B48)
-val SubtitleTeal = Color(0xFF1E837A)
-val BackgroundColor = Color(0xFFF8FAFC)
 
 @Composable
 fun LoginScreen(
@@ -42,10 +34,12 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
 
+    val colorScheme = MaterialTheme.colorScheme
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundColor)
+            .background(colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -55,7 +49,6 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo
             Image(
                 painter = painterResource(id = R.drawable.logo_solo),
                 contentDescription = "Logo Lince Track",
@@ -64,70 +57,64 @@ fun LoginScreen(
                     .padding(bottom = 16.dp)
             )
 
-            // Título
             Text(
                 text = "Lince Track",
-                fontSize = 32.sp,
+                style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
-                color = NavyBlue,
+                color = colorScheme.primary,
                 textAlign = TextAlign.Center
             )
 
-            // Subtítulo
             Text(
                 text = "Operaciones Southbound",
-                fontSize = 20.sp,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = SubtitleTeal,
+                color = colorScheme.secondary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 4.dp, bottom = 32.dp)
             )
 
-            // Campo: Correo Institucional
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                placeholder = { Text("Correo institucional", color = Color.Black) },
+                placeholder = { Text("Correo institucional", color = colorScheme.onSurfaceVariant) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Email,
                         contentDescription = "Icono Correo",
-                        tint = Color.Black
+                        tint = colorScheme.onSurfaceVariant
                     )
                 },
                 singleLine = true,
-                textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedBorderColor = Color.Black,
-                    unfocusedBorderColor = Color.Black,
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black
+                    focusedContainerColor = colorScheme.surface,
+                    unfocusedContainerColor = colorScheme.surface,
+                    focusedBorderColor = colorScheme.primary,
+                    unfocusedBorderColor = colorScheme.outline,
+                    focusedTextColor = colorScheme.onSurface,
+                    unfocusedTextColor = colorScheme.onSurface
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Subtexto aclaratorio del correo
             Text(
                 text = "Ingresa tu correo corporativo",
-                fontSize = 13.sp,
-                color = Color.Black,
+                style = MaterialTheme.typography.bodySmall,
+                color = colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp, bottom = 20.dp)
             )
 
-            // Campo: Contraseña
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                placeholder = { Text("Contraseña", color = Color.Black) },
+                placeholder = { Text("Contraseña", color = colorScheme.onSurfaceVariant) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Lock,
                         contentDescription = "Icono Contraseña",
-                        tint = Color.Black
+                        tint = colorScheme.onSurfaceVariant
                     )
                 },
                 trailingIcon = {
@@ -135,54 +122,50 @@ fun LoginScreen(
                         Icon(
                             imageVector = if (isPasswordVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
                             contentDescription = if (isPasswordVisible) "Ocultar contraseña" else "Mostrar contraseña",
-                            tint = Color.Black
+                            tint = colorScheme.onSurfaceVariant
                         )
                     }
                 },
                 singleLine = true,
-                textStyle = TextStyle(color = Color.Black, fontWeight = FontWeight.Bold),
                 visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedBorderColor = Color.Black,
-                    unfocusedBorderColor = Color.Black,
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black
+                    focusedContainerColor = colorScheme.surface,
+                    unfocusedContainerColor = colorScheme.surface,
+                    focusedBorderColor = colorScheme.primary,
+                    unfocusedBorderColor = colorScheme.outline,
+                    focusedTextColor = colorScheme.onSurface,
+                    unfocusedTextColor = colorScheme.onSurface
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Botón Iniciar Sesión
             Button(
                 onClick = { onLoginClick(email, password) },
                 shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = NavyBlue),
+                colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp)
             ) {
                 Text(
                     text = "Iniciar Sesión",
-                    fontSize = 18.sp,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = colorScheme.onPrimary
                 )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Enlace "¿Problemas para ingresar?"
             TextButton(onClick = onForgotPasswordClick) {
                 Text(
                     text = "¿Problemas para ingresar?",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = Color.Black
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorScheme.onSurface
                 )
             }
         }
