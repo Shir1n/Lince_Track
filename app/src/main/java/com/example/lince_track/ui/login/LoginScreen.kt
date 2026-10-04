@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -24,6 +25,13 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.lince_track.R
+import com.example.lince_track.ui.theme.BackgroundColor
+import com.example.lince_track.ui.theme.BrandTeal
+import com.example.lince_track.ui.theme.NavyBlue
+
+private val TextPrimary = Color(0xFF1A202C)
+private val BorderField = Color(0xFF1E293B)
+private val TextMuted = Color(0xFF64748B)
 
 @Composable
 fun LoginScreen(
@@ -34,12 +42,10 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
 
-    val colorScheme = MaterialTheme.colorScheme
-
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(colorScheme.background)
+            .background(BackgroundColor)
     ) {
         Column(
             modifier = Modifier
@@ -61,7 +67,7 @@ fun LoginScreen(
                 text = "Lince Track",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
-                color = colorScheme.primary,
+                color = NavyBlue,
                 textAlign = TextAlign.Center
             )
 
@@ -69,7 +75,7 @@ fun LoginScreen(
                 text = "Operaciones Southbound",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = colorScheme.secondary,
+                color = BrandTeal,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 4.dp, bottom = 32.dp)
             )
@@ -77,24 +83,24 @@ fun LoginScreen(
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                placeholder = { Text("Correo institucional", color = colorScheme.onSurfaceVariant) },
+                placeholder = { Text("Correo institucional", color = TextMuted) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Email,
                         contentDescription = "Icono Correo",
-                        tint = colorScheme.onSurfaceVariant
+                        tint = TextMuted
                     )
                 },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = colorScheme.surface,
-                    unfocusedContainerColor = colorScheme.surface,
-                    focusedBorderColor = colorScheme.primary,
-                    unfocusedBorderColor = colorScheme.outline,
-                    focusedTextColor = colorScheme.onSurface,
-                    unfocusedTextColor = colorScheme.onSurface
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = NavyBlue,
+                    unfocusedBorderColor = BorderField,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -102,19 +108,19 @@ fun LoginScreen(
             Text(
                 text = "Ingresa tu correo corporativo",
                 style = MaterialTheme.typography.bodySmall,
-                color = colorScheme.onSurfaceVariant,
+                color = TextMuted,
                 modifier = Modifier.padding(top = 6.dp, bottom = 20.dp)
             )
 
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                placeholder = { Text("Contraseña", color = colorScheme.onSurfaceVariant) },
+                placeholder = { Text("Contraseña", color = TextMuted) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Lock,
                         contentDescription = "Icono Contraseña",
-                        tint = colorScheme.onSurfaceVariant
+                        tint = TextMuted
                     )
                 },
                 trailingIcon = {
@@ -122,7 +128,7 @@ fun LoginScreen(
                         Icon(
                             imageVector = if (isPasswordVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
                             contentDescription = if (isPasswordVisible) "Ocultar contraseña" else "Mostrar contraseña",
-                            tint = colorScheme.onSurfaceVariant
+                            tint = TextMuted
                         )
                     }
                 },
@@ -131,12 +137,12 @@ fun LoginScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = colorScheme.surface,
-                    unfocusedContainerColor = colorScheme.surface,
-                    focusedBorderColor = colorScheme.primary,
-                    unfocusedBorderColor = colorScheme.outline,
-                    focusedTextColor = colorScheme.onSurface,
-                    unfocusedTextColor = colorScheme.onSurface
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = NavyBlue,
+                    unfocusedBorderColor = BorderField,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -145,8 +151,8 @@ fun LoginScreen(
 
             Button(
                 onClick = { onLoginClick(email, password) },
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary),
+                shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = NavyBlue),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp)
@@ -155,7 +161,7 @@ fun LoginScreen(
                     text = "Iniciar Sesión",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = colorScheme.onPrimary
+                    color = Color.White
                 )
             }
 
@@ -165,7 +171,7 @@ fun LoginScreen(
                 Text(
                     text = "¿Problemas para ingresar?",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = colorScheme.onSurface
+                    color = TextPrimary
                 )
             }
         }

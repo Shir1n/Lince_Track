@@ -5,6 +5,9 @@ import androidx.compose.ui.graphics.Color
 val NavyBlue = Color(0xFF0F2B48)
 val SubtitleTeal = Color(0xFF1E837A)
 val BackgroundColor = Color(0xFFF8FAFC)
+val GrisClaro = Color(0xFFE9EAEC)
+val BrandTeal = Color(0xFF0A8F82)
+val Warning = Color(0xFFC67A18)
 
 val NavyBlueDark = Color(0xFF0A1E33)
 val NavyBlueLight = Color(0xFFD3E0EC)
