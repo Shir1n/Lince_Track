@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.*
@@ -43,7 +44,10 @@ private val Naranja = Color(0xFFFFE8D3)
 private val RojoClaro = Color(0xFFFFDAD6)
 
 @Composable
-fun PerfilScreen(onLogout: () -> Unit = {}) {
+fun PerfilScreen(
+    onLogout: () -> Unit = {},
+    onOpenSettings: () -> Unit = {}
+) {
     var notificaciones by remember { mutableStateOf(true) }
     var compartirGps by remember { mutableStateOf(true) }
 
@@ -69,6 +73,7 @@ fun PerfilScreen(onLogout: () -> Unit = {}) {
                 compartirGps = compartirGps,
                 onGpsChange = { compartirGps = it }
             )
+            AjustesAparienciaCard(onClick = onOpenSettings)
             CerrarSesion(onLogout = onLogout)
             PieDePagina()
             Spacer(modifier = Modifier.height(8.dp))
@@ -863,6 +868,44 @@ private fun AjusteSwitch(
                 uncheckedTrackColor = Color.LightGray
             )
         )
+    }
+}
+
+@Composable
+private fun AjustesAparienciaCard(onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Settings,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = "Ajustes de apariencia",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
