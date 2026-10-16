@@ -22,8 +22,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Warning
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -55,6 +53,7 @@ import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.formatHora
 import com.example.lince_track.data.formatPrecioCLP
 import com.example.lince_track.ui.components.EstadoServicioBadge
+import com.example.lince_track.ui.components.RejectServicioDialog
 import kotlinx.coroutines.launch
 
 @Composable
@@ -73,7 +72,7 @@ fun DetalleServicioScreen(
 
     fun operar(op: suspend (String) -> Result<Unit>) {
         if (servicio == null || procesando) return
-        scope.launch {
+        scope.launch { 
             procesando = true
             val resultado = op(servicio.id)
             procesando = false
@@ -149,52 +148,12 @@ fun DetalleServicioScreen(
     }
 
     if (showRejectDialog) {
-        AlertDialog(
-            onDismissRequest = { showRejectDialog = false },
-            shape = RoundedCornerShape(28.dp),
-            containerColor = MaterialTheme.colorScheme.surface,
-            icon = {
-                Icon(
-                    imageVector = Icons.Outlined.Warning,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.tertiary
-                )
-            },
-            title = {
-                Text(
-                    text = "Rechazar ${servicio.reserva}",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            text = {
-                Text(
-                    text = "Se notificará de inmediato a Coordinación Logística para buscar un reemplazo.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showRejectDialog = false
-                        operar(ServicioRepository::rechazar)
-                    },
-                    shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("CONFIRMAR RECHAZO", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRejectDialog = false }) {
-                    Text(
-                        text = "CANCELAR",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+        RejectServicioDialog(
+            servicio = servicio,
+            onDismiss = { showRejectDialog = false },
+            onConfirm = {
+                showRejectDialog = false
+                operar(ServicioRepository::rechazar)
             }
         )
     }

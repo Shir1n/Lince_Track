@@ -52,6 +52,7 @@ import com.example.lince_track.data.formatFechaCorta
 import com.example.lince_track.data.formatHora
 import com.example.lince_track.data.formatPrecioCLP
 import com.example.lince_track.ui.components.EstadoServicioBadge
+import com.example.lince_track.ui.components.RejectServicioDialog
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -154,52 +155,12 @@ fun ServiciosScreen(
     }
 
     rechazoPendiente?.let { servicio ->
-        AlertDialog(
-            onDismissRequest = { rechazoPendiente = null },
-            shape = RoundedCornerShape(28.dp),
-            containerColor = MaterialTheme.colorScheme.surface,
-            icon = {
-                Icon(
-                    imageVector = Icons.Outlined.Warning,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.tertiary
-                )
-            },
-            title = {
-                Text(
-                    text = "Rechazar asignación",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            text = {
-                Text(
-                    text = "¿Seguro que deseas rechazar \"${servicio.titulo}\"?",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        operar(servicio, ServicioRepository::rechazar)
-                        rechazoPendiente = null
-                    },
-                    shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Rechazar", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { rechazoPendiente = null }) {
-                    Text(
-                        text = "Cancelar",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+        RejectServicioDialog(
+            servicio = servicio,
+            onDismiss = { rechazoPendiente = null },
+            onConfirm = {
+                operar(servicio, ServicioRepository::rechazar)
+                rechazoPendiente = null
             }
         )
     }

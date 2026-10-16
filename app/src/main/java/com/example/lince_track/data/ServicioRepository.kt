@@ -22,15 +22,21 @@ object ServicioRepository {
 
     fun buscarPorId(id: String): Servicio? = _servicios.value.find { it.id == id }
 
-    suspend fun aceptar(id: String): Result<Unit> = mutar(id, EstadoServicio.ACEPTADO)
+    suspend fun aceptar(id: String): Result<Unit> =
+        mutar(id, EstadoServicio.ACEPTADO, from = setOf(EstadoServicio.PENDIENTE))
 
-    suspend fun rechazar(id: String): Result<Unit> = mutar(id, EstadoServicio.RECHAZADO)
+    suspend fun rechazar(id: String): Result<Unit> =
+        mutar(id, EstadoServicio.RECHAZADO, from = setOf(EstadoServicio.PENDIENTE, EstadoServicio.ACEPTADO))
 
-    private suspend fun mutar(id: String, nuevoEstado: EstadoServicio): Result<Unit> {
+    private suspend fun mutar(
+        id: String,
+        nuevoEstado: EstadoServicio,
+        from: Set<EstadoServicio>
+    ): Result<Unit> {
         delay(500)
         val actual = _servicios.value.find { it.id == id }
             ?: return Result.failure(IllegalStateException("Asignación no encontrada"))
-        if (actual.estado != EstadoServicio.PENDIENTE) {
+        if (actual.estado !in from) {
             return Result.failure(IllegalStateException("Esta asignación ya fue respondida"))
         }
         _servicios.update { lista ->
