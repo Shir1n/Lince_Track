@@ -65,7 +65,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
     val currentRoute = backStackEntry?.destination?.route
     val showBottomBar = BottomNavItem.entries.any { it.route == currentRoute }
     val containerColor = when (currentRoute) {
-        Routes.SERVICIOS, Routes.DETALLE_SERVICIO -> MaterialTheme.colorScheme.primary
+        Routes.SERVICIOS, Routes.DETALLE_SERVICIO, Routes.PERFIL -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.background
     }
 
@@ -153,6 +153,11 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             composable(Routes.ALERTAS) { AlertasScreen() }
             composable(Routes.PERFIL) {
                 PerfilScreen(
+                    onLogout = {
+                        navController.navigate(Routes.LOGIN) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    },
                     onOpenSettings = { navController.navigate(Routes.AJUSTES) }
                 )
             }
