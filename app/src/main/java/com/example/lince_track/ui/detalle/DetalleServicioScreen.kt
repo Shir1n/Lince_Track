@@ -58,7 +58,11 @@ import com.example.lince_track.ui.components.EstadoServicioBadge
 import kotlinx.coroutines.launch
 
 @Composable
-fun DetalleServicioScreen(servicioId: String, onBack: () -> Unit = {}) {
+fun DetalleServicioScreen(
+    servicioId: String,
+    onBack: () -> Unit = {},
+    onOpenRoute: (String) -> Unit = {}
+) {
     val servicios by ServicioRepository.servicios.collectAsState()
     val servicio = remember(servicios, servicioId) { servicios.find { it.id == servicioId } }
 
@@ -133,7 +137,8 @@ fun DetalleServicioScreen(servicioId: String, onBack: () -> Unit = {}) {
                 servicio = servicio,
                 procesando = procesando,
                 onConfirm = { operar(ServicioRepository::aceptar) },
-                onReject = { showRejectDialog = true }
+                onReject = { showRejectDialog = true },
+                onOpenRoute = { onOpenRoute(servicio.id) }
             )
         }
 
@@ -364,7 +369,8 @@ private fun BottomActions(
     servicio: Servicio,
     procesando: Boolean,
     onConfirm: () -> Unit,
-    onReject: () -> Unit
+    onReject: () -> Unit,
+    onOpenRoute: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -374,57 +380,76 @@ private fun BottomActions(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (servicio.estado == EstadoServicio.PENDIENTE) {
-            if (procesando) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(50.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
-                }
-            } else {
-                Button(
-                    onClick = onConfirm,
-                    shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary
-                    ),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(50.dp)
-                ) {
-                    Text("CONFIRMAR ASIGNACIÓN", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                }
-                OutlinedButton(
-                    onClick = onReject,
-                    shape = RoundedCornerShape(50),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    ),
-                    modifier = Modifier.height(50.dp)
-                ) {
-                    Text("Rechazar", fontWeight = FontWeight.Bold)
+        when (servicio.estado) {
+            EstadoServicio.PENDIENTE -> {
+                if (procesando) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
+                    }
+                } else {
+                    Button(
+                        onClick = onConfirm,
+                        shape = RoundedCornerShape(50),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp)
+                    ) {
+                        Text("CONFIRMAR ASIGNACIÓN", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+                    OutlinedButton(
+                        onClick = onReject,
+                        shape = RoundedCornerShape(50),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        modifier = Modifier.height(50.dp)
+                    ) {
+                        Text("Rechazar", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
-        } else {
-            Icon(
-                imageVector = Icons.Outlined.Person,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = when (servicio.estado) {
-                    EstadoServicio.ACEPTADO -> "Asignación aceptada"
-                    EstadoServicio.RECHAZADO -> "Asignación rechazada"
-                    EstadoServicio.PENDIENTE -> ""
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            EstadoServicio.ACEPTADO -> {
+                Button(
+                    onClick = onOpenRoute,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.LocationOn,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("VER RUTA Y CHECK-IN EN MAPA", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            EstadoServicio.RECHAZADO -> {
+                Icon(
+                    imageVector = Icons.Outlined.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Asignación rechazada",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

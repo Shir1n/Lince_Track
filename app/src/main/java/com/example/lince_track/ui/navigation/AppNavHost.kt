@@ -34,18 +34,21 @@ import com.example.lince_track.ui.calendario.CalendarioScreen
 import com.example.lince_track.ui.detalle.DetalleServicioScreen
 import com.example.lince_track.ui.login.LoginScreen
 import com.example.lince_track.ui.perfil.PerfilScreen
+import com.example.lince_track.ui.ruta.RutaMapaScreen
 import com.example.lince_track.ui.servicios.ServiciosScreen
 
 object Routes {
     const val LOGIN = "login"
     const val SERVICIOS = "servicios"
     const val DETALLE_SERVICIO = "detalle_servicio/{servicioId}"
+    const val RUTA_MAPA = "ruta_mapa/{servicioId}"
     const val CALENDARIO = "calendario"
     const val ALERTAS = "alertas"
     const val PERFIL = "perfil"
     const val AJUSTES = "ajustes"
 
     fun detalleServicio(id: String) = "detalle_servicio/$id"
+    fun rutaMapa(id: String) = "ruta_mapa/$id"
 }
 
 enum class BottomNavItem(
@@ -65,7 +68,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
     val currentRoute = backStackEntry?.destination?.route
     val showBottomBar = BottomNavItem.entries.any { it.route == currentRoute }
     val containerColor = when (currentRoute) {
-        Routes.SERVICIOS, Routes.DETALLE_SERVICIO, Routes.PERFIL -> MaterialTheme.colorScheme.primary
+        Routes.SERVICIOS, Routes.DETALLE_SERVICIO, Routes.RUTA_MAPA, Routes.PERFIL -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.background
     }
 
@@ -128,7 +131,8 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             }
             composable(Routes.SERVICIOS) {
                 ServiciosScreen(
-                    onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) }
+                    onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) },
+                    onRouteClick = { id -> navController.navigate(Routes.rutaMapa(id)) }
                 )
             }
             composable(
@@ -141,6 +145,21 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             ) { backStackEntry ->
                 val servicioId = backStackEntry.arguments?.getString("servicioId").orEmpty()
                 DetalleServicioScreen(
+                    servicioId = servicioId,
+                    onBack = { navController.popBackStack() },
+                    onOpenRoute = { id -> navController.navigate(Routes.rutaMapa(id)) }
+                )
+            }
+            composable(
+                route = Routes.RUTA_MAPA,
+                arguments = listOf(navArgument("servicioId") { type = NavType.StringType }),
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None }
+            ) { backStackEntry ->
+                val servicioId = backStackEntry.arguments?.getString("servicioId").orEmpty()
+                RutaMapaScreen(
                     servicioId = servicioId,
                     onBack = { navController.popBackStack() }
                 )
