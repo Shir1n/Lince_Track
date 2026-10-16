@@ -639,6 +639,8 @@ private fun OsmMapContainer(
     routeColorArgb: Int
 ) {
     val mapView = remember {
+        Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+        Configuration.getInstance().userAgentValue = "${context.packageName}/1.0 (LinceTrackApp)"
         MapView(context).apply {
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)

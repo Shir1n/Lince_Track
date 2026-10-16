@@ -11,9 +11,14 @@ import com.example.lince_track.ui.theme.Lince_TrackTheme
 import com.example.lince_track.ui.theme.ThemeMode
 import com.example.lince_track.ui.theme.themeModeFlow
 
+import android.content.Context
+import org.osmdroid.config.Configuration
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Configuration.getInstance().load(this, getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+        Configuration.getInstance().userAgentValue = "$packageName/1.0 (LinceTrackApp)"
         enableEdgeToEdge()
         setContent {
             val themeMode by this@MainActivity.themeModeFlow.collectAsState(initial = ThemeMode.SYSTEM)
