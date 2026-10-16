@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -37,11 +39,13 @@ import com.example.lince_track.ui.servicios.ServiciosScreen
 object Routes {
     const val LOGIN = "login"
     const val SERVICIOS = "servicios"
-    const val DETALLE_SERVICIO = "detalle_servicio"
+    const val DETALLE_SERVICIO = "detalle_servicio/{servicioId}"
     const val CALENDARIO = "calendario"
     const val ALERTAS = "alertas"
     const val PERFIL = "perfil"
     const val AJUSTES = "ajustes"
+
+    fun detalleServicio(id: String) = "detalle_servicio/$id"
 }
 
 enum class BottomNavItem(
@@ -124,19 +128,28 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             }
             composable(Routes.SERVICIOS) {
                 ServiciosScreen(
-                    onServiceClick = { navController.navigate(Routes.DETALLE_SERVICIO) }
+                    onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) }
                 )
             }
             composable(
                 route = Routes.DETALLE_SERVICIO,
+                arguments = listOf(navArgument("servicioId") { type = NavType.StringType }),
                 enterTransition = { EnterTransition.None },
                 exitTransition = { ExitTransition.None },
                 popEnterTransition = { EnterTransition.None },
                 popExitTransition = { ExitTransition.None }
-            ) {
-                DetalleServicioScreen(onBack = { navController.popBackStack() })
+            ) { backStackEntry ->
+                val servicioId = backStackEntry.arguments?.getString("servicioId").orEmpty()
+                DetalleServicioScreen(
+                    servicioId = servicioId,
+                    onBack = { navController.popBackStack() }
+                )
             }
-            composable(Routes.CALENDARIO) { CalendarioScreen() }
+            composable(Routes.CALENDARIO) {
+                CalendarioScreen(
+                    onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) }
+                )
+            }
             composable(Routes.ALERTAS) { AlertasScreen() }
             composable(Routes.PERFIL) {
                 PerfilScreen(
