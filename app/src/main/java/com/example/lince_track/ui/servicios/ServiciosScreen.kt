@@ -35,10 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.lince_track.ui.theme.BrandTeal
-import com.example.lince_track.ui.theme.NavyBlue
-import com.example.lince_track.ui.theme.NavyBlueDark
-import com.example.lince_track.ui.theme.Warning
 
 @Composable
 fun ServiciosScreen(onServiceClick: () -> Unit = {}) {
@@ -61,7 +57,7 @@ fun ServiciosScreen(onServiceClick: () -> Unit = {}) {
                 text = "Servicios de Hoy - 17 Septiembre",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurface
             )
             ConfirmedServiceCard(onClick = onServiceClick)
             PendingServiceCard(onClick = onServiceClick)
@@ -76,7 +72,7 @@ private fun TopBar() {
         modifier = Modifier
             .fillMaxWidth()
             .height(80.dp)
-            .background(NavyBlueDark)
+            .background(MaterialTheme.colorScheme.primary)
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.CenterStart
     ) {
@@ -87,26 +83,26 @@ private fun TopBar() {
         ) {
             Text(
                 text = "Lince Track",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onPrimary,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .background(Color(0xFFE1E7F0), RoundedCornerShape(50))
+                    .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(50))
                     .padding(horizontal = 14.dp, vertical = 6.dp)
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Person,
                     contentDescription = null,
-                    tint = NavyBlueDark,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "Transportista",
-                    color = NavyBlueDark,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -120,7 +116,7 @@ private fun SummaryKpiCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
@@ -134,14 +130,14 @@ private fun SummaryKpiCard() {
                 Text(
                     text = "Saldo acumulado hoy:",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF374151)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "$68.000 CLP",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
@@ -149,12 +145,12 @@ private fun SummaryKpiCard() {
                     text = "3",
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "servicios",
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color(0xFF374151)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -167,7 +163,7 @@ private fun ConfirmedServiceCard(onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
@@ -184,14 +180,14 @@ private fun ConfirmedServiceCard(onClick: () -> Unit) {
                     text = "Transfer Hotel Cumbres →\nAeropuerto Tepual",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.width(200.dp)
                 )
                 Text(
                     text = "08:30 AM",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -202,7 +198,7 @@ private fun ConfirmedServiceCard(onClick: () -> Unit) {
                 MetaChip("Guía: Andrea S.")
             }
             Spacer(modifier = Modifier.height(10.dp))
-            StatusBadge("Confirmado", BrandTeal)
+            StatusBadge("Confirmado", MaterialTheme.colorScheme.secondary)
             Spacer(modifier = Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -213,13 +209,13 @@ private fun ConfirmedServiceCard(onClick: () -> Unit) {
                     text = "$28.000",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 OutlinedButton(
                     onClick = {},
                     shape = RoundedCornerShape(50),
-                    border = BorderStroke(1.dp, NavyBlue),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = NavyBlue)
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text(
                         text = "Ver Ruta",
@@ -237,7 +233,7 @@ private fun PendingServiceCard(onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
@@ -254,14 +250,14 @@ private fun PendingServiceCard(onClick: () -> Unit) {
                     text = "Excursión Saltos del Petrohué",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.width(200.dp)
                 )
                 Text(
                     text = "01:30 PM",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -272,7 +268,7 @@ private fun PendingServiceCard(onClick: () -> Unit) {
                 MetaChip("Guía: Roberto D.")
             }
             Spacer(modifier = Modifier.height(10.dp))
-            StatusBadge("Pendiente", Warning)
+            StatusBadge("Pendiente", MaterialTheme.colorScheme.tertiary)
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -283,7 +279,7 @@ private fun PendingServiceCard(onClick: () -> Unit) {
                     text = "$40.000",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -292,7 +288,7 @@ private fun PendingServiceCard(onClick: () -> Unit) {
                     Button(
                         onClick = {},
                         shape = RoundedCornerShape(50),
-                        colors = ButtonDefaults.buttonColors(containerColor = BrandTeal),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                         modifier = Modifier.width(128.dp)
                     ) {
                         Text(
@@ -303,7 +299,7 @@ private fun PendingServiceCard(onClick: () -> Unit) {
                     TextButton(onClick = {}) {
                         Text(
                             text = "Rechazar",
-                            color = BrandTeal,
+                            color = MaterialTheme.colorScheme.error,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -319,9 +315,9 @@ private fun MetaChip(text: String) {
         text = text,
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.SemiBold,
-        color = Color(0xFF111827),
+        color = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier
-            .border(1.dp, Color(0xFF374151), RoundedCornerShape(50))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(50))
             .padding(horizontal = 12.dp, vertical = 4.dp)
     )
 }

@@ -48,13 +48,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.lince_track.ui.theme.BrandTeal
-import com.example.lince_track.ui.theme.NavyBlueDark
-import com.example.lince_track.ui.theme.Warning
-
-private val ErrorRed = Color(0xFFC53030)
-private val DarkText = Color(0xFF1A202C)
-private val MutedText = Color(0xFF64748B)
 
 @Composable
 fun DetalleServicioScreen(onBack: () -> Unit = {}) {
@@ -104,7 +97,7 @@ private fun DetalleTopBar(onBack: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
-            .background(NavyBlueDark)
+            .background(MaterialTheme.colorScheme.primary)
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -112,12 +105,12 @@ private fun DetalleTopBar(onBack: () -> Unit) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Volver",
-                tint = Color.White
+                tint = MaterialTheme.colorScheme.onPrimary
             )
         }
         Text(
             text = "Detalle de Servicio",
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onPrimary,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -129,7 +122,7 @@ private fun ServiceHeaderCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -137,28 +130,28 @@ private fun ServiceHeaderCard() {
                 text = "Excursión Saltos del Petrohué",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = "Reserva: #SB-2026-8941",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp)
             )
             Spacer(modifier = Modifier.height(12.dp))
-            StatusBadge("Pendiente de Confirmación", Warning)
+            StatusBadge("Pendiente de Confirmación", MaterialTheme.colorScheme.tertiary)
             Spacer(modifier = Modifier.height(14.dp))
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     text = "Tarifa: ",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "$40.000 CLP",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -170,7 +163,7 @@ private fun RouteScheduleCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -178,14 +171,14 @@ private fun RouteScheduleCard() {
                 text = "Ruta y Horario",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.Top) {
                 Icon(
                     imageVector = Icons.Outlined.LocationOn,
                     contentDescription = null,
-                    tint = BrandTeal,
+                    tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.size(10.dp))
@@ -193,7 +186,7 @@ private fun RouteScheduleCard() {
                     text = "Hotel Cumbres, Puerto Varas  •  01:30 PM",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Spacer(modifier = Modifier.height(14.dp))
@@ -201,7 +194,7 @@ private fun RouteScheduleCard() {
                 Icon(
                     imageVector = Icons.Outlined.LocationOn,
                     contentDescription = null,
-                    tint = BrandTeal,
+                    tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.size(10.dp))
@@ -209,14 +202,14 @@ private fun RouteScheduleCard() {
                     text = "Parque Nacional Vicente Pérez Rosales",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Total 8 pasajeros (Familia Johnson)",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -227,7 +220,7 @@ private fun InclusionsCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -235,7 +228,7 @@ private fun InclusionsCard() {
                 text = "¿Qué incluye este servicio?",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(14.dp))
             InclusionItem("Peajes de autopista incluidos")
@@ -254,13 +247,13 @@ private fun InclusionItem(text: String) {
         Box(
             modifier = Modifier
                 .size(20.dp)
-                .background(BrandTeal, CircleShape),
+                .background(MaterialTheme.colorScheme.secondary, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Filled.Check,
                 contentDescription = null,
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.onSecondary,
                 modifier = Modifier.size(14.dp)
             )
         }
@@ -268,7 +261,7 @@ private fun InclusionItem(text: String) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
@@ -278,7 +271,7 @@ private fun GuideCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
@@ -292,12 +285,12 @@ private fun GuideCard() {
                     text = "Guía Asignado: Roberto Díaz",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "Credencial SERNATUR #4120",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MutedText,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }
@@ -305,13 +298,13 @@ private fun GuideCard() {
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .background(Color(0xFFF1F5F9), CircleShape),
+                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Call,
                         contentDescription = "Llamar al guía",
-                        tint = Color.Black
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -324,7 +317,7 @@ private fun BottomActions(onConfirm: () -> Unit, onReject: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -332,7 +325,7 @@ private fun BottomActions(onConfirm: () -> Unit, onReject: () -> Unit) {
         Button(
             onClick = onConfirm,
             shape = RoundedCornerShape(50),
-            colors = ButtonDefaults.buttonColors(containerColor = BrandTeal),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
             modifier = Modifier
                 .weight(1f)
                 .height(50.dp)
@@ -346,12 +339,12 @@ private fun BottomActions(onConfirm: () -> Unit, onReject: () -> Unit) {
         OutlinedButton(
             onClick = onReject,
             shape = RoundedCornerShape(50),
-            border = BorderStroke(1.dp, Color(0xFF1E293B)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
             modifier = Modifier.height(50.dp)
         ) {
             Text(
                 text = "Rechazar",
-                color = DarkText,
+                color = MaterialTheme.colorScheme.error,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -372,12 +365,12 @@ private fun RejectDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(28.dp),
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
         icon = {
             Icon(
                 imageVector = Icons.Filled.Warning,
                 contentDescription = null,
-                tint = Warning
+                tint = MaterialTheme.colorScheme.tertiary
             )
         },
         title = {
@@ -385,7 +378,7 @@ private fun RejectDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
                 text = "Rechazar Asignación #SB-2026-8941",
                 fontSize = 21.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurface
             )
         },
         text = {
@@ -393,14 +386,14 @@ private fun RejectDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
                 Text(
                     text = "Se notificará de inmediato a Coordinación Logística para buscar un reemplazo.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = DarkText
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "Selecciona el motivo (Obligatorio):",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 reasons.forEachIndexed { index, reason ->
@@ -417,7 +410,7 @@ private fun RejectDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
                         Text(
                             text = reason,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Black
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -425,7 +418,7 @@ private fun RejectDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
                 OutlinedTextField(
                     value = observations,
                     onValueChange = { observations = it },
-                    placeholder = { Text("Observaciones para el coordinador...", color = MutedText) },
+                    placeholder = { Text("Observaciones para el coordinador...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp)
                 )
@@ -435,7 +428,7 @@ private fun RejectDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             Button(
                 onClick = onConfirm,
                 shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.buttonColors(containerColor = ErrorRed)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
                 Text(
                     text = "CONFIRMAR RECHAZO",
@@ -448,7 +441,7 @@ private fun RejectDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             TextButton(onClick = onDismiss) {
                 Text(
                     text = "CANCELAR",
-                    color = Color.Black,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
             }
