@@ -57,7 +57,10 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 @Composable
-fun ServiciosScreen(onServiceClick: (String) -> Unit = {}) {
+fun ServiciosScreen(
+    onServiceClick: (String) -> Unit = {},
+    onRouteClick: (String) -> Unit = {}
+) {
     val servicios by ServicioRepository.servicios.collectAsState()
     val hoy = LocalDate.now()
     val serviciosHoy = remember(servicios, hoy) {
@@ -137,7 +140,8 @@ fun ServiciosScreen(onServiceClick: (String) -> Unit = {}) {
                             procesando = servicio.id in procesandoIds,
                             onAceptar = { operar(servicio, ServicioRepository::aceptar) },
                             onRechazar = { rechazoPendiente = servicio },
-                            onClick = { onServiceClick(servicio.id) }
+                            onClick = { onServiceClick(servicio.id) },
+                            onRouteClick = { onRouteClick(servicio.id) }
                         )
                     }
                 }
@@ -248,7 +252,7 @@ private fun SummaryKpiCard(servicios: List<Servicio>) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = if (pendientes.size == 1) "1 pendiente" else "$pendientes pendientes",
+                    text = if (pendientes.size == 1) "1 pendiente" else "${pendientes.size} pendientes",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -263,7 +267,8 @@ private fun ServicioCard(
     procesando: Boolean,
     onAceptar: () -> Unit,
     onRechazar: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onRouteClick: () -> Unit
 ) {
     Card(
         onClick = onClick,
@@ -313,45 +318,60 @@ private fun ServicioCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                if (servicio.estado == EstadoServicio.PENDIENTE) {
-                    if (procesando) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Button(
-                                onClick = onAceptar,
-                                shape = RoundedCornerShape(50),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.secondary
-                                )
+                when (servicio.estado) {
+                    EstadoServicio.PENDIENTE -> {
+                        if (procesando) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Text("Confirmar", fontWeight = FontWeight.Bold)
-                            }
-                            TextButton(onClick = onRechazar) {
-                                Text(
-                                    text = "Rechazar",
-                                    color = MaterialTheme.colorScheme.error,
-                                    fontWeight = FontWeight.SemiBold
-                                )
+                                Button(
+                                    onClick = onAceptar,
+                                    shape = RoundedCornerShape(50),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondary
+                                    )
+                                ) {
+                                    Text("Confirmar", fontWeight = FontWeight.Bold)
+                                }
+                                TextButton(onClick = onRechazar) {
+                                    Text(
+                                        text = "Rechazar",
+                                        color = MaterialTheme.colorScheme.error,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
                             }
                         }
                     }
-                } else {
-                    OutlinedButton(
-                        onClick = onClick,
-                        shape = RoundedCornerShape(50),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        Text("Ver Detalle", fontWeight = FontWeight.SemiBold)
+                    EstadoServicio.ACEPTADO -> {
+                        OutlinedButton(
+                            onClick = onRouteClick,
+                            shape = RoundedCornerShape(50),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Text("Ver Ruta", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    EstadoServicio.RECHAZADO -> {
+                        OutlinedButton(
+                            onClick = onClick,
+                            shape = RoundedCornerShape(50),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        ) {
+                            Text("Ver Detalle", fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }
