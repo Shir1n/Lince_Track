@@ -2,7 +2,6 @@ package com.example.lince_track.ui.detalle
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,86 +12,184 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.lince_track.ui.theme.BrandTeal
-import com.example.lince_track.ui.theme.NavyBlueDark
-import com.example.lince_track.ui.theme.Warning
-
-private val ErrorRed = Color(0xFFC53030)
-private val DarkText = Color(0xFF1A202C)
-private val MutedText = Color(0xFF64748B)
+import com.example.lince_track.data.EstadoServicio
+import com.example.lince_track.data.Servicio
+import com.example.lince_track.data.ServicioRepository
+import com.example.lince_track.data.formatHora
+import com.example.lince_track.data.formatPrecioCLP
+import com.example.lince_track.ui.components.EstadoServicioBadge
+import kotlinx.coroutines.launch
 
 @Composable
-fun DetalleServicioScreen(onBack: () -> Unit = {}) {
+fun DetalleServicioScreen(servicioId: String, onBack: () -> Unit = {}) {
+    val servicios by ServicioRepository.servicios.collectAsState()
+    val servicio = remember(servicios, servicioId) { servicios.find { it.id == servicioId } }
+
+    val scope = rememberCoroutineScope()
+    var procesando by remember { mutableStateOf(false) }
     var showRejectDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        DetalleTopBar(onBack = onBack)
+    fun operar(op: suspend (String) -> Result<Unit>) {
+        if (servicio == null || procesando) return
+        scope.launch {
+            procesando = true
+            val resultado = op(servicio.id)
+            procesando = false
+            resultado.onSuccess {
+                snackbarHostState.showSnackbar("Operación completada")
+                onBack()
+            }.onFailure { e ->
+                snackbarHostState.showSnackbar(e.message ?: "No se pudo completar la operación")
+            }
+        }
+    }
 
+    if (servicio == null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Asignación no encontrada",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = onBack,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Volver")
+                }
+            }
+        }
+        return
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            ServiceHeaderCard()
-            RouteScheduleCard()
-            InclusionsCard()
-            GuideCard()
+            DetalleTopBar(onBack = onBack)
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                ServiceHeaderCard(servicio)
+                RouteScheduleCard(servicio)
+                GuideCard(servicio)
+            }
+
+            BottomActions(
+                servicio = servicio,
+                procesando = procesando,
+                onConfirm = { operar(ServicioRepository::aceptar) },
+                onReject = { showRejectDialog = true }
+            )
         }
 
-        BottomActions(
-            onConfirm = { onBack() },
-            onReject = { showRejectDialog = true }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
 
     if (showRejectDialog) {
-        RejectDialog(
-            onDismiss = { showRejectDialog = false },
-            onConfirm = {
-                showRejectDialog = false
-                onBack()
+        AlertDialog(
+            onDismissRequest = { showRejectDialog = false },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.tertiary
+                )
+            },
+            title = {
+                Text(
+                    text = "Rechazar ${servicio.reserva}",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    text = "Se notificará de inmediato a Coordinación Logística para buscar un reemplazo.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showRejectDialog = false
+                        operar(ServicioRepository::rechazar)
+                    },
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("CONFIRMAR RECHAZO", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRejectDialog = false }) {
+                    Text(
+                        text = "CANCELAR",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         )
     }
@@ -104,7 +201,7 @@ private fun DetalleTopBar(onBack: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
-            .background(NavyBlueDark)
+            .background(MaterialTheme.colorScheme.primary)
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -112,12 +209,12 @@ private fun DetalleTopBar(onBack: () -> Unit) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Volver",
-                tint = Color.White
+                tint = MaterialTheme.colorScheme.onPrimary
             )
         }
         Text(
             text = "Detalle de Servicio",
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onPrimary,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -125,40 +222,40 @@ private fun DetalleTopBar(onBack: () -> Unit) {
 }
 
 @Composable
-private fun ServiceHeaderCard() {
+private fun ServiceHeaderCard(servicio: Servicio) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "Excursión Saltos del Petrohué",
+                text = servicio.titulo,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "Reserva: #SB-2026-8941",
+                text = "Reserva: ${servicio.reserva}",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp)
             )
             Spacer(modifier = Modifier.height(12.dp))
-            StatusBadge("Pendiente de Confirmación", Warning)
+            EstadoServicioBadge(servicio.estado)
             Spacer(modifier = Modifier.height(14.dp))
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     text = "Tarifa: ",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "$40.000 CLP",
+                    text = "${formatPrecioCLP(servicio.tarifa)} CLP",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -166,11 +263,11 @@ private fun ServiceHeaderCard() {
 }
 
 @Composable
-private fun RouteScheduleCard() {
+private fun RouteScheduleCard(servicio: Servicio) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -178,22 +275,22 @@ private fun RouteScheduleCard() {
                 text = "Ruta y Horario",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.Top) {
                 Icon(
                     imageVector = Icons.Outlined.LocationOn,
                     contentDescription = null,
-                    tint = BrandTeal,
+                    tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.size(10.dp))
                 Text(
-                    text = "Hotel Cumbres, Puerto Varas  •  01:30 PM",
+                    text = "${servicio.origen}  •  ${formatHora(servicio.horaInicio)}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Spacer(modifier = Modifier.height(14.dp))
@@ -201,84 +298,33 @@ private fun RouteScheduleCard() {
                 Icon(
                     imageVector = Icons.Outlined.LocationOn,
                     contentDescription = null,
-                    tint = BrandTeal,
+                    tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.size(10.dp))
                 Text(
-                    text = "Parque Nacional Vicente Pérez Rosales",
+                    text = "${servicio.destino}  •  ${formatHora(servicio.horaFin)}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Total 8 pasajeros (Familia Johnson)",
+                text = "Total ${servicio.pasajeros} pasajeros",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
 }
 
 @Composable
-private fun InclusionsCard() {
+private fun GuideCard(servicio: Servicio) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text(
-                text = "¿Qué incluye este servicio?",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-            Spacer(modifier = Modifier.height(14.dp))
-            InclusionItem("Peajes de autopista incluidos")
-            InclusionItem("Box lunch para pasajeros")
-            InclusionItem("Entradas a Parque Nacional")
-        }
-    }
-}
-
-@Composable
-private fun InclusionItem(text: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(vertical = 6.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(20.dp)
-                .background(BrandTeal, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Check,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(14.dp)
-            )
-        }
-        Spacer(modifier = Modifier.size(12.dp))
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.Black
-        )
-    }
-}
-
-@Composable
-private fun GuideCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
@@ -289,29 +335,23 @@ private fun GuideCard() {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Guía Asignado: Roberto Díaz",
+                    text = "Guía Asignado: ${servicio.guia}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-                Text(
-                    text = "Credencial SERNATUR #4120",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MutedText,
-                    modifier = Modifier.padding(top = 2.dp)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             IconButton(onClick = {}) {
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .background(Color(0xFFF1F5F9), CircleShape),
+                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Call,
                         contentDescription = "Llamar al guía",
-                        tint = Color.Black
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -320,151 +360,71 @@ private fun GuideCard() {
 }
 
 @Composable
-private fun BottomActions(onConfirm: () -> Unit, onReject: () -> Unit) {
+private fun BottomActions(
+    servicio: Servicio,
+    procesando: Boolean,
+    onConfirm: () -> Unit,
+    onReject: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Button(
-            onClick = onConfirm,
-            shape = RoundedCornerShape(50),
-            colors = ButtonDefaults.buttonColors(containerColor = BrandTeal),
-            modifier = Modifier
-                .weight(1f)
-                .height(50.dp)
-        ) {
-            Text(
-                text = "CONFIRMAR ASIGNACIÓN",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
+        if (servicio.estado == EstadoServicio.PENDIENTE) {
+            if (procesando) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
+                }
+            } else {
+                Button(
+                    onClick = onConfirm,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp)
+                ) {
+                    Text("CONFIRMAR ASIGNACIÓN", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
+                OutlinedButton(
+                    onClick = onReject,
+                    shape = RoundedCornerShape(50),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+                    modifier = Modifier.height(50.dp)
+                ) {
+                    Text("Rechazar", fontWeight = FontWeight.Bold)
+                }
+            }
+        } else {
+            Icon(
+                imageVector = Icons.Outlined.Person,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-        OutlinedButton(
-            onClick = onReject,
-            shape = RoundedCornerShape(50),
-            border = BorderStroke(1.dp, Color(0xFF1E293B)),
-            modifier = Modifier.height(50.dp)
-        ) {
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Rechazar",
-                color = DarkText,
-                fontWeight = FontWeight.Bold
+                text = when (servicio.estado) {
+                    EstadoServicio.ACEPTADO -> "Asignación aceptada"
+                    EstadoServicio.RECHAZADO -> "Asignación rechazada"
+                    EstadoServicio.PENDIENTE -> ""
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
-}
-
-@Composable
-private fun RejectDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    var selectedReason by remember { mutableIntStateOf(0) }
-    var observations by remember { mutableStateOf("") }
-    val reasons = listOf(
-        "Falla mecánica de vehículo",
-        "Problema de salud / Fuerza mayor",
-        "Cruce de horario con otro servicio",
-        "Otro"
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = Color.White,
-        icon = {
-            Icon(
-                imageVector = Icons.Filled.Warning,
-                contentDescription = null,
-                tint = Warning
-            )
-        },
-        title = {
-            Text(
-                text = "Rechazar Asignación #SB-2026-8941",
-                fontSize = 21.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-        },
-        text = {
-            Column {
-                Text(
-                    text = "Se notificará de inmediato a Coordinación Logística para buscar un reemplazo.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = DarkText
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "Selecciona el motivo (Obligatorio):",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                reasons.forEachIndexed { index, reason ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { selectedReason = index },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = selectedReason == index,
-                            onClick = { selectedReason = index }
-                        )
-                        Text(
-                            text = reason,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Black
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = observations,
-                    onValueChange = { observations = it },
-                    placeholder = { Text("Observaciones para el coordinador...", color = MutedText) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.buttonColors(containerColor = ErrorRed)
-            ) {
-                Text(
-                    text = "CONFIRMAR RECHAZO",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    text = "CANCELAR",
-                    color = Color.Black,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    )
-}
-
-@Composable
-private fun StatusBadge(text: String, color: Color) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Bold,
-        color = Color.White,
-        modifier = Modifier
-            .background(color, RoundedCornerShape(50))
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-    )
 }

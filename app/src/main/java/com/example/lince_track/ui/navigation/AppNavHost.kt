@@ -18,32 +18,34 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.lince_track.ui.ajustes.AjustesScreen
 import com.example.lince_track.ui.alertas.AlertasScreen
 import com.example.lince_track.ui.calendario.CalendarioScreen
 import com.example.lince_track.ui.detalle.DetalleServicioScreen
 import com.example.lince_track.ui.login.LoginScreen
 import com.example.lince_track.ui.perfil.PerfilScreen
 import com.example.lince_track.ui.servicios.ServiciosScreen
-import com.example.lince_track.ui.theme.BackgroundColor
-import com.example.lince_track.ui.theme.NavyBlue
-import com.example.lince_track.ui.theme.NavyBlueDark
 
 object Routes {
     const val LOGIN = "login"
     const val SERVICIOS = "servicios"
-    const val DETALLE_SERVICIO = "detalle_servicio"
+    const val DETALLE_SERVICIO = "detalle_servicio/{servicioId}"
     const val CALENDARIO = "calendario"
     const val ALERTAS = "alertas"
     const val PERFIL = "perfil"
+    const val AJUSTES = "ajustes"
+
+    fun detalleServicio(id: String) = "detalle_servicio/$id"
 }
 
 enum class BottomNavItem(
@@ -63,8 +65,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
     val currentRoute = backStackEntry?.destination?.route
     val showBottomBar = BottomNavItem.entries.any { it.route == currentRoute }
     val containerColor = when (currentRoute) {
-        Routes.SERVICIOS, Routes.DETALLE_SERVICIO, Routes.PERFIL -> NavyBlueDark
-        Routes.LOGIN -> BackgroundColor
+        Routes.SERVICIOS, Routes.DETALLE_SERVICIO, Routes.PERFIL -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.background
     }
 
@@ -73,7 +74,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
-                    containerColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.surface
                 ) {
                     BottomNavItem.entries.forEach { item ->
                         NavigationBarItem(
@@ -99,11 +100,11 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                             },
                             alwaysShowLabel = true,
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Color.White,
-                                selectedTextColor = NavyBlue,
-                                unselectedIconColor = NavyBlue,
-                                unselectedTextColor = NavyBlue,
-                                indicatorColor = NavyBlue
+                                selectedIconColor = MaterialTheme.colorScheme.onSecondary,
+                                selectedTextColor = MaterialTheme.colorScheme.secondary,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                indicatorColor = MaterialTheme.colorScheme.secondary
                             )
                         )
                     }
@@ -127,19 +128,28 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             }
             composable(Routes.SERVICIOS) {
                 ServiciosScreen(
-                    onServiceClick = { navController.navigate(Routes.DETALLE_SERVICIO) }
+                    onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) }
                 )
             }
             composable(
                 route = Routes.DETALLE_SERVICIO,
+                arguments = listOf(navArgument("servicioId") { type = NavType.StringType }),
                 enterTransition = { EnterTransition.None },
                 exitTransition = { ExitTransition.None },
                 popEnterTransition = { EnterTransition.None },
                 popExitTransition = { ExitTransition.None }
-            ) {
-                DetalleServicioScreen(onBack = { navController.popBackStack() })
+            ) { backStackEntry ->
+                val servicioId = backStackEntry.arguments?.getString("servicioId").orEmpty()
+                DetalleServicioScreen(
+                    servicioId = servicioId,
+                    onBack = { navController.popBackStack() }
+                )
             }
-            composable(Routes.CALENDARIO) { CalendarioScreen() }
+            composable(Routes.CALENDARIO) {
+                CalendarioScreen(
+                    onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) }
+                )
+            }
             composable(Routes.ALERTAS) { AlertasScreen() }
             composable(Routes.PERFIL) {
                 PerfilScreen(
@@ -147,8 +157,12 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                         navController.navigate(Routes.LOGIN) {
                             popUpTo(0) { inclusive = true }
                         }
-                    }
+                    },
+                    onOpenSettings = { navController.navigate(Routes.AJUSTES) }
                 )
+            }
+            composable(Routes.AJUSTES) {
+                AjustesScreen(onBack = { navController.popBackStack() })
             }
         }
     }
