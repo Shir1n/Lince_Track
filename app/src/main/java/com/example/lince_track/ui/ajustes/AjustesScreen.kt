@@ -32,15 +32,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.example.lince_track.ui.theme.ThemeMode
 import com.example.lince_track.ui.theme.setThemeMode
 import com.example.lince_track.ui.theme.themeModeFlow
+import com.example.lince_track.util.LinceLogConsoleDialog
+import com.example.lince_track.util.LinceLogger
 import kotlinx.coroutines.launch
 
 @Composable
 fun AjustesScreen(onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val themeMode by context.themeModeFlow.collectAsState(initial = ThemeMode.SYSTEM)
+    val logs by LinceLogger.logs.collectAsState()
+    var showLogConsole by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     Column(
@@ -75,12 +84,64 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
                         ThemeModeOption(
                             mode = mode,
                             selected = themeMode == mode,
-                            onClick = { scope.launch { context.setThemeMode(mode) } }
+                            onClick = {
+                                LinceLogger.i("AJUSTES", "Cambio de tema visual a ${mode.name}")
+                                scope.launch { context.setThemeMode(mode) }
+                            }
+                        )
+                    }
+                }
+            }
+
+            Text(
+                text = "Diagnóstico y Desarrollo",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Consola de Logs Lince",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Inspecciona eventos de GPS, mapa, red y navegación (${logs.size} registros activos).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Button(
+                        onClick = { showLogConsole = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "ABRIR CONSOLA DE LOGS",
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
             }
         }
+    }
+
+    if (showLogConsole) {
+        LinceLogConsoleDialog(onDismiss = { showLogConsole = false })
     }
 }
 
