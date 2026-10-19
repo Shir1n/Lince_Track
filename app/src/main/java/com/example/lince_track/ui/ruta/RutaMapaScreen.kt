@@ -3,6 +3,7 @@ package com.example.lince_track.ui.ruta
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
@@ -639,10 +640,22 @@ private fun OsmMapContainer(
     routeColorArgb: Int
 ) {
     val mapView = remember {
-        Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
-        Configuration.getInstance().userAgentValue = "LinceTrackChile/1.0 (Android; contacto@lincetrack.cl; DuocUC)"
+        val osmContext = object : ContextWrapper(context.applicationContext) {
+            override fun getPackageName(): String = "cl.duoc.lince_track"
+        }
+        Configuration.getInstance().load(osmContext, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+        Configuration.getInstance().userAgentValue = "LinceTrackChile/1.0 (cl.duoc.lince_track)"
+        val linceTileSource = org.osmdroid.tileprovider.tilesource.XYTileSource(
+            "LinceOSM",
+            0,
+            19,
+            256,
+            ".png",
+            arrayOf("https://tile.openstreetmap.org/"),
+            "© OpenStreetMap contributors"
+        )
         MapView(context).apply {
-            setTileSource(TileSourceFactory.MAPNIK)
+            setTileSource(linceTileSource)
             setMultiTouchControls(true)
             controller.setZoom(13.0)
             controller.setCenter(PickupHotelCumbres)

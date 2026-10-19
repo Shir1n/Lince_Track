@@ -12,18 +12,17 @@ import com.example.lince_track.ui.theme.ThemeMode
 import com.example.lince_track.ui.theme.themeModeFlow
 
 import android.content.Context
-import java.io.File
+import android.content.ContextWrapper
 import org.osmdroid.config.Configuration
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Configuration.getInstance().load(this, getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
-        Configuration.getInstance().userAgentValue = "LinceTrackChile/1.0 (Android; contacto@lincetrack.cl; DuocUC)"
-        try {
-            Configuration.getInstance().osmdroidTileCache?.deleteRecursively()
-            File(cacheDir, "osmdroid").deleteRecursively()
-        } catch (_: Exception) {}
+        val osmContext = object : ContextWrapper(applicationContext) {
+            override fun getPackageName(): String = "cl.duoc.lince_track"
+        }
+        Configuration.getInstance().load(osmContext, getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+        Configuration.getInstance().userAgentValue = "LinceTrackChile/1.0 (cl.duoc.lince_track)"
         enableEdgeToEdge()
         setContent {
             val themeMode by this@MainActivity.themeModeFlow.collectAsState(initial = ThemeMode.SYSTEM)
