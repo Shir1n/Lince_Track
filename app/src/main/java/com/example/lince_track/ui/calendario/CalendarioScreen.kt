@@ -27,7 +27,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Warning
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -65,6 +64,7 @@ import com.example.lince_track.data.formatHora
 import com.example.lince_track.data.formatPrecioCLP
 import com.example.lince_track.ui.agenda.AgendaViewModel
 import com.example.lince_track.ui.components.EstadoServicioBadge
+import com.example.lince_track.ui.components.RejectServicioDialog
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -147,52 +147,12 @@ fun CalendarioScreen(onServiceClick: (String) -> Unit = {}) {
     }
 
     rechazoPendiente?.let { servicio ->
-        AlertDialog(
-            onDismissRequest = { rechazoPendiente = null },
-            shape = RoundedCornerShape(28.dp),
-            containerColor = MaterialTheme.colorScheme.surface,
-            icon = {
-                Icon(
-                    imageVector = Icons.Outlined.Warning,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.tertiary
-                )
-            },
-            title = {
-                Text(
-                    text = "Rechazar asignación",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            text = {
-                Text(
-                    text = "¿Seguro que deseas rechazar \"${servicio.titulo}\"? Se notificará a Coordinación Logística.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.rechazar(servicio)
-                        rechazoPendiente = null
-                    },
-                    shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Rechazar", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { rechazoPendiente = null }) {
-                    Text(
-                        text = "Cancelar",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+        RejectServicioDialog(
+            servicio = servicio,
+            onDismiss = { rechazoPendiente = null },
+            onConfirm = {
+                viewModel.rechazar(servicio)
+                rechazoPendiente = null
             }
         )
     }
