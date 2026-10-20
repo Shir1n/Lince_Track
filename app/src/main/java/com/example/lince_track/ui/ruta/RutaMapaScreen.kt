@@ -3,6 +3,7 @@ package com.example.lince_track.ui.ruta
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
@@ -78,6 +79,8 @@ import androidx.core.content.ContextCompat
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.formatHora
+import com.example.lince_track.util.LinceLogConsoleDialog
+import com.example.lince_track.util.LinceLogger
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
@@ -131,6 +134,7 @@ fun RutaMapaScreen(
     var showReportDialog by remember { mutableStateOf(false) }
     var showReassignDialog by remember { mutableStateOf(false) }
     var showExternalNavDialog by remember { mutableStateOf(false) }
+    var showLogConsoleDialog by remember { mutableStateOf(false) }
 
     var hasLocationPermission by remember {
         mutableStateOf(hasPermissions(context))
@@ -148,6 +152,7 @@ fun RutaMapaScreen(
         val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
             permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         hasLocationPermission = granted
+        LinceLogger.i("GPS", "Respuesta de permisos de ubicación: granted=$granted")
         if (granted) {
             fetchCurrentGps(
                 context = context,
@@ -161,7 +166,13 @@ fun RutaMapaScreen(
     }
 
     LaunchedEffect(Unit) {
-        Configuration.getInstance().userAgentValue = context.packageName
+        Configuration.getInstance().userAgentValue = "LinceTrackChile/1.0 (cl.duoc.lince_track)"
+        LinceLogger.i(
+            tag = "MAPA",
+            message = "Abriendo RutaMapaScreen para servicio $servicioId",
+            details = "titulo='${servicio?.titulo ?: "Por defecto"}', rolInicial=${activeRole.label}"
+        )
+        LinceLogger.runMapTileDiagnostic()
         if (hasLocationPermission) {
             fetchCurrentGps(
                 context = context,
@@ -172,6 +183,7 @@ fun RutaMapaScreen(
                 }
             )
         } else {
+            LinceLogger.w("GPS", "Sin permiso de ubicación activo; solicitando al usuario")
             permissionLauncher.launch(
                 arrayOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
@@ -217,12 +229,16 @@ fun RutaMapaScreen(
             RutaTopBar(
                 activeRole = activeRole,
                 hasPermission = hasLocationPermission,
+                onOpenLogs = { showLogConsoleDialog = true },
                 onBack = onBack
             )
 
             RoleSelectorRow(
                 activeRole = activeRole,
-                onRoleSelected = { activeRole = it }
+                onRoleSelected = {
+                    activeRole = it
+                    LinceLogger.i("MAPA", "Cambio de vista de rol a ${it.label}")
+                }
             )
 
             ServiceRouteHeaderCard(
@@ -439,12 +455,19 @@ fun RutaMapaScreen(
             }
         )
     }
+
+    if (showLogConsoleDialog) {
+        LinceLogConsoleDialog(
+            onDismiss = { showLogConsoleDialog = false }
+        )
+    }
 }
 
 @Composable
 private fun RutaTopBar(
     activeRole: RolMapa,
     hasPermission: Boolean,
+    onOpenLogs: () -> Unit,
     onBack: () -> Unit
 ) {
     Row(
@@ -456,7 +479,10 @@ private fun RutaTopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -467,15 +493,15 @@ private fun RutaTopBar(
             Text(
                 text = if (activeRole == RolMapa.COORDINADOR) "Monitoreo GPS" else "Ruta y Check-in",
                 color = MaterialTheme.colorScheme.onPrimary,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
         }
 
         val badgeText = when {
-            activeRole == RolMapa.COORDINADOR -> "Modo Supervisión"
+            activeRole == RolMapa.COORDINADOR -> "Supervisión"
             hasPermission -> "GPS Activo"
-            else -> "GPS Sin Permiso"
+            else -> "Sin GPS"
         }
         val badgeColor = when {
             activeRole == RolMapa.COORDINADOR -> MaterialTheme.colorScheme.primaryContainer
@@ -490,24 +516,45 @@ private fun RutaTopBar(
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .padding(end = 8.dp)
-                .background(badgeColor, RoundedCornerShape(50))
-                .padding(horizontal = 12.dp, vertical = 6.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(end = 6.dp)
         ) {
-            Icon(
-                imageVector = if (activeRole == RolMapa.COORDINADOR) Icons.Outlined.Person else Icons.Outlined.LocationOn,
-                contentDescription = null,
-                tint = badgeTextColor,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = badgeText,
-                color = badgeTextColor,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.18f))
+                    .clickable(onClick = onOpenLogs)
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = "Logs",
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .background(badgeColor, RoundedCornerShape(50))
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Icon(
+                    imageVector = if (activeRole == RolMapa.COORDINADOR) Icons.Outlined.Person else Icons.Outlined.LocationOn,
+                    contentDescription = null,
+                    tint = badgeTextColor,
+                    modifier = Modifier.size(15.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = badgeText,
+                    color = badgeTextColor,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -639,8 +686,31 @@ private fun OsmMapContainer(
     routeColorArgb: Int
 ) {
     val mapView = remember {
+        val prefs = context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE)
+        prefs.edit().putString("osmdroid.userAgentValue", "LinceTrackChile/1.0 (cl.duoc.lince_track)").apply()
+        val osmContext = object : ContextWrapper(context.applicationContext) {
+            override fun getPackageName(): String = "cl.duoc.lince_track"
+        }
+        Configuration.getInstance().load(osmContext, prefs)
+        Configuration.getInstance().userAgentValue = "LinceTrackChile/1.0 (cl.duoc.lince_track)"
+        Configuration.getInstance().isDebugMode = false
+        Configuration.getInstance().isDebugMapTileDownloader = true
+        val linceTileSource = org.osmdroid.tileprovider.tilesource.XYTileSource(
+            "LinceOsmDe",
+            0,
+            19,
+            256,
+            ".png",
+            arrayOf("https://tile.openstreetmap.de/"),
+            "© OpenStreetMap contributors"
+        )
+        LinceLogger.i(
+            tag = "MAPA",
+            message = "MapView inicializado con fuente ${linceTileSource.name()}",
+            details = "url=https://tile.openstreetmap.de/ | UA=${Configuration.getInstance().userAgentValue}"
+        )
         MapView(context).apply {
-            setTileSource(TileSourceFactory.MAPNIK)
+            setTileSource(linceTileSource)
             setMultiTouchControls(true)
             controller.setZoom(13.0)
             controller.setCenter(PickupHotelCumbres)
@@ -1178,9 +1248,11 @@ private fun launchExternalMapApp(
                     setPackage("com.google.android.apps.maps")
                 }
                 if (mapIntent.resolveActivity(context.packageManager) != null) {
+                    LinceLogger.i("NAV", "Abriendo Google Maps nativo hacia $targetLabel", gmmUri.toString())
                     context.startActivity(mapIntent)
                 } else {
                     val webUri = Uri.parse("https://www.google.com/maps/dir/?api=1&destination=$lat,$lon&travelmode=driving")
+                    LinceLogger.w("NAV", "Google Maps no instalado; usando fallback web", webUri.toString())
                     context.startActivity(Intent(Intent.ACTION_VIEW, webUri))
                 }
             }
@@ -1190,14 +1262,17 @@ private fun launchExternalMapApp(
                     setPackage("com.waze")
                 }
                 if (wazeIntent.resolveActivity(context.packageManager) != null) {
+                    LinceLogger.i("NAV", "Abriendo Waze nativo hacia $targetLabel", wazeUri.toString())
                     context.startActivity(wazeIntent)
                 } else {
+                    LinceLogger.w("NAV", "Waze no instalado; abriendo ruta web", wazeUri.toString())
                     onFallbackMessage("Waze no instalado en este dispositivo; abriendo ruta web")
                     context.startActivity(Intent(Intent.ACTION_VIEW, wazeUri))
                 }
             }
             AppNavegacionExterna.SELECTOR_SISTEMA -> {
                 val geoUri = Uri.parse("geo:$lat,$lon?q=$lat,$lon($encodedLabel)")
+                LinceLogger.i("NAV", "Abriendo selector nativo geo: hacia $targetLabel", geoUri.toString())
                 val chooser = Intent.createChooser(
                     Intent(Intent.ACTION_VIEW, geoUri),
                     "Navegar con:"
@@ -1205,7 +1280,8 @@ private fun launchExternalMapApp(
                 context.startActivity(chooser)
             }
         }
-    } catch (_: Exception) {
+    } catch (ex: Exception) {
+        LinceLogger.e("NAV", "Error al lanzar aplicación de mapas externa (${option.label})", ex)
         onFallbackMessage("No se encontró una aplicación de mapas compatible")
     }
 }
@@ -1236,14 +1312,26 @@ private fun fetchCurrentGps(
         if (location != null) {
             val isInsideChile = location.latitude in -56.0..-17.0 && location.longitude in -76.0..-66.0
             if (isInsideChile) {
+                LinceLogger.i(
+                    tag = "GPS",
+                    message = "Ubicación GPS real obtenida",
+                    details = "lat=${location.latitude}, lon=${location.longitude}, acc=${location.accuracy}m"
+                )
                 onLocation(GeoPoint(location.latitude, location.longitude), true)
             } else {
+                LinceLogger.w(
+                    tag = "GPS",
+                    message = "Coordenada fuera de Chile (emulador); usando punto simulado en Puerto Varas",
+                    details = "raw=${location.latitude},${location.longitude} -> sim=${SimuladorCercaPickup.latitude},${SimuladorCercaPickup.longitude}"
+                )
                 onLocation(SimuladorCercaPickup, false)
             }
         } else {
+            LinceLogger.w("GPS", "FusedLocation devolvió null; usando ubicación simulada de respaldo")
             onLocation(SimuladorCercaPickup, false)
         }
-    }.addOnFailureListener {
+    }.addOnFailureListener { ex ->
+        LinceLogger.e("GPS", "Error al consultar FusedLocationProviderClient", ex)
         onLocation(SimuladorCercaPickup, false)
     }
 }
