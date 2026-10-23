@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "589632568586",
+    "project_id": "lince-track-66c55",
+    "storage_bucket": "lince-track-66c55.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:589632568586:android:ab358a8d93bc3b6d798ef3",
+        "android_client_info": {
+          "package_name": "com.example.lince_track"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0LKLl1A3-jjx0HiLtg7oWmmkZRT0Vnqc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

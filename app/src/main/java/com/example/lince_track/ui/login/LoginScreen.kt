@@ -23,16 +23,25 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.lince_track.R
+import com.example.lince_track.data.Rol
 
 @Composable
 fun LoginScreen(
-    onLoginClick: (String, String) -> Unit = { _, _ -> },
+    onLoginSuccess: (Rol) -> Unit = {},
     onForgotPasswordClick: () -> Unit = {}
 ) {
+    val viewModel: LoginViewModel = viewModel()
+    val estado by viewModel.estado.collectAsState()
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(estado.rol) {
+        estado.rol?.let { onLoginSuccess(it) }
+    }
 
     Box(
         modifier = Modifier
@@ -74,7 +83,11 @@ fun LoginScreen(
 
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = {
+                    email = it
+                    viewModel.limpiarError()
+                },
+                enabled = !estado.cargando,
                 placeholder = { Text("Correo institucional", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                 leadingIcon = {
                     Icon(
@@ -106,7 +119,11 @@ fun LoginScreen(
 
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    viewModel.limpiarError()
+                },
+                enabled = !estado.cargando,
                 placeholder = { Text("Contraseña", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                 leadingIcon = {
                     Icon(
@@ -142,18 +159,37 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                onClick = { onLoginClick(email, password) },
+                onClick = { viewModel.iniciarSesion(email, password) },
+                enabled = !estado.cargando,
                 shape = RoundedCornerShape(24.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp)
             ) {
+                if (estado.cargando) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(
+                        text = "Iniciar Sesión",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+
+            estado.error?.let { mensaje ->
                 Text(
-                    text = "Iniciar Sesión",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary
+                    text = mensaje,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 16.dp)
                 )
             }
 

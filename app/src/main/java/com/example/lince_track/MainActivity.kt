@@ -1,5 +1,7 @@
 package com.example.lince_track
 
+import android.content.Context
+import android.content.ContextWrapper
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -10,15 +12,15 @@ import com.example.lince_track.ui.navigation.AppNavHost
 import com.example.lince_track.ui.theme.Lince_TrackTheme
 import com.example.lince_track.ui.theme.ThemeMode
 import com.example.lince_track.ui.theme.themeModeFlow
-
-import android.content.Context
-import android.content.ContextWrapper
 import com.example.lince_track.util.LinceLogger
+import com.google.firebase.FirebaseApp
 import org.osmdroid.config.Configuration
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FirebaseApp.initializeApp(this)
+
         val prefs = getSharedPreferences("osmdroid", Context.MODE_PRIVATE)
         prefs.edit().putString("osmdroid.userAgentValue", "LinceTrackChile/1.0 (cl.duoc.lince_track)").apply()
         val osmContext = object : ContextWrapper(applicationContext) {
@@ -31,6 +33,7 @@ class MainActivity : ComponentActivity() {
             message = "MainActivity iniciada y osmdroid configurado",
             details = "userAgent='${Configuration.getInstance().userAgentValue}', normalizedUA='${Configuration.getInstance().normalizedUserAgent}'"
         )
+
         enableEdgeToEdge()
         setContent {
             val themeMode by this@MainActivity.themeModeFlow.collectAsState(initial = ThemeMode.SYSTEM)

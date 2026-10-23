@@ -1,10 +1,11 @@
 package com.example.lince_track.ui.perfil
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -14,16 +15,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -39,16 +44,65 @@ fun PerfilScreen(
 ) {
     var notificaciones by remember { mutableStateOf(true) }
     var compartirGps by remember { mutableStateOf(true) }
+    val scrollState = rememberScrollState()
+    var isTopBarVisible by rememberSaveable { mutableStateOf(true) }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = { PerfilTopBar() }
-    ) { padding ->
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                if (delta < -10f && isTopBarVisible) {
+                    isTopBarVisible = false
+                } else if (delta > 10f && !isTopBarVisible) {
+                    isTopBarVisible = true
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
+    LaunchedEffect(scrollState.value) {
+        if (scrollState.value <= 10 && !isTopBarVisible) {
+            isTopBarVisible = true
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        AnimatedVisibility(
+            visible = isTopBarVisible,
+            enter = slideInVertically(
+                initialOffsetY = { -it },
+                animationSpec = spring(
+                    stiffness = Spring.StiffnessMediumLow,
+                    dampingRatio = Spring.DampingRatioNoBouncy
+                )
+            ) + expandVertically(
+                expandFrom = Alignment.Top,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+            ) + fadeIn(animationSpec = tween(180)),
+            exit = slideOutVertically(
+                targetOffsetY = { -it },
+                animationSpec = spring(
+                    stiffness = Spring.StiffnessMediumLow,
+                    dampingRatio = Spring.DampingRatioNoBouncy
+                )
+            ) + shrinkVertically(
+                shrinkTowards = Alignment.Top,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+            ) + fadeOut(animationSpec = tween(180))
+        ) {
+            PerfilTopBar()
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .nestedScroll(nestedScrollConnection)
+                .verticalScroll(scrollState)
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -60,9 +114,9 @@ fun PerfilScreen(
                 notificaciones = notificaciones,
                 onNotificacionesChange = { notificaciones = it },
                 compartirGps = compartirGps,
-                onGpsChange = { compartirGps = it }
+                onGpsChange = { compartirGps = it },
+                onOpenSettings = onOpenSettings
             )
-            AjustesAparienciaCard(onClick = onOpenSettings)
             CerrarSesion(onLogout = onLogout)
             PieDePagina()
             Spacer(modifier = Modifier.height(8.dp))
@@ -72,69 +126,93 @@ fun PerfilScreen(
 
 @Composable
 private fun PerfilTopBar() {
-    Column {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.primary)
+            .statusBarsPadding()
+            .height(48.dp)
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .statusBarsPadding()
-                .height(62.dp)
-                .padding(horizontal = 14.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(8.dp)),
+                    .size(28.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(6.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Outlined.DirectionsCar,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(16.dp)
                 )
             }
 
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(8.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     "Mi Perfil",
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     "Operaciones Southbound",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
                     style = MaterialTheme.typography.labelSmall,
+                    fontSize = 10.sp,
                     maxLines = 1
                 )
             }
 
             Surface(
                 color = MaterialTheme.colorScheme.secondary,
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    modifier = Modifier.padding(
+                        horizontal = 7.dp,
+                        vertical = 3.dp
+                    ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         Icons.Outlined.DirectionsCar,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSecondary,
-                        modifier = Modifier.size(13.dp)
+                        modifier = Modifier.size(11.dp)
                     )
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(3.dp))
                     Text(
                         "TRANSPORTISTA",
                         color = MaterialTheme.colorScheme.onSecondary,
                         style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
+            }
+
+            Spacer(Modifier.width(6.dp))
+
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(26.dp)
+            ) {
+                Icon(
+                    Icons.Outlined.Person,
+                    contentDescription = "Perfil",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(5.dp)
+                )
             }
         }
     }
@@ -195,24 +273,27 @@ private fun ResumenPerfil() {
             Spacer(Modifier.height(10.dp))
 
             Surface(
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                shape = RoundedCornerShape(20.dp)
+                color = MaterialTheme.colorScheme.secondary,
+                shape = RoundedCornerShape(18.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(
+                        horizontal = 12.dp,
+                        vertical = 5.dp
+                    ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier
+                        Modifier
                             .size(7.dp)
-                            .background(MaterialTheme.colorScheme.secondary, CircleShape)
+                            .background(MaterialTheme.colorScheme.onSecondary, CircleShape)
                     )
-                    Spacer(Modifier.width(5.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text(
                         "EN TURNO ACTIVO",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        color = MaterialTheme.colorScheme.onSecondary,
                         letterSpacing = 0.5.sp
                     )
                 }
@@ -223,8 +304,8 @@ private fun ResumenPerfil() {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(vertical = 10.dp, horizontal = 4.dp),
                 verticalAlignment = Alignment.Top
             ) {
@@ -242,7 +323,7 @@ private fun ResumenPerfil() {
                     titulo = "Flota",
                     valor = "Sprinter 516",
                     modifier = Modifier.weight(1.1f),
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
         }
@@ -289,7 +370,7 @@ private fun DatosPersonales() {
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
-            Etiqueta("Verificado", MaterialTheme.colorScheme.secondary)
+            Etiqueta("Verificado")
         }
 
         Spacer(Modifier.height(16.dp))
@@ -317,7 +398,7 @@ private fun DatosPersonales() {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .padding(10.dp),
             verticalAlignment = Alignment.Top
         ) {
@@ -327,9 +408,9 @@ private fun DatosPersonales() {
                 tint = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier
                     .padding(top = 2.dp)
-                    .size(19.dp)
+                    .size(20.dp)
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(10.dp))
             Column {
                 Text(
                     "Licencia de Conducir",
@@ -344,11 +425,12 @@ private fun DatosPersonales() {
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.width(6.dp))
-                    Etiqueta("Clase A2", MaterialTheme.colorScheme.primary)
+                    Etiqueta("Clase A2")
                 }
+                Spacer(Modifier.height(2.dp))
                 Text(
                     "Vigencia hasta Noviembre 2028 (Al día)",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -366,7 +448,7 @@ private fun FilaDato(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 11.dp),
+            .padding(bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -382,12 +464,12 @@ private fun FilaDato(
                 fontWeight = FontWeight.SemiBold
             )
             if (subrayado) {
-                Spacer(Modifier.height(1.dp))
+                Spacer(Modifier.height(2.dp))
                 Box(
                     Modifier
-                        .width(155.dp)
+                        .width(145.dp)
                         .height(1.dp)
-                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
                 )
             }
         }
@@ -413,7 +495,7 @@ private fun VehiculoAsignado() {
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
-            Etiqueta("● Operativo", MaterialTheme.colorScheme.secondary)
+            Etiqueta("● Operativo")
         }
 
         Spacer(Modifier.height(14.dp))
@@ -421,8 +503,8 @@ private fun VehiculoAsignado() {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(130.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .height(132.dp)
+                .clip(RoundedCornerShape(10.dp))
         ) {
             Image(
                 painter = painterResource(R.drawable.mercedes_benz_sprinter),
@@ -452,24 +534,93 @@ private fun VehiculoAsignado() {
                 Text(
                     "VAN DE PASAJEROS",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.85f),
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "Mercedes-Benz Sprinter 516 CDI",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Black,
+                    fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
+                Text(
+                    "Mercedes-Benz Sprinter\n516 CDI",
+                    style = MaterialTheme.typography.titleMedium,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Text(
+                    "Año modelo 2023",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.85f)
+                )
+            }
+
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 10.dp),
+                color = MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(6.dp),
+                shadowElevation = 3.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(
+                        horizontal = 10.dp,
+                        vertical = 7.dp
+                    ),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "CL  LK · VF -",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "84",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(13.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MiniDato(Icons.Outlined.Pin, "Patente", "LK-VF-84", Modifier.weight(1f))
-            MiniDato(Icons.Outlined.People, "Capacidad", "19+1 Asientos", Modifier.weight(1.1f))
-            MiniDato(Icons.Outlined.Speed, "Odómetro", "84.320 km", Modifier.weight(1.1f))
+            MiniDato(
+                Icons.Outlined.Groups,
+                "Capacidad",
+                "19 Pasajeros",
+                Modifier.weight(1f)
+            )
+            MiniDato(
+                Icons.Outlined.Speed,
+                "Odómetro",
+                "64.280 km",
+                Modifier.weight(1f)
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Outlined.Verified,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "Revisión técnica y homologación SERNATUR al día (Sep 2024).",
+                style = MaterialTheme.typography.bodySmall,
+                lineHeight = 15.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
@@ -484,17 +635,17 @@ private fun MiniDato(
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .padding(8.dp),
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             icono,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp)
+            tint = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.size(20.dp)
         )
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.width(8.dp))
         Column {
             Text(
                 titulo,
@@ -533,36 +684,45 @@ private fun ResumenOperacional() {
 
         Spacer(Modifier.height(14.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Estadistica(
-                Icons.Outlined.Route,
-                "42",
-                "Viajes Mes",
-                Modifier.weight(1f)
+                icono = Icons.Outlined.Route,
+                valor = "42",
+                titulo = "Viajes Mes",
+                fondo = MaterialTheme.colorScheme.surfaceVariant,
+                iconFondo = MaterialTheme.colorScheme.secondary,
+                iconTint = MaterialTheme.colorScheme.onSecondary,
+                modifier = Modifier.weight(1f)
             )
             Estadistica(
-                Icons.Outlined.Star,
-                "4.9 ★",
-                "Calificación",
-                Modifier.weight(1f),
-                colorValor = MaterialTheme.colorScheme.tertiary
+                icono = Icons.Outlined.Star,
+                valor = "4.9 ★",
+                titulo = "Calificación",
+                fondo = MaterialTheme.colorScheme.tertiaryContainer,
+                iconFondo = MaterialTheme.colorScheme.tertiary,
+                iconTint = MaterialTheme.colorScheme.onTertiary,
+                colorValor = MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier.weight(1f)
             )
             Estadistica(
-                Icons.Outlined.AccessTime,
-                "98.4%",
-                "Puntualidad",
-                Modifier.weight(1f),
-                colorValor = MaterialTheme.colorScheme.primary
+                icono = Icons.Outlined.AccessTime,
+                valor = "98.4%",
+                titulo = "Puntualidad",
+                fondo = MaterialTheme.colorScheme.surfaceVariant,
+                iconFondo = MaterialTheme.colorScheme.secondary,
+                iconTint = MaterialTheme.colorScheme.onSecondary,
+                colorValor = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.weight(1f)
             )
         }
 
-        Spacer(Modifier.height(9.dp))
+        Spacer(Modifier.height(10.dp))
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .padding(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -574,7 +734,7 @@ private fun ResumenOperacional() {
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                "Certificación Conductor Destacado\n2026",
+                "Certificación Conductor Destacado\n2024",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.SemiBold,
                 lineHeight = 15.sp,
@@ -586,7 +746,7 @@ private fun ResumenOperacional() {
                 style = MaterialTheme.typography.labelSmall,
                 lineHeight = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.tertiary,
+                color = MaterialTheme.colorScheme.secondary,
                 textAlign = TextAlign.Center
             )
         }
@@ -598,13 +758,16 @@ private fun Estadistica(
     icono: androidx.compose.ui.graphics.vector.ImageVector,
     valor: String,
     titulo: String,
+    fondo: Color,
+    iconFondo: Color,
+    iconTint: Color,
     modifier: Modifier = Modifier,
     colorValor: Color = MaterialTheme.colorScheme.onSurface
 ) {
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .background(fondo)
             .padding(vertical = 10.dp, horizontal = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -612,14 +775,14 @@ private fun Estadistica(
             modifier = Modifier
                 .size(26.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surface),
+                .background(iconFondo),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 icono,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(15.dp)
+                tint = iconTint,
+                modifier = Modifier.size(16.dp)
             )
         }
         Spacer(Modifier.height(4.dp))
@@ -643,7 +806,8 @@ private fun AjustesSeguridad(
     notificaciones: Boolean,
     onNotificacionesChange: (Boolean) -> Unit,
     compartirGps: Boolean,
-    onGpsChange: (Boolean) -> Unit
+    onGpsChange: (Boolean) -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     Tarjeta {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -657,81 +821,49 @@ private fun AjustesSeguridad(
             )
         }
 
-        Spacer(Modifier.height(13.dp))
+        Spacer(Modifier.height(14.dp))
 
         AjusteSwitch(
-            Icons.AutoMirrored.Outlined.VolumeUp,
-            "Notificaciones sonoras en ruta",
-            "Alertas de tráfico y paradas prioritarias",
-            notificaciones,
-            onNotificacionesChange
+            icono = Icons.AutoMirrored.Outlined.VolumeUp,
+            titulo = "Notificaciones sonoras en ruta",
+            descripcion = "Alertas de tráfico y paradas prioritarias",
+            activo = notificaciones,
+            onChange = onNotificacionesChange
         )
         AjusteSwitch(
-            Icons.Outlined.GpsFixed,
-            "Compartir GPS en tiempo real",
-            "Requerido por protocolo Southbound",
-            compartirGps,
-            onGpsChange
+            icono = Icons.Outlined.GpsFixed,
+            titulo = "Compartir GPS en tiempo real",
+            descripcion = null,
+            activo = compartirGps,
+            onChange = onGpsChange
         )
-
-        Spacer(Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                .clickable { }
-                .padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                color = MaterialTheme.colorScheme.primary,
-                shape = CircleShape,
-                modifier = Modifier.size(28.dp)
-            ) {
-                Icon(
-                    Icons.Outlined.SupportAgent,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.padding(6.dp)
-                )
-            }
-            Spacer(Modifier.width(8.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "Contactar Soporte TI / Mesa de Ayuda",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    "Línea directa operativa 24/7",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Icon(
-                Icons.Outlined.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        AjusteNavegacion(
+            icono = Icons.Outlined.Palette,
+            titulo = "Ajustes de apariencia",
+            descripcion = "Tema claro, oscuro o del sistema",
+            onClick = onOpenSettings
+        )
+        AjusteNavegacion(
+            icono = Icons.Outlined.SupportAgent,
+            titulo = "Contactar Soporte TI / Mesa de Ayuda",
+            descripcion = "Línea directa operativa 24/7",
+            onClick = { }
+        )
     }
 }
 
 @Composable
-private fun AjusteSwitch(
+private fun AjusteNavegacion(
     icono: androidx.compose.ui.graphics.vector.ImageVector,
     titulo: String,
-    descripcion: String,
-    activo: Boolean,
-    onChange: (Boolean) -> Unit
+    descripcion: String? = null,
+    onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 7.dp),
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -748,12 +880,60 @@ private fun AjusteSwitch(
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
+            if (!descripcion.isNullOrBlank()) {
+                Text(
+                    descripcion,
+                    style = MaterialTheme.typography.bodySmall,
+                    lineHeight = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun AjusteSwitch(
+    icono: androidx.compose.ui.graphics.vector.ImageVector,
+    titulo: String,
+    descripcion: String? = null,
+    activo: Boolean,
+    onChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            icono,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                descripcion,
-                style = MaterialTheme.typography.bodySmall,
-                lineHeight = 15.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                titulo,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
+            if (!descripcion.isNullOrBlank()) {
+                Text(
+                    descripcion,
+                    style = MaterialTheme.typography.bodySmall,
+                    lineHeight = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         Switch(
             checked = activo,
@@ -765,44 +945,6 @@ private fun AjusteSwitch(
                 uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         )
-    }
-}
-
-@Composable
-private fun AjustesAparienciaCard(onClick: () -> Unit) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Settings,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = "Ajustes de apariencia",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
-            )
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
     }
 }
 
@@ -849,9 +991,10 @@ private fun PieDePagina() {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            "Módulo Conductor • Patagonia Hub Sur",
+            "Operaciones Cono Sur · Southbound Logistics",
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
         )
     }
 }
@@ -869,7 +1012,7 @@ private fun Tarjeta(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(16.dp),
             content = contenido
         )
     }
@@ -898,18 +1041,22 @@ private fun IconoCircular(
 @Composable
 private fun Etiqueta(
     texto: String,
-    color: Color
+    color: Color = MaterialTheme.colorScheme.secondary,
+    textColor: Color = MaterialTheme.colorScheme.onSecondary
 ) {
     Surface(
-        color = color.copy(alpha = 0.18f),
-        shape = RoundedCornerShape(20.dp)
+        color = color,
+        shape = RoundedCornerShape(12.dp)
     ) {
         Text(
             texto,
-            color = color,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+            color = textColor,
+            modifier = Modifier.padding(
+                horizontal = 8.dp,
+                vertical = 3.dp
+            )
         )
     }
 }
