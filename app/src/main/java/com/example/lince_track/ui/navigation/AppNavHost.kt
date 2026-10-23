@@ -6,8 +6,16 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.navigation.NavBackStackEntry
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -43,6 +51,46 @@ import com.example.lince_track.ui.login.LoginScreen
 import com.example.lince_track.ui.perfil.PerfilScreen
 import com.example.lince_track.ui.ruta.RutaMapaScreen
 import com.example.lince_track.ui.servicios.ServiciosScreen
+
+private fun getBottomNavIndex(route: String?): Int {
+    return when (route) {
+        Routes.SERVICIOS, Routes.GUIA_ASIGNACIONES -> 0
+        Routes.CALENDARIO -> 1
+        Routes.ALERTAS, Routes.GUIA_CONEXION -> 2
+        Routes.PERFIL, Routes.GUIA_PERFIL -> 3
+        else -> -1
+    }
+}
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.bottomNavEnterTransition(): EnterTransition? {
+    val initialIndex = getBottomNavIndex(initialState.destination.route)
+    val targetIndex = getBottomNavIndex(targetState.destination.route)
+
+    return if (initialIndex != -1 && targetIndex != -1 && initialIndex != targetIndex) {
+        val direction = if (targetIndex > initialIndex) 1 else -1
+        slideInHorizontally(
+            initialOffsetX = { fullWidth -> direction * fullWidth },
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+        ) + fadeIn(animationSpec = tween(durationMillis = 200))
+    } else {
+        null
+    }
+}
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.bottomNavExitTransition(): ExitTransition? {
+    val initialIndex = getBottomNavIndex(initialState.destination.route)
+    val targetIndex = getBottomNavIndex(targetState.destination.route)
+
+    return if (initialIndex != -1 && targetIndex != -1 && initialIndex != targetIndex) {
+        val direction = if (targetIndex > initialIndex) -1 else 1
+        slideOutHorizontally(
+            targetOffsetX = { fullWidth -> direction * fullWidth },
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+        ) + fadeOut(animationSpec = tween(durationMillis = 200))
+    } else {
+        null
+    }
+}
 
 object Routes {
     const val LOGIN = "login"
@@ -93,11 +141,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
 
     val items = bottomNavItems(rol)
     val showBottomBar = items.any { it.route == currentRoute }
-    val containerColor = when (currentRoute) {
-        Routes.SERVICIOS, Routes.DETALLE_SERVICIO, Routes.RUTA_MAPA, Routes.PERFIL, Routes.ALERTAS,
-        Routes.GUIA_ASIGNACIONES, Routes.GUIA_CONEXION, Routes.GUIA_PERFIL -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.background
-    }
+    val containerColor = MaterialTheme.colorScheme.background
 
     Scaffold(
         containerColor = containerColor,
@@ -157,7 +201,13 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                     }
                 )
             }
-            composable(Routes.SERVICIOS) {
+            composable(
+                route = Routes.SERVICIOS,
+                enterTransition = { bottomNavEnterTransition() },
+                exitTransition = { bottomNavExitTransition() },
+                popEnterTransition = { bottomNavEnterTransition() },
+                popExitTransition = { bottomNavExitTransition() }
+            ) {
                 ServiciosScreen(
                     onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) },
                     onRouteClick = { id -> navController.navigate(Routes.rutaMapa(id)) }
@@ -192,13 +242,31 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                     onBack = { navController.popBackStack() }
                 )
             }
-            composable(Routes.CALENDARIO) {
+            composable(
+                route = Routes.CALENDARIO,
+                enterTransition = { bottomNavEnterTransition() },
+                exitTransition = { bottomNavExitTransition() },
+                popEnterTransition = { bottomNavEnterTransition() },
+                popExitTransition = { bottomNavExitTransition() }
+            ) {
                 CalendarioScreen(
                     onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) }
                 )
             }
-            composable(Routes.ALERTAS) { AlertasScreen() }
-            composable(Routes.PERFIL) {
+            composable(
+                route = Routes.ALERTAS,
+                enterTransition = { bottomNavEnterTransition() },
+                exitTransition = { bottomNavExitTransition() },
+                popEnterTransition = { bottomNavEnterTransition() },
+                popExitTransition = { bottomNavExitTransition() }
+            ) { AlertasScreen() }
+            composable(
+                route = Routes.PERFIL,
+                enterTransition = { bottomNavEnterTransition() },
+                exitTransition = { bottomNavExitTransition() },
+                popEnterTransition = { bottomNavEnterTransition() },
+                popExitTransition = { bottomNavExitTransition() }
+            ) {
                 PerfilScreen(
                     onLogout = {
                         AuthRepository.cerrarSesion()
@@ -214,9 +282,27 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             }
 
             // Pantallas del guía
-            composable(Routes.GUIA_ASIGNACIONES) { GuiaAsignacionesScreen() }
-            composable(Routes.GUIA_CONEXION) { ConexionConductorScreen() }
-            composable(Routes.GUIA_PERFIL) {
+            composable(
+                route = Routes.GUIA_ASIGNACIONES,
+                enterTransition = { bottomNavEnterTransition() },
+                exitTransition = { bottomNavExitTransition() },
+                popEnterTransition = { bottomNavEnterTransition() },
+                popExitTransition = { bottomNavExitTransition() }
+            ) { GuiaAsignacionesScreen() }
+            composable(
+                route = Routes.GUIA_CONEXION,
+                enterTransition = { bottomNavEnterTransition() },
+                exitTransition = { bottomNavExitTransition() },
+                popEnterTransition = { bottomNavEnterTransition() },
+                popExitTransition = { bottomNavExitTransition() }
+            ) { ConexionConductorScreen() }
+            composable(
+                route = Routes.GUIA_PERFIL,
+                enterTransition = { bottomNavEnterTransition() },
+                exitTransition = { bottomNavExitTransition() },
+                popEnterTransition = { bottomNavEnterTransition() },
+                popExitTransition = { bottomNavExitTransition() }
+            ) {
                 GuiaPerfilScreen(
                     onLogout = {
                         AuthRepository.cerrarSesion()

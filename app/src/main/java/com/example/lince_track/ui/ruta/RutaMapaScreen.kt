@@ -14,6 +14,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +55,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -78,12 +81,24 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
+import com.example.lince_track.data.clima.ClimaInfo
+import com.example.lince_track.data.clima.ClimaService
+import com.example.lince_track.data.clima.PresetClima
+import com.example.lince_track.data.clima.RecomendacionConduccion
 import com.example.lince_track.data.formatHora
+import com.example.lince_track.data.clima.TipoClima
 import com.example.lince_track.util.LinceLogConsoleDialog
 import com.example.lince_track.util.LinceLogger
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
+import android.os.Looper
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.runtime.mutableFloatStateOf
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -141,9 +156,52 @@ fun RutaMapaScreen(
     }
     var userGeoPoint by remember { mutableStateOf(SimuladorCercaPickup) }
     var isUsingRealGps by remember { mutableStateOf(false) }
+    var currentSpeedKmh by remember { mutableFloatStateOf(0f) }
 
     val fusedLocationClient = remember {
         LocationServices.getFusedLocationProviderClient(context)
+    }
+
+    DisposableEffect(hasLocationPermission) {
+        if (!hasLocationPermission) return@DisposableEffect onDispose {}
+
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 2000L)
+            .setMinUpdateIntervalMillis(1000L)
+            .setMinUpdateDistanceMeters(1f)
+            .build()
+
+        val locationCallback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                val loc = result.lastLocation ?: return
+                val speed = if (loc.hasSpeed()) loc.speed * 3.6f else 0f
+                currentSpeedKmh = speed
+                userGeoPoint = GeoPoint(loc.latitude, loc.longitude)
+                isUsingRealGps = true
+                if (speed > 5f) {
+                    LinceLogger.i(
+                        "GPS",
+                        "Tracking continuo: ${speed.roundToInt()} km/h",
+                        "lat=${loc.latitude}, lon=${loc.longitude}"
+                    )
+                }
+            }
+        }
+
+        try {
+            fusedLocationClient.requestLocationUpdates(
+                locationRequest,
+                locationCallback,
+                Looper.getMainLooper()
+            )
+            LinceLogger.i("GPS", "Suscripción activa de tracking GPS y velocímetro")
+        } catch (e: SecurityException) {
+            LinceLogger.w("GPS", "Error al iniciar tracking GPS: ${e.message}")
+        }
+
+        onDispose {
+            fusedLocationClient.removeLocationUpdates(locationCallback)
+            LinceLogger.i("GPS", "Tracking GPS pausado")
+        }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -220,6 +278,33 @@ fun RutaMapaScreen(
         calculateDistanceMeters(userGeoPoint, referenceTarget)
     }
 
+    var presetClima by remember { mutableStateOf(PresetClima.REAL) }
+    var climaInfo by remember { mutableStateOf(PresetClima.REAL.clima) }
+    var cargandoClima by remember { mutableStateOf(false) }
+
+    val driverDisplayName = remember(assignedDriver) {
+        assignedDriver.substringBefore("(").trim()
+    }
+
+    LaunchedEffect(userGeoPoint, presetClima) {
+        if (presetClima == PresetClima.REAL) {
+            cargandoClima = true
+            val res = ClimaService.consultarOpenMeteo(userGeoPoint.latitude, userGeoPoint.longitude)
+            res.onSuccess { climaInfo = it }
+            cargandoClima = false
+        } else {
+            climaInfo = presetClima.clima
+        }
+    }
+
+    val recomendacionConduccion = remember(climaInfo, driverDisplayName, servicio) {
+        ClimaService.generarRecomendacion(
+            clima = climaInfo,
+            nombreConductor = driverDisplayName,
+            destino = servicio?.destino ?: "Aeropuerto El Tepual"
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -241,104 +326,170 @@ fun RutaMapaScreen(
                 }
             )
 
-            ServiceRouteHeaderCard(
-                servicio = servicio,
-                activeRole = activeRole,
-                isCheckInDone = isCheckInDone,
-                isServiceFinished = isServiceFinished,
-                assignedDriver = assignedDriver
-            )
-
-            Box(
+            Column(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+                    .verticalScroll(rememberScrollState())
             ) {
-                OsmMapContainer(
-                    context = context,
-                    userPoint = userGeoPoint,
-                    destinationPoint = destinationPoint,
-                    originTitle = servicio?.origen ?: "Hotel Cumbres Puerto Varas",
-                    destinationTitle = servicio?.destino ?: "Aeropuerto El Tepual",
+                ServiceRouteHeaderCard(
+                    servicio = servicio,
                     activeRole = activeRole,
-                    routeColorArgb = MaterialTheme.colorScheme.secondary.toArgb()
+                    isCheckInDone = isCheckInDone,
+                    isServiceFinished = isServiceFinished,
+                    assignedDriver = assignedDriver
                 )
 
-                ExtendedFloatingActionButton(
-                    onClick = { showExternalNavDialog = true },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = RoundedCornerShape(50),
+                Box(
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(12.dp)
-                        .height(44.dp)
+                        .fillMaxWidth()
+                        .height(310.dp)
+                        .padding(horizontal = 16.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Navigation,
-                        contentDescription = "Abrir en app de mapas",
-                        modifier = Modifier.size(18.dp)
+                    OsmMapContainer(
+                        context = context,
+                        userPoint = userGeoPoint,
+                        destinationPoint = destinationPoint,
+                        originTitle = servicio?.origen ?: "Hotel Cumbres Puerto Varas",
+                        destinationTitle = servicio?.destino ?: "Aeropuerto El Tepual",
+                        activeRole = activeRole,
+                        routeColorArgb = MaterialTheme.colorScheme.secondary.toArgb()
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (activeRole == RolMapa.COORDINADOR) {
-                            "Ver en Maps / Waze"
-                        } else if (!isCheckInDone) {
-                            "Ir al Pickup"
-                        } else {
-                            "Ir al Destino"
-                        },
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
 
-                FloatingActionButton(
-                    onClick = {
-                        if (hasLocationPermission) {
-                            fetchCurrentGps(
-                                context = context,
-                                fusedClient = fusedLocationClient,
-                                onLocation = { point, real ->
-                                    userGeoPoint = point
-                                    isUsingRealGps = real
-                                    scope.launch {
-                                        val msg = if (real) {
-                                            "GPS actualizado (${formatCoord(point)})"
-                                        } else {
-                                            "GPS de emulador fuera de Chile: centrando en Puerto Varas"
-                                        }
-                                        snackbarHostState.showSnackbar(msg)
-                                    }
-                                }
+                    // Velocímetro GPS en tiempo real
+                    val limiteVelocidad = when (climaInfo.tipo) {
+                        TipoClima.LLUVIA_FUERTE, TipoClima.TORMENTA, TipoClima.NIEVE -> 50
+                        TipoClima.NIEBLA -> 45
+                        TipoClima.LLUVIA_MODERADA, TipoClima.VIENTO_FUERTE -> 70
+                        else -> 100
+                    }
+                    val velocidadExcedida = currentSpeedKmh.roundToInt() > limiteVelocidad
+
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = if (velocidadExcedida) Color(0xFFDC2626) else MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                        shadowElevation = 3.dp,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Speed,
+                                contentDescription = "Velocidad GPS",
+                                tint = if (velocidadExcedida) Color.White else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(17.dp)
                             )
-                        } else {
-                            permissionLauncher.launch(
-                                arrayOf(
-                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION
-                                )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = "${currentSpeedKmh.roundToInt()} km/h",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (velocidadExcedida) Color.White else MaterialTheme.colorScheme.onSurface
                             )
                         }
-                    },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(12.dp)
-                        .size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.MyLocation,
-                        contentDescription = "Actualizar ubicación GPS"
-                    )
-                }
-            }
+                    }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                    ExtendedFloatingActionButton(
+                        onClick = { showExternalNavDialog = true },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(12.dp)
+                            .height(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Navigation,
+                            contentDescription = "Abrir en app de mapas",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (activeRole == RolMapa.COORDINADOR) {
+                                "Ver en Maps / Waze"
+                            } else if (!isCheckInDone) {
+                                "Ir al Pickup"
+                            } else {
+                                "Ir al Destino"
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    FloatingActionButton(
+                        onClick = {
+                            if (hasLocationPermission) {
+                                fetchCurrentGps(
+                                    context = context,
+                                    fusedClient = fusedLocationClient,
+                                    onLocation = { point, real ->
+                                        userGeoPoint = point
+                                        isUsingRealGps = real
+                                        scope.launch {
+                                            val msg = if (real) {
+                                                "GPS actualizado (${formatCoord(point)})"
+                                            } else {
+                                                "GPS de emulador fuera de Chile: centrando en Puerto Varas"
+                                            }
+                                            snackbarHostState.showSnackbar(msg)
+                                        }
+                                    }
+                                )
+                            } else {
+                                permissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
+                            }
+                        },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(12.dp)
+                            .size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.MyLocation,
+                            contentDescription = "Actualizar ubicación GPS"
+                        )
+                    }
+                }
+
+                if (activeRole == RolMapa.TRANSPORTISTA) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        ClimaConduccionCard(
+                            clima = climaInfo,
+                            recomendacion = recomendacionConduccion,
+                            presetActual = presetClima,
+                            cargando = cargandoClima,
+                            onPresetSelected = { presetClima = it },
+                            onRefrescarGps = {
+                                scope.launch {
+                                    cargandoClima = true
+                                    val res = ClimaService.consultarOpenMeteo(userGeoPoint.latitude, userGeoPoint.longitude)
+                                    res.onSuccess { climaInfo = it }
+                                    cargandoClima = false
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
             RoleBottomActionPanel(
                 servicio = servicio,
@@ -800,14 +951,23 @@ private fun RoleBottomActionPanel(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Box(
+                modifier = Modifier
+                    .width(36.dp)
+                    .height(4.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(2.dp))
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             val locationTitle = when (activeRole) {
                 RolMapa.TRANSPORTISTA -> "Punto de recogida: $origenNombre"
                 RolMapa.GUIA -> "Recepción de pasajeros: Lobby $origenNombre"
@@ -820,7 +980,7 @@ private fun RoleBottomActionPanel(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(3.dp))
 
             Text(
                 text = "A $distanceMeters m del punto • GPS: ${formatCoord(userPoint)}",
@@ -828,7 +988,7 @@ private fun RoleBottomActionPanel(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             val primaryButtonText = when (activeRole) {
                 RolMapa.TRANSPORTISTA -> when {
@@ -856,7 +1016,7 @@ private fun RoleBottomActionPanel(
                 colors = ButtonDefaults.buttonColors(containerColor = primaryButtonColor),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
+                    .height(48.dp)
             ) {
                 if (isServiceFinished && activeRole != RolMapa.COORDINADOR) {
                     Icon(
@@ -874,7 +1034,7 @@ private fun RoleBottomActionPanel(
                 )
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             if (activeRole == RolMapa.COORDINADOR) {
                 OutlinedButton(
@@ -883,7 +1043,7 @@ private fun RoleBottomActionPanel(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(44.dp)
+                        .height(42.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Call,
@@ -899,7 +1059,10 @@ private fun RoleBottomActionPanel(
                     )
                 }
             } else {
-                TextButton(onClick = onSecondaryAction) {
+                TextButton(
+                    onClick = onSecondaryAction,
+                    modifier = Modifier.height(36.dp)
+                ) {
                     Text(
                         text = if (activeRole == RolMapa.TRANSPORTISTA) {
                             "Reportar retraso a Coordinación"
@@ -907,7 +1070,8 @@ private fun RoleBottomActionPanel(
                             "Reportar incidencia de grupo a Coordinación"
                         },
                         color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp
                     )
                 }
             }
