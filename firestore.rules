@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Colección de usuarios: uid -> { email, nombre, rol }
+    // Solo el administrador crea/edita estos documentos desde la consola.
+    match /usuarios/{uid} {
+      // Un usuario autenticado puede leer su propio documento (para obtener su rol).
+      allow read: if request.auth != null && request.auth.uid == uid;
+      // Nadie desde la app puede modificar roles: solo el admin desde la consola.
+      allow write: if false;
+    }
+
+    // El resto de las colecciones de la app requieren estar autenticado.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

@@ -28,6 +28,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.ui.ajustes.AjustesScreen
 import com.example.lince_track.ui.alertas.AlertasScreen
 import com.example.lince_track.ui.calendario.CalendarioScreen
@@ -122,7 +123,8 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         ) {
             composable(Routes.LOGIN) {
                 LoginScreen(
-                    onLoginClick = { _, _ ->
+                    onLoginSuccess = { _ ->
+                        // TODO: enrutar según rol cuando existan pantallas para guía y administrador.
                         navController.navigate(Routes.SERVICIOS) {
                             popUpTo(Routes.LOGIN) { inclusive = true }
                         }
@@ -173,6 +175,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             composable(Routes.PERFIL) {
                 PerfilScreen(
                     onLogout = {
+                        AuthRepository.cerrarSesion()
                         navController.navigate(Routes.LOGIN) {
                             popUpTo(0) { inclusive = true }
                         }
