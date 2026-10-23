@@ -3,6 +3,7 @@ package com.example.lince_track.ui.navigation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.animation.EnterTransition
@@ -15,6 +16,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
@@ -29,10 +31,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.lince_track.data.AuthRepository
+import com.example.lince_track.data.Rol
 import com.example.lince_track.ui.ajustes.AjustesScreen
 import com.example.lince_track.ui.alertas.AlertasScreen
 import com.example.lince_track.ui.calendario.CalendarioScreen
 import com.example.lince_track.ui.detalle.DetalleServicioScreen
+import com.example.lince_track.ui.guia.ConexionConductorScreen
+import com.example.lince_track.ui.guia.GuiaAsignacionesScreen
+import com.example.lince_track.ui.guia.GuiaPerfilScreen
 import com.example.lince_track.ui.login.LoginScreen
 import com.example.lince_track.ui.perfil.PerfilScreen
 import com.example.lince_track.ui.ruta.RutaMapaScreen
@@ -48,28 +54,48 @@ object Routes {
     const val PERFIL = "perfil"
     const val AJUSTES = "ajustes"
 
+    // Rutas del guía
+    const val GUIA_ASIGNACIONES = "guia_asignaciones"
+    const val GUIA_CONEXION = "guia_conexion"
+    const val GUIA_PERFIL = "guia_perfil"
+
     fun detalleServicio(id: String) = "detalle_servicio/$id"
     fun rutaMapa(id: String) = "ruta_mapa/$id"
 }
 
-enum class BottomNavItem(
+data class BottomNavItem(
     val route: String,
     val label: String,
     val icon: ImageVector
-) {
-    Servicios(Routes.SERVICIOS, "Servicios", Icons.Outlined.Home),
-    Calendario(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth),
-    Alertas(Routes.ALERTAS, "Alertas", Icons.Outlined.Notifications),
-    Perfil(Routes.PERFIL, "Perfil", Icons.Outlined.Person)
+)
+
+private fun bottomNavItems(rol: Rol?): List<BottomNavItem> = when (rol) {
+    Rol.GUIA -> listOf(
+        BottomNavItem(Routes.GUIA_ASIGNACIONES, "Asignaciones", Icons.Outlined.Home),
+        BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth),
+        BottomNavItem(Routes.GUIA_CONEXION, "Conexión", Icons.Outlined.LocationOn),
+        BottomNavItem(Routes.GUIA_PERFIL, "Perfil", Icons.Outlined.Person)
+    )
+    // Conductor (y por ahora administrador, hasta tener pantallas propias)
+    else -> listOf(
+        BottomNavItem(Routes.SERVICIOS, "Servicios", Icons.Outlined.Home),
+        BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth),
+        BottomNavItem(Routes.ALERTAS, "Alertas", Icons.Outlined.Notifications),
+        BottomNavItem(Routes.PERFIL, "Perfil", Icons.Outlined.Person)
+    )
 }
 
 @Composable
 fun AppNavHost(navController: NavHostController = rememberNavController()) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val showBottomBar = BottomNavItem.entries.any { it.route == currentRoute }
+    val rol by AuthRepository.rolActual.collectAsState()
+
+    val items = bottomNavItems(rol)
+    val showBottomBar = items.any { it.route == currentRoute }
     val containerColor = when (currentRoute) {
-        Routes.SERVICIOS, Routes.DETALLE_SERVICIO, Routes.RUTA_MAPA, Routes.PERFIL, Routes.ALERTAS -> MaterialTheme.colorScheme.primary
+        Routes.SERVICIOS, Routes.DETALLE_SERVICIO, Routes.RUTA_MAPA, Routes.PERFIL, Routes.ALERTAS,
+        Routes.GUIA_ASIGNACIONES, Routes.GUIA_CONEXION, Routes.GUIA_PERFIL -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.background
     }
 
@@ -80,7 +106,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surface
                 ) {
-                    BottomNavItem.entries.forEach { item ->
+                    items.forEach { item ->
                         NavigationBarItem(
                             selected = currentRoute == item.route,
                             onClick = {
@@ -123,9 +149,9 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         ) {
             composable(Routes.LOGIN) {
                 LoginScreen(
-                    onLoginSuccess = { _ ->
-                        // TODO: enrutar según rol cuando existan pantallas para guía y administrador.
-                        navController.navigate(Routes.SERVICIOS) {
+                    onLoginSuccess = { rol ->
+                        val destino = if (rol == Rol.GUIA) Routes.GUIA_ASIGNACIONES else Routes.SERVICIOS
+                        navController.navigate(destino) {
                             popUpTo(Routes.LOGIN) { inclusive = true }
                         }
                     }
@@ -185,6 +211,20 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             }
             composable(Routes.AJUSTES) {
                 AjustesScreen(onBack = { navController.popBackStack() })
+            }
+
+            // Pantallas del guía
+            composable(Routes.GUIA_ASIGNACIONES) { GuiaAsignacionesScreen() }
+            composable(Routes.GUIA_CONEXION) { ConexionConductorScreen() }
+            composable(Routes.GUIA_PERFIL) {
+                GuiaPerfilScreen(
+                    onLogout = {
+                        AuthRepository.cerrarSesion()
+                        navController.navigate(Routes.LOGIN) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
             }
         }
     }
