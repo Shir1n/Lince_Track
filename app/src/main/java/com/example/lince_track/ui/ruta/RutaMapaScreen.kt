@@ -282,19 +282,52 @@ fun RutaMapaScreen(
     var climaInfo by remember { mutableStateOf(PresetClima.REAL.clima) }
     var cargandoClima by remember { mutableStateOf(false) }
 
-    val driverDisplayName = remember(assignedDriver) {
-        assignedDriver.substringBefore("(").trim()
+    var ultimaUbicacionClima by remember { mutableStateOf<GeoPoint?>(null) }
+    var ultimoTimestampClimaMs by remember { mutableStateOf(0L) }
+    var mapCenterTrigger by remember { mutableIntStateOf(1) }
+
+    suspend fun refrescarClima(lat: Double, lon: Double, forzar: Boolean = false) {
+        val ahora = System.currentTimeMillis()
+        val minutosTranscurridos = (ahora - ultimoTimestampClimaMs) / (1000 * 60)
+        val distanciaKm = if (ultimaUbicacionClima != null) {
+            calculateDistanceMeters(ultimaUbicacionClima!!, GeoPoint(lat, lon)).toFloat() / 1000f
+        } else {
+            Float.MAX_VALUE
+        }
+
+        if (forzar || minutosTranscurridos >= 15L || distanciaKm >= 5f) {
+            cargandoClima = true
+            LinceLogger.i(
+                tag = "CLIMA",
+                message = "Consultando Open-Meteo",
+                details = "forzar=$forzar, minutos=$minutosTranscurridos, distanciaKm=${distanciaKm.roundToInt()}"
+            )
+            val res = ClimaService.consultarOpenMeteo(lat, lon)
+            res.onSuccess {
+                climaInfo = it
+                ultimaUbicacionClima = GeoPoint(lat, lon)
+                ultimoTimestampClimaMs = ahora
+            }
+            cargandoClima = false
+        }
     }
 
-    LaunchedEffect(userGeoPoint, presetClima) {
+    LaunchedEffect(presetClima) {
         if (presetClima == PresetClima.REAL) {
-            cargandoClima = true
-            val res = ClimaService.consultarOpenMeteo(userGeoPoint.latitude, userGeoPoint.longitude)
-            res.onSuccess { climaInfo = it }
-            cargandoClima = false
+            refrescarClima(userGeoPoint.latitude, userGeoPoint.longitude, forzar = true)
         } else {
             climaInfo = presetClima.clima
         }
+    }
+
+    LaunchedEffect(userGeoPoint) {
+        if (presetClima == PresetClima.REAL) {
+            refrescarClima(userGeoPoint.latitude, userGeoPoint.longitude, forzar = false)
+        }
+    }
+
+    val driverDisplayName = remember(assignedDriver) {
+        assignedDriver.substringBefore("(").trim()
     }
 
     val recomendacionConduccion = remember(climaInfo, driverDisplayName, servicio) {
@@ -355,45 +388,18 @@ fun RutaMapaScreen(
                         originTitle = servicio?.origen ?: "Hotel Cumbres Puerto Varas",
                         destinationTitle = servicio?.destino ?: "Aeropuerto El Tepual",
                         activeRole = activeRole,
-                        routeColorArgb = MaterialTheme.colorScheme.secondary.toArgb()
+                        routeColorArgb = MaterialTheme.colorScheme.secondary.toArgb(),
+                        centerTrigger = mapCenterTrigger
                     )
 
-                    // Velocímetro GPS en tiempo real
-                    val limiteVelocidad = when (climaInfo.tipo) {
-                        TipoClima.LLUVIA_FUERTE, TipoClima.TORMENTA, TipoClima.NIEVE -> 50
-                        TipoClima.NIEBLA -> 45
-                        TipoClima.LLUVIA_MODERADA, TipoClima.VIENTO_FUERTE -> 70
-                        else -> 100
-                    }
-                    val velocidadExcedida = currentSpeedKmh.roundToInt() > limiteVelocidad
-
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = if (velocidadExcedida) Color(0xFFDC2626) else MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
-                        shadowElevation = 3.dp,
+                    // Velocímetro GPS aislado (evita recomponer la pantalla completa con cada km/h)
+                    GpsSpeedometerBadge(
+                        speedProvider = { currentSpeedKmh },
+                        tipoClima = climaInfo.tipo,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Speed,
-                                contentDescription = "Velocidad GPS",
-                                tint = if (velocidadExcedida) Color.White else MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(17.dp)
-                            )
-                            Spacer(modifier = Modifier.width(5.dp))
-                            Text(
-                                text = "${currentSpeedKmh.roundToInt()} km/h",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = if (velocidadExcedida) Color.White else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
+                    )
 
                     ExtendedFloatingActionButton(
                         onClick = { showExternalNavDialog = true },
@@ -426,6 +432,7 @@ fun RutaMapaScreen(
 
                     FloatingActionButton(
                         onClick = {
+                            mapCenterTrigger++
                             if (hasLocationPermission) {
                                 fetchCurrentGps(
                                     context = context,
@@ -477,10 +484,7 @@ fun RutaMapaScreen(
                             onPresetSelected = { presetClima = it },
                             onRefrescarGps = {
                                 scope.launch {
-                                    cargandoClima = true
-                                    val res = ClimaService.consultarOpenMeteo(userGeoPoint.latitude, userGeoPoint.longitude)
-                                    res.onSuccess { climaInfo = it }
-                                    cargandoClima = false
+                                    refrescarClima(userGeoPoint.latitude, userGeoPoint.longitude, forzar = true)
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
@@ -827,6 +831,50 @@ private fun ServiceRouteHeaderCard(
 }
 
 @Composable
+private fun GpsSpeedometerBadge(
+    speedProvider: () -> Float,
+    tipoClima: TipoClima,
+    modifier: Modifier = Modifier
+) {
+    val speed = speedProvider()
+    val limiteVelocidad = remember(tipoClima) {
+        when (tipoClima) {
+            TipoClima.LLUVIA_FUERTE, TipoClima.TORMENTA, TipoClima.NIEVE -> 50
+            TipoClima.NIEBLA -> 45
+            TipoClima.LLUVIA_MODERADA, TipoClima.VIENTO_FUERTE -> 70
+            else -> 100
+        }
+    }
+    val velocidadExcedida = speed.roundToInt() > limiteVelocidad
+
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = if (velocidadExcedida) Color(0xFFDC2626) else MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        shadowElevation = 3.dp,
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Speed,
+                contentDescription = "Velocidad GPS",
+                tint = if (velocidadExcedida) Color.White else MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(17.dp)
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text(
+                text = "${speed.roundToInt()} km/h",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = if (velocidadExcedida) Color.White else MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
 private fun OsmMapContainer(
     context: Context,
     userPoint: GeoPoint,
@@ -834,7 +882,8 @@ private fun OsmMapContainer(
     originTitle: String,
     destinationTitle: String,
     activeRole: RolMapa,
-    routeColorArgb: Int
+    routeColorArgb: Int,
+    centerTrigger: Int
 ) {
     val mapView = remember {
         val prefs = context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE)
@@ -875,59 +924,78 @@ private fun OsmMapContainer(
         }
     }
 
+    val routeLine = remember(mapView, destinationPoint, routeColorArgb) {
+        Polyline().apply {
+            setPoints(listOf(PickupHotelCumbres, destinationPoint))
+            outlinePaint.color = routeColorArgb
+            outlinePaint.strokeWidth = 10f
+        }
+    }
+
+    val originMarker = remember(mapView, originTitle) {
+        Marker(mapView).apply {
+            position = PickupHotelCumbres
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            title = "Pickup: $originTitle"
+        }
+    }
+
+    val destinationMarker = remember(mapView, destinationPoint, destinationTitle) {
+        Marker(mapView).apply {
+            position = destinationPoint
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            title = "Destino: $destinationTitle"
+        }
+    }
+
+    val guideMeetingMarker = remember(mapView) {
+        Marker(mapView).apply {
+            position = PuntoEncuentroGuias
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            title = "Punto de Encuentro Guía / Recepción Grupo"
+        }
+    }
+
+    val currentMarker = remember(mapView) {
+        Marker(mapView).apply {
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+        }
+    }
+
+    var lastCenterTrigger by remember { mutableIntStateOf(-1) }
+
     AndroidView(
         modifier = Modifier.fillMaxSize(),
-        factory = { mapView },
-        update = { map ->
-            map.overlays.clear()
-
-            val routeLine = Polyline().apply {
-                setPoints(
-                    listOf(
-                        PickupHotelCumbres,
-                        destinationPoint
-                    )
-                )
-                outlinePaint.color = routeColorArgb
-                outlinePaint.strokeWidth = 10f
-            }
-            map.overlays.add(routeLine)
-
-            val originMarker = Marker(map).apply {
-                position = PickupHotelCumbres
-                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                title = "Pickup: $originTitle"
-            }
-            map.overlays.add(originMarker)
-
-            val destinationMarker = Marker(map).apply {
-                position = destinationPoint
-                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                title = "Destino: $destinationTitle"
-            }
-            map.overlays.add(destinationMarker)
-
-            if (activeRole == RolMapa.GUIA) {
-                val guideMeetingMarker = Marker(map).apply {
-                    position = PuntoEncuentroGuias
-                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                    title = "Punto de Encuentro Guía / Recepción Grupo"
+        factory = { _ ->
+            mapView.apply {
+                overlays.clear()
+                overlays.add(routeLine)
+                overlays.add(originMarker)
+                overlays.add(destinationMarker)
+                if (activeRole == RolMapa.GUIA) {
+                    overlays.add(guideMeetingMarker)
                 }
+                overlays.add(currentMarker)
+            }
+        },
+        update = { map: MapView ->
+            if (activeRole == RolMapa.GUIA && !map.overlays.contains(guideMeetingMarker)) {
                 map.overlays.add(guideMeetingMarker)
+            } else if (activeRole != RolMapa.GUIA && map.overlays.contains(guideMeetingMarker)) {
+                map.overlays.remove(guideMeetingMarker)
             }
 
-            val currentMarker = Marker(map).apply {
-                position = userPoint
-                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                title = when (activeRole) {
-                    RolMapa.TRANSPORTISTA -> "Tu Vehículo (GPS en vivo)"
-                    RolMapa.GUIA -> "Tu Ubicación Guía SERNATUR"
-                    RolMapa.COORDINADOR -> "Telemetría Vehículo en Ruta"
-                }
+            currentMarker.position = userPoint
+            currentMarker.title = when (activeRole) {
+                RolMapa.TRANSPORTISTA -> "Tu Vehículo (GPS en vivo)"
+                RolMapa.GUIA -> "Tu Ubicación Guía SERNATUR"
+                RolMapa.COORDINADOR -> "Telemetría Vehículo en Ruta"
             }
-            map.overlays.add(currentMarker)
 
-            map.controller.animateTo(userPoint)
+            if (lastCenterTrigger != centerTrigger) {
+                lastCenterTrigger = centerTrigger
+                map.controller.animateTo(userPoint)
+            }
             map.invalidate()
         }
     )
