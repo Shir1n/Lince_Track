@@ -69,7 +69,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
     val currentRoute = backStackEntry?.destination?.route
     val showBottomBar = BottomNavItem.entries.any { it.route == currentRoute }
     val containerColor = when (currentRoute) {
-        Routes.SERVICIOS, Routes.DETALLE_SERVICIO, Routes.RUTA_MAPA, Routes.PERFIL -> MaterialTheme.colorScheme.primary
+        Routes.SERVICIOS, Routes.DETALLE_SERVICIO, Routes.RUTA_MAPA, Routes.PERFIL, Routes.ALERTAS -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.background
     }
 
