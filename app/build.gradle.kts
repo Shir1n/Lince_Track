@@ -58,6 +58,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.osmdroid.android)
     implementation(libs.play.services.location)
+    implementation("io.coil-kt:coil-compose:2.6.0")
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
