@@ -58,6 +58,14 @@ object ServicioRepository {
                 horaFin = LocalTime.of(9, 30),
                 pasajeros = 4,
                 guia = "Andrea Soto",
+                nombresPasajeros = listOf(
+                    "John Miller", "Sarah Miller", "Emily Miller", "Jake Thompson"
+                ),
+                idiomaTour = "Inglés",
+                liderGrupo = "John Miller",
+                fonoLider = "+1 415 555 0132",
+                notasGrupo = "Vuelo LA-281 sale 11:45 AM. Equipaje: 4 maletas grandes.",
+                conductor = "Carlos Morales",
                 tarifa = 28000,
                 estado = EstadoServicio.ACEPTADO,
                 reserva = "#SB-2026-8890"
@@ -72,6 +80,15 @@ object ServicioRepository {
                 horaFin = LocalTime.of(10, 30),
                 pasajeros = 6,
                 guia = "Andrea Soto",
+                nombresPasajeros = listOf(
+                    "Marcela Fuentes", "Jorge Fuentes", "Camila Rojas",
+                    "Diego Rojas", "Valentina Paredes", "Tomás Paredes"
+                ),
+                idiomaTour = "Español",
+                liderGrupo = "Marcela Fuentes",
+                fonoLider = "+56 9 6112 4455",
+                notasGrupo = "Dos niños menores de 8 años. Preferencia asientos delanteros.",
+                conductor = "Carlos Morales",
                 tarifa = 35000,
                 estado = EstadoServicio.ACEPTADO,
                 reserva = "#SB-2026-8901"
@@ -86,6 +103,15 @@ object ServicioRepository {
                 horaFin = LocalTime.of(18, 30),
                 pasajeros = 8,
                 guia = "Roberto Díaz",
+                nombresPasajeros = listOf(
+                    "Michael Brown", "Laura Brown", "Kevin Smith", "Anna Smith",
+                    "Peter Jones", "Julia Jones", "Mark Wilson", "Emma Wilson"
+                ),
+                idiomaTour = "Inglés",
+                liderGrupo = "Michael Brown",
+                fonoLider = "+44 7700 900123",
+                notasGrupo = "Llevar comprobantes CONAF. Un pasajero con movilidad reducida (bastón).",
+                conductor = "Miguel Soto",
                 tarifa = 40000,
                 estado = EstadoServicio.PENDIENTE,
                 reserva = "#SB-2026-8941"
@@ -100,6 +126,14 @@ object ServicioRepository {
                 horaFin = LocalTime.of(16, 0),
                 pasajeros = 2,
                 guia = "Roberto Díaz",
+                nombresPasajeros = listOf(
+                    "Carlos Souza", "Beatriz Souza"
+                ),
+                idiomaTour = "Portugués",
+                liderGrupo = "Carlos Souza",
+                fonoLider = "+55 11 91234 5678",
+                notasGrupo = "Llegan en vuelo SKY-114. Esperar en puerta 2 de arribos.",
+                conductor = "Jorge Valdivia",
                 tarifa = 22000,
                 estado = EstadoServicio.PENDIENTE,
                 reserva = "#SB-2026-9020"
@@ -114,6 +148,16 @@ object ServicioRepository {
                 horaFin = LocalTime.of(13, 0),
                 pasajeros = 10,
                 guia = "Andrea Soto",
+                nombresPasajeros = listOf(
+                    "Rodrigo González", "María González", "Josefa González", "Martín González",
+                    "Luis Herrera", "Carmen Herrera", "Sofía Herrera",
+                    "Andrés Mora", "Paula Mora", "Felipe Mora"
+                ),
+                idiomaTour = "Español",
+                liderGrupo = "Rodrigo González",
+                fonoLider = "+56 9 8334 2211",
+                notasGrupo = "Grupo familiar. Almuerzo no incluido: sugerir restaurante en Ancud.",
+                conductor = "Patricio Lagos",
                 tarifa = 65000,
                 estado = EstadoServicio.ACEPTADO,
                 reserva = "#SB-2026-8950"
@@ -128,6 +172,14 @@ object ServicioRepository {
                 horaFin = LocalTime.of(13, 0),
                 pasajeros = 3,
                 guia = "Roberto Díaz",
+                nombresPasajeros = listOf(
+                    "Patricia Lagos", "Hernán Vega", "Rosa Vega"
+                ),
+                idiomaTour = "Español",
+                liderGrupo = "Patricia Lagos",
+                fonoLider = "+56 9 4556 7788",
+                notasGrupo = "Sin observaciones.",
+                conductor = "Jorge Valdivia",
                 tarifa = 20000,
                 estado = EstadoServicio.RECHAZADO,
                 reserva = "#SB-2026-8702"
@@ -142,6 +194,15 @@ object ServicioRepository {
                 horaFin = LocalTime.of(14, 0),
                 pasajeros = 5,
                 guia = "Andrea Soto",
+                nombresPasajeros = listOf(
+                    "David Clark", "Nancy Clark", "Robert Clark",
+                    "Alice Johnson", "Tom Johnson"
+                ),
+                idiomaTour = "Inglés",
+                liderGrupo = "David Clark",
+                fonoLider = "+1 303 555 0177",
+                notasGrupo = "Interés en fotografía de volcanes. Adulto mayor (78 años), ritmo lento.",
+                conductor = "Miguel Soto",
                 tarifa = 48000,
                 estado = EstadoServicio.ACEPTADO,
                 reserva = "#SB-2026-8605"
