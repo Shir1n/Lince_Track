@@ -43,7 +43,6 @@ fun PerfilScreen(
     onOpenSettings: () -> Unit = {}
 ) {
     var notificaciones by remember { mutableStateOf(true) }
-    var compartirGps by remember { mutableStateOf(true) }
     val scrollState = rememberScrollState()
     var isTopBarVisible by rememberSaveable { mutableStateOf(true) }
 
@@ -113,8 +112,6 @@ fun PerfilScreen(
             AjustesSeguridad(
                 notificaciones = notificaciones,
                 onNotificacionesChange = { notificaciones = it },
-                compartirGps = compartirGps,
-                onGpsChange = { compartirGps = it },
                 onOpenSettings = onOpenSettings
             )
             CerrarSesion(onLogout = onLogout)
@@ -805,8 +802,6 @@ private fun Estadistica(
 private fun AjustesSeguridad(
     notificaciones: Boolean,
     onNotificacionesChange: (Boolean) -> Unit,
-    compartirGps: Boolean,
-    onGpsChange: (Boolean) -> Unit,
     onOpenSettings: () -> Unit
 ) {
     Tarjeta {
@@ -814,7 +809,7 @@ private fun AjustesSeguridad(
             IconoCircular(Icons.Outlined.Tune)
             Spacer(Modifier.width(9.dp))
             Text(
-                "Ajustes y Seguridad",
+                "Ajustes y Soporte",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -829,13 +824,6 @@ private fun AjustesSeguridad(
             descripcion = "Alertas de tráfico y paradas prioritarias",
             activo = notificaciones,
             onChange = onNotificacionesChange
-        )
-        AjusteSwitch(
-            icono = Icons.Outlined.GpsFixed,
-            titulo = "Compartir GPS en tiempo real",
-            descripcion = null,
-            activo = compartirGps,
-            onChange = onGpsChange
         )
         AjusteNavegacion(
             icono = Icons.Outlined.Palette,

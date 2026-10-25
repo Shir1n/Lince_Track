@@ -20,7 +20,13 @@ data class Servicio(
     val horaInicio: LocalTime,
     val horaFin: LocalTime,
     val pasajeros: Int,
+    val nombresPasajeros: List<String>,
+    val idiomaTour: String,
+    val liderGrupo: String,
+    val fonoLider: String,
+    val notasGrupo: String,
     val guia: String,
+    val conductor: String,
     val tarifa: Int,
     val estado: EstadoServicio,
     val reserva: String
