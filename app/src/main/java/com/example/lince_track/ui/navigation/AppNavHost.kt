@@ -288,7 +288,12 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 exitTransition = { bottomNavExitTransition() },
                 popEnterTransition = { bottomNavEnterTransition() },
                 popExitTransition = { bottomNavExitTransition() }
-            ) { GuiaAsignacionesScreen() }
+            ) {
+                GuiaAsignacionesScreen(
+                    onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) },
+                    onRouteClick = { id -> navController.navigate(Routes.rutaMapa(id)) }
+                )
+            }
             composable(
                 route = Routes.GUIA_CONEXION,
                 enterTransition = { bottomNavEnterTransition() },
