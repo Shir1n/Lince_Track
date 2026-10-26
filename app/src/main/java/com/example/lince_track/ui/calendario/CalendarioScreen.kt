@@ -272,6 +272,7 @@ private fun CalendarioSection(
                             selected = date == selectedDate,
                             isToday = date == hoy,
                             statuses = date?.let { estadosPresentes(serviciosPorFecha[it]) } ?: emptyList(),
+                            serviciosPorFecha = serviciosPorFecha,
                             onClick = { if (date != null) onSeleccionar(date) }
                         )
                     }
@@ -287,11 +288,13 @@ private fun RowScope.DayCell(
     selected: Boolean,
     isToday: Boolean,
     statuses: List<EstadoServicio>,
+    serviciosPorFecha: Map<LocalDate, List<Servicio>>,
     onClick: () -> Unit
 ) {
-    val shape = RoundedCornerShape(10.dp)
+    val shape = RoundedCornerShape(12.dp)
     val background = when {
-        selected -> MaterialTheme.colorScheme.secondaryContainer
+        selected -> MaterialTheme.colorScheme.secondary
+        isToday && !selected -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
         else -> Color.Transparent
     }
 
@@ -305,7 +308,7 @@ private fun RowScope.DayCell(
             .background(background)
             .then(
                 if (isToday && !selected) {
-                    Modifier.border(1.dp, MaterialTheme.colorScheme.secondary, shape)
+                    Modifier.border(1.5.dp, MaterialTheme.colorScheme.secondary, shape)
                 } else {
                     Modifier
                 }
@@ -315,21 +318,44 @@ private fun RowScope.DayCell(
         if (date != null) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(vertical = 2.dp)
             ) {
                 Text(
                     text = date.dayOfMonth.toString(),
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (selected || isToday) FontWeight.Bold else FontWeight.Normal,
+                    fontWeight = if (selected || isToday) FontWeight.Bold else FontWeight.Medium,
                     color = if (selected) {
-                        MaterialTheme.colorScheme.onSecondaryContainer
+                        MaterialTheme.colorScheme.onSecondary
+                    } else if (isToday) {
+                        MaterialTheme.colorScheme.secondary
                     } else {
                         MaterialTheme.colorScheme.onSurface
                     }
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    statuses.take(3).forEach { estado ->
-                        StatusDot(estado)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    if (statuses.isNotEmpty()) {
+                        val cantidad = serviciosPorFecha[date]?.size ?: statuses.size
+                        val primerEstado = statuses.first()
+                        val color = when (primerEstado) {
+                            EstadoServicio.PENDIENTE -> MaterialTheme.colorScheme.tertiary
+                            EstadoServicio.ACEPTADO -> MaterialTheme.colorScheme.secondary
+                            EstadoServicio.RECHAZADO -> MaterialTheme.colorScheme.error
+                        }
+                        Text(
+                            text = "$cantidad",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = color,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(color.copy(alpha = 0.12f))
+                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
                     }
                 }
             }
@@ -342,29 +368,36 @@ private fun StatusDot(estado: EstadoServicio) {
     val color = when (estado) {
         EstadoServicio.PENDIENTE -> MaterialTheme.colorScheme.tertiary
         EstadoServicio.ACEPTADO -> MaterialTheme.colorScheme.secondary
-        EstadoServicio.RECHAZADO -> MaterialTheme.colorScheme.outline
+        EstadoServicio.RECHAZADO -> MaterialTheme.colorScheme.error
     }
     Box(
         modifier = Modifier
-            .size(5.dp)
+            .size(6.dp)
             .clip(CircleShape)
             .background(color)
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FiltroChips(filtro: FiltroAgenda, onFiltro: (FiltroAgenda) -> Unit) {
-    FlowRow(
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         FiltroAgenda.entries.forEach { opcion ->
             FilterChip(
                 selected = filtro == opcion,
                 onClick = { onFiltro(opcion) },
-                label = { Text(opcion.label) },
+                label = {
+                    Text(
+                        text = opcion.label,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                },
+                modifier = Modifier.weight(1f),
                 colors = FilterChipDefaults.filterChipColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     labelColor = MaterialTheme.colorScheme.onSurfaceVariant,

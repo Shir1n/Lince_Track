@@ -43,6 +43,12 @@ seguimiento del estado de los servicios.
 | Navegación | Navigation Compose 2.10.2 |
 | Diagramas | Mermaid |
 
+##  Planificación del Proyecto
+
+Para llevar un control de las tareas, pendientes y avances del proyecto utilizamos **Trello**.
+
+[![Trello](https://img.shields.io/badge/Trello-LinceTrack-0052CC?style=for-the-badge&logo=trello&logoColor=white)](https://trello.com/invite/b/6adb4d7f1dcb5139510fb058/ATTI72f8bfc1875b16743e30d6cfd2711b7e4DC0D4F1/lincetrack)
+
 ##  Cómo ejecutar
 
 ### Requisitos

@@ -1,5 +1,11 @@
 package com.example.lince_track.ui.perfil
 
+import android.Manifest
+import android.graphics.Bitmap
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
@@ -26,15 +32,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.rememberAsyncImagePainter
 import com.example.lince_track.R
 
 @Composable
@@ -217,6 +227,63 @@ private fun PerfilTopBar() {
 
 @Composable
 private fun ResumenPerfil() {
+    val context = LocalContext.current
+    var fotoUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var fotoBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var mostrarSelector by remember { mutableStateOf(false) }
+
+    val camaraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            fotoBitmap = bitmap
+            fotoUri = null
+        }
+    }
+
+    val permisoCamaraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { autorizado ->
+        if (autorizado) {
+            camaraLauncher.launch(null)
+        }
+    }
+
+    val galeriaLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            fotoUri = uri.toString()
+            fotoBitmap = null
+        }
+    }
+
+    if (mostrarSelector) {
+        AlertDialog(
+            onDismissRequest = { mostrarSelector = false },
+            title = { Text("Cambiar foto de perfil") },
+            text = { Text("Elige una opción") },
+            confirmButton = {
+                TextButton(onClick = {
+                    mostrarSelector = false
+                    permisoCamaraLauncher.launch(Manifest.permission.CAMERA)
+                }) {
+                    Text("Tomar foto")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    mostrarSelector = false
+                    galeriaLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                }) {
+                    Text("Elegir de galería")
+                }
+            }
+        )
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -230,23 +297,31 @@ private fun ResumenPerfil() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(contentAlignment = Alignment.BottomEnd) {
+                val painter = when {
+                    fotoBitmap != null -> BitmapPainter(fotoBitmap!!.asImageBitmap())
+                    !fotoUri.isNullOrEmpty() -> rememberAsyncImagePainter(model = fotoUri)
+                    else -> painterResource(R.drawable.perfil1)
+                }
                 Image(
-                    painter = painterResource(R.drawable.perfil1),
+                    painter = painter,
                     contentDescription = "Foto del conductor",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(76.dp)
                         .clip(CircleShape)
                         .border(3.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                        .clickable { mostrarSelector = true }
                 )
                 Surface(
                     color = MaterialTheme.colorScheme.secondary,
                     shape = CircleShape,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clickable { mostrarSelector = true }
                 ) {
                     Icon(
-                        Icons.Filled.Check,
-                        contentDescription = "Verificado",
+                        Icons.Outlined.PhotoCamera,
+                        contentDescription = "Cambiar foto",
                         tint = MaterialTheme.colorScheme.onSecondary,
                         modifier = Modifier.padding(4.dp)
                     )
