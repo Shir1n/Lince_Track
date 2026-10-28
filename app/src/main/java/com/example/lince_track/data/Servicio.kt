@@ -29,7 +29,13 @@ data class Servicio(
     val conductor: String,
     val tarifa: Int,
     val estado: EstadoServicio,
-    val reserva: String
+    val reserva: String,
+    /** TRANSFER, GUIDED_SERVICE o EXCURSION (vacío en datos antiguos). */
+    val tipo: String = "",
+    /** StatusPL de la API: CF, RQ, DL, CX o null si no hay staff asignado. */
+    val statusPL: String? = null,
+    /** true si horaFin fue estimada (la API solo entrega la hora de pickup). */
+    val horaFinEstimada: Boolean = false
 )
 
 private val horaFormatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.ENGLISH)

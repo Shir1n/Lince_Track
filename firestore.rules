@@ -2,18 +2,39 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Colección de usuarios: uid -> { email, nombre, rol }
-    // Solo el administrador crea/edita estos documentos desde la consola.
+    // ---------- Funciones auxiliares ----------
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function perfil() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    // Usuario autenticado, con documento en "usuarios" y rol válido.
+    // (Cuando agreguen el campo "activo", sumar: && perfil().get('activo', true) == true)
+    function tieneAcceso() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && perfil().rol in ['administrador', 'conductor', 'guia'];
+    }
+
+    function esAdmin() {
+      return tieneAcceso() && perfil().rol == 'administrador';
+    }
+
+    // ---------- Colecciones ----------
+
+    // usuarios/{uid}: { email, nombre, rol }
+    // Cada usuario lee solo su documento (para obtener su rol); el admin lee todos.
+    // Nadie modifica roles desde la app: solo desde la consola o un script con Admin SDK.
     match /usuarios/{uid} {
-      // Un usuario autenticado puede leer su propio documento (para obtener su rol).
-      allow read: if request.auth != null && request.auth.uid == uid;
-      // Nadie desde la app puede modificar roles: solo el admin desde la consola.
+      allow read: if signedIn() && (request.auth.uid == uid || esAdmin());
       allow write: if false;
     }
 
-    // El resto de las colecciones de la app requieren estar autenticado.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
-    }
+    // Todo lo demás queda DENEGADO por defecto.
+    // Cada colección nueva (respuestas, checkins, incidencias, alertas...) se agrega
+    // aquí con su propio bloque "match" y sus reglas. No usar comodines {document=**}.
   }
 }
