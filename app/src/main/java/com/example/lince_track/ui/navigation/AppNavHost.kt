@@ -24,6 +24,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.padding
@@ -40,6 +41,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.Rol
+import com.example.lince_track.ui.admin.AdminPerfilScreen
 import com.example.lince_track.ui.ajustes.AjustesScreen
 import com.example.lince_track.ui.alertas.AlertasScreen
 import com.example.lince_track.ui.calendario.CalendarioScreen
@@ -57,7 +59,7 @@ private fun getBottomNavIndex(route: String?): Int {
         Routes.SERVICIOS, Routes.GUIA_ASIGNACIONES -> 0
         Routes.CALENDARIO -> 1
         Routes.ALERTAS, Routes.GUIA_CONEXION -> 2
-        Routes.PERFIL, Routes.GUIA_PERFIL -> 3
+        Routes.PERFIL, Routes.GUIA_PERFIL, Routes.ADMIN_PERFIL -> 3
         else -> -1
     }
 }
@@ -107,6 +109,9 @@ object Routes {
     const val GUIA_CONEXION = "guia_conexion"
     const val GUIA_PERFIL = "guia_perfil"
 
+    // Rutas del administrador
+    const val ADMIN_PERFIL = "admin_perfil"
+
     fun detalleServicio(id: String) = "detalle_servicio/$id"
     fun rutaMapa(id: String) = "ruta_mapa/$id"
 }
@@ -124,7 +129,14 @@ private fun bottomNavItems(rol: Rol?): List<BottomNavItem> = when (rol) {
         BottomNavItem(Routes.GUIA_CONEXION, "Conexión", Icons.Outlined.LocationOn),
         BottomNavItem(Routes.GUIA_PERFIL, "Perfil", Icons.Outlined.Person)
     )
-    // Conductor (y por ahora administrador, hasta tener pantallas propias)
+    // Por ahora el administrador usa las pantallas del conductor, salvo el perfil
+    Rol.ADMINISTRADOR -> listOf(
+        BottomNavItem(Routes.SERVICIOS, "Servicios", Icons.Outlined.Home),
+        BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth),
+        BottomNavItem(Routes.ALERTAS, "Alertas", Icons.Outlined.Notifications),
+        BottomNavItem(Routes.ADMIN_PERFIL, "Perfil", Icons.Outlined.Person)
+    )
+    // Conductor
     else -> listOf(
         BottomNavItem(Routes.SERVICIOS, "Servicios", Icons.Outlined.Home),
         BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth),
@@ -138,6 +150,17 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val rol by AuthRepository.rolActual.collectAsState()
+
+    // Si Android mató el proceso, la navegación se restaura sin pasar por el login:
+    // hay que recuperar aquí el perfil de la sesión.
+    LaunchedEffect(currentRoute) {
+        val usuario = AuthRepository.usuarioActual
+        if (currentRoute != null && currentRoute != Routes.LOGIN &&
+            usuario != null && AuthRepository.rolActual.value == null
+        ) {
+            AuthRepository.cargarRolActual(usuario.uid)
+        }
+    }
 
     val items = bottomNavItems(rol)
     val showBottomBar = items.any { it.route == currentRoute }
@@ -315,6 +338,25 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                             popUpTo(0) { inclusive = true }
                         }
                     }
+                )
+            }
+
+            // Pantallas del administrador
+            composable(
+                route = Routes.ADMIN_PERFIL,
+                enterTransition = { bottomNavEnterTransition() },
+                exitTransition = { bottomNavExitTransition() },
+                popEnterTransition = { bottomNavEnterTransition() },
+                popExitTransition = { bottomNavExitTransition() }
+            ) {
+                AdminPerfilScreen(
+                    onLogout = {
+                        AuthRepository.cerrarSesion()
+                        navController.navigate(Routes.LOGIN) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    },
+                    onOpenSettings = { navController.navigate(Routes.AJUSTES) }
                 )
             }
         }

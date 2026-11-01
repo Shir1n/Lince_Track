@@ -51,6 +51,7 @@ import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.formatFechaCorta
 import com.example.lince_track.data.formatHora
 import com.example.lince_track.data.formatPrecioCLP
+import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.RejectServicioDialog
 import kotlinx.coroutines.launch
@@ -62,6 +63,7 @@ fun ServiciosScreen(
     onRouteClick: (String) -> Unit = {}
 ) {
     val servicios by ServicioRepository.servicios.collectAsState()
+    val error by ServicioRepository.error.collectAsState()
     val hoy = LocalDate.now()
     val serviciosHoy = remember(servicios, hoy) {
         servicios.filter { it.fecha == hoy }.sortedBy { it.horaInicio }
@@ -108,7 +110,9 @@ fun ServiciosScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                if (serviciosHoy.isEmpty()) {
+                error?.let { AvisoServiciosCard(it) }
+
+                if (serviciosHoy.isEmpty() && error == null) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
