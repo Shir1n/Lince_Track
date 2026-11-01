@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import com.example.lince_track.R
+import com.example.lince_track.ui.components.SoporteDialog
 
 @Composable
 fun PerfilScreen(
@@ -879,6 +880,8 @@ private fun AjustesSeguridad(
     onNotificacionesChange: (Boolean) -> Unit,
     onOpenSettings: () -> Unit
 ) {
+    var mostrarSoporte by remember { mutableStateOf(false) }
+
     Tarjeta {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconoCircular(Icons.Outlined.Tune)
@@ -910,8 +913,12 @@ private fun AjustesSeguridad(
             icono = Icons.Outlined.SupportAgent,
             titulo = "Contactar Soporte TI / Mesa de Ayuda",
             descripcion = "Línea directa operativa 24/7",
-            onClick = { }
+            onClick = { mostrarSoporte = true }
         )
+    }
+
+    if (mostrarSoporte) {
+        SoporteDialog(onDismiss = { mostrarSoporte = false })
     }
 }
 
