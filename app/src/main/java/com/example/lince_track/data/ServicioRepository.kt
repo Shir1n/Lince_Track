@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,10 +29,15 @@ import kotlinx.coroutines.launch
  *
  * - Los servicios vienen de la API de Southbound (solo lectura). Si no hay clave en
  *   local.properties (LINCE_API_KEY), se usan datos de ejemplo con la misma forma.
+ * - Solo se cargan con sesión iniciada y según el perfil del usuario (AuthRepository);
+ *   al cerrar sesión se borra todo.
  * - Aceptar/rechazar se guarda por ahora solo en memoria (la API no permite escribir).
  *   El siguiente paso es guardar esas respuestas en Firestore.
  */
 object ServicioRepository {
+
+    private const val CUENTA_SIN_VINCULAR =
+        "Tu cuenta aún no está vinculada. Contacta al administrador."
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -57,28 +63,49 @@ object ServicioRepository {
     private val _cargando = MutableStateFlow(false)
     val cargando: StateFlow<Boolean> = _cargando.asStateFlow()
 
-    private val _error = MutableStateFlow<String?>(null)
-    /** Último error de carga, listo para mostrar en pantalla (null si no hay). */
-    val error: StateFlow<String?> = _error.asStateFlow()
+    private val errorCarga = MutableStateFlow<String?>(null)
+    /** Último error (de carga o de la cuenta), listo para mostrar en pantalla (null si no hay). */
+    val error: StateFlow<String?> =
+        combine(errorCarga, AuthRepository.errorPerfil) { carga, perfil -> perfil ?: carga }
+            .stateIn(scope, SharingStarted.Eagerly, null)
 
-    private var filtroActual = FiltroServicios.porDefecto()
+    /** Qué pedir a la fuente; null si no hay nada que cargar para el usuario actual. */
+    private var filtroActual: FiltroServicios? = null
     private var cargaEnCurso: Job? = null
 
     init {
+        scope.launch {
+            AuthRepository.perfilActual.collect { aplicarPerfil(it) }
+        }
+    }
+
+    /** Descarta los datos del usuario anterior y carga los del nuevo. */
+    private suspend fun aplicarPerfil(perfil: PerfilUsuario?) {
+        // Se espera a que termine para que una carga antigua no escriba sobre los datos nuevos.
+        cargaEnCurso?.cancelAndJoin()
+        serviciosFuente.value = emptyList()
+        respuestasLocales.value = emptyMap()
+        errorCarga.value = null
+
+        filtroActual = perfil?.let { FiltroServicios.paraPerfil(it) }
+        if (perfil != null && filtroActual == null) {
+            errorCarga.value = CUENTA_SIN_VINCULAR
+            LinceLogger.w("SERVICIOS", "Cuenta de ${perfil.rol.etiqueta} sin id de la API")
+        }
         refrescar()
     }
 
     /** Vuelve a pedir los servicios. Si ya hay una carga en curso, no lanza otra. */
-    fun refrescar(filtro: FiltroServicios = filtroActual): Job {
+    fun refrescar(): Job? {
         cargaEnCurso?.takeIf { it.isActive }?.let { return it }
-        filtroActual = filtro
+        val filtro = filtroActual ?: return null
         return scope.launch {
             _cargando.value = true
             try {
                 val dtos = fuente.obtener(filtro)
                 val convertidos = dtos.mapNotNull { ServicioMapper.aDominio(it) }
                 serviciosFuente.value = convertidos
-                _error.value = null
+                errorCarga.value = null
                 LinceLogger.i(
                     tag = "SERVICIOS",
                     message = "${convertidos.size} servicios cargados desde ${fuente.nombre}",
@@ -89,7 +116,7 @@ object ServicioRepository {
                 throw e
             } catch (e: Throwable) {
                 val error = e.aLinceApiException()
-                _error.value = error.message
+                errorCarga.value = error.message
                 LinceLogger.e("SERVICIOS", "No se pudieron cargar los servicios (${fuente.nombre})", error)
             } finally {
                 _cargando.value = false

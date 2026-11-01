@@ -52,6 +52,7 @@ import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.formatFechaCorta
 import com.example.lince_track.data.formatHora
+import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.RejectServicioDialog
 import kotlinx.coroutines.launch
@@ -60,24 +61,19 @@ import java.time.LocalDate
 /**
  * Lista de excursiones/traslados asignados al guía logueado.
  *
- * Basada en ServiciosScreen: muestra los servicios del día filtrados por el
- * nombre del guía (campo `guia` de Servicio).
- *
- * TODO: obtener el nombre del guía desde la sesión (AuthRepository) en lugar
- * del valor por defecto.
+ * Basada en ServiciosScreen: muestra los servicios del día. ServicioRepository ya
+ * entrega solo los del guía con sesión iniciada (por su guiaId).
  */
 @Composable
 fun GuiaAsignacionesScreen(
-    guiaNombre: String = "Andrea Soto",
     onServiceClick: (String) -> Unit = {},
     onRouteClick: (String) -> Unit = {}
 ) {
     val servicios by ServicioRepository.servicios.collectAsState()
+    val error by ServicioRepository.error.collectAsState()
     val hoy = LocalDate.now()
-    val serviciosHoy = remember(servicios, hoy, guiaNombre) {
-        servicios
-            .filter { it.fecha == hoy && it.guia.equals(guiaNombre, ignoreCase = true) }
-            .sortedBy { it.horaInicio }
+    val serviciosHoy = remember(servicios, hoy) {
+        servicios.filter { it.fecha == hoy }.sortedBy { it.horaInicio }
     }
 
     val scope = rememberCoroutineScope()
@@ -121,7 +117,9 @@ fun GuiaAsignacionesScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                if (serviciosHoy.isEmpty()) {
+                error?.let { AvisoServiciosCard(it) }
+
+                if (serviciosHoy.isEmpty() && error == null) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),

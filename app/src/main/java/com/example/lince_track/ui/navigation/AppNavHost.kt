@@ -24,6 +24,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.padding
@@ -138,6 +139,17 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val rol by AuthRepository.rolActual.collectAsState()
+
+    // Si Android mató el proceso, la navegación se restaura sin pasar por el login:
+    // hay que recuperar aquí el perfil de la sesión.
+    LaunchedEffect(currentRoute) {
+        val usuario = AuthRepository.usuarioActual
+        if (currentRoute != null && currentRoute != Routes.LOGIN &&
+            usuario != null && AuthRepository.rolActual.value == null
+        ) {
+            AuthRepository.cargarRolActual(usuario.uid)
+        }
+    }
 
     val items = bottomNavItems(rol)
     val showBottomBar = items.any { it.route == currentRoute }

@@ -1,5 +1,7 @@
 package com.example.lince_track.data.servicios
 
+import com.example.lince_track.data.PerfilUsuario
+import com.example.lince_track.data.Rol
 import com.example.lince_track.data.remote.LinceApi
 import com.example.lince_track.data.remote.LinceApiException
 import com.example.lince_track.data.remote.aLinceApiException
@@ -13,8 +15,8 @@ import java.time.LocalDate
  *
  * @property oficina código de oficina (SCL, PUX, PUQ). Por defecto PUX (Puerto Varas),
  *   que es donde opera la app hoy; null = todas las oficinas.
- * @property guiaId / transportistaId id de la persona en la API. Cuando cada usuario
- *   tenga su id guardado en Firestore (usuarios/{uid}), se filtrará por aquí.
+ * @property guiaId / transportistaId id de la persona en la API. Viene del perfil del
+ *   usuario en Firestore (usuarios/{uid}); ver [paraPerfil].
  */
 data class FiltroServicios(
     val desde: LocalDate,
@@ -31,6 +33,20 @@ data class FiltroServicios(
             desde = hoy.minusDays(7),
             hasta = hoy.plusDays(30)
         )
+
+        /**
+         * Filtro según el rol: el conductor ve lo suyo por transportistaId, el guía por
+         * guiaId y el administrador toda la oficina. Devuelve null si a un conductor o guía
+         * le falta su id: en ese caso no se pide nada, para no mostrarle servicios ajenos.
+         */
+        fun paraPerfil(perfil: PerfilUsuario, hoy: LocalDate = LocalDate.now()): FiltroServicios? {
+            val base = porDefecto(hoy)
+            return when (perfil.rol) {
+                Rol.ADMINISTRADOR -> base
+                Rol.CONDUCTOR -> perfil.transportistaId?.let { base.copy(transportistaId = it) }
+                Rol.GUIA -> perfil.guiaId?.let { base.copy(guiaId = it) }
+            }
+        }
     }
 }
 
