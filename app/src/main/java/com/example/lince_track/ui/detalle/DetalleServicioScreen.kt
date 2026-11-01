@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Call
+import androidx.compose.material.icons.outlined.Chat
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationOn
@@ -62,6 +63,7 @@ import com.example.lince_track.data.formatHora
 import com.example.lince_track.data.formatPrecioCLP
 import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.RejectServicioDialog
+import com.example.lince_track.util.abrirWhatsApp
 import kotlinx.coroutines.launch
 
 @Composable
@@ -399,6 +401,22 @@ private fun PassengersCard(servicio: Servicio) {
                         Icon(
                             imageVector = Icons.Outlined.Call,
                             contentDescription = "Llamar al líder del grupo",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+                IconButton(onClick = {
+                    abrirWhatsApp(context, servicio.fonoLider)
+                }) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(MaterialTheme.colorScheme.surface, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Chat,
+                            contentDescription = "Abrir WhatsApp del líder del grupo",
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
