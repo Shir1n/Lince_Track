@@ -89,6 +89,7 @@ import com.example.lince_track.data.formatHora
 import com.example.lince_track.data.clima.TipoClima
 import com.example.lince_track.util.LinceLogConsoleDialog
 import com.example.lince_track.util.LinceLogger
+import com.example.lince_track.util.abrirWhatsApp
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -544,8 +545,7 @@ fun RutaMapaScreen(
                     when (activeRole) {
                         RolMapa.TRANSPORTISTA, RolMapa.GUIA -> showReportDialog = true
                         RolMapa.COORDINADOR -> {
-                            val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:+56987654321"))
-                            context.startActivity(dialIntent)
+                            abrirWhatsApp(context, "+56987654321")
                         }
                     }
                 }
