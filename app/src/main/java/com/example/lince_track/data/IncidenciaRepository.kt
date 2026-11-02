@@ -61,13 +61,28 @@ object IncidenciaRepository {
     ).confirmada()
 
     /** @return true si el servidor lo confirmó; false si sigue en cola por falta de conexión. */
-    suspend fun resolver(id: String, adminUid: String): Boolean =
+    suspend fun responder(id: String, adminUid: String, respuesta: String): Boolean =
         firestore.collection(COLECCION).document(id).update(
             mapOf(
-                "resuelta" to true,
-                "resueltaEn" to FieldValue.serverTimestamp(),
-                "resueltaPor" to adminUid
+                "enGestion" to true,
+                "respuesta" to respuesta,
+                "atendidaEn" to FieldValue.serverTimestamp(),
+                "atendidaPor" to adminUid
             )
+        ).confirmada()
+
+    /**
+     * Con [respuesta] vacía se mantiene la anterior.
+     * @return true si el servidor lo confirmó; false si sigue en cola por falta de conexión.
+     */
+    suspend fun resolver(id: String, adminUid: String, respuesta: String): Boolean =
+        firestore.collection(COLECCION).document(id).update(
+            buildMap<String, Any> {
+                put("resuelta", true)
+                put("resueltaEn", FieldValue.serverTimestamp())
+                put("resueltaPor", adminUid)
+                if (respuesta.isNotBlank()) put("respuesta", respuesta)
+            }
         ).confirmada()
 
     private fun DocumentSnapshot.aIncidencia(): IncidenciaServicio? {
@@ -85,7 +100,9 @@ object IncidenciaRepository {
             tipo = tipo,
             detalle = getString("detalle").orEmpty(),
             creadaEn = creadaEn,
-            resuelta = getBoolean("resuelta") == true
+            resuelta = getBoolean("resuelta") == true,
+            enGestion = getBoolean("enGestion") == true,
+            respuesta = getString("respuesta").orEmpty()
         )
     }
 }
