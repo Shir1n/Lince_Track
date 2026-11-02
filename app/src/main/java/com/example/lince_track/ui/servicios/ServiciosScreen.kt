@@ -1,4 +1,4 @@
-package com.example.lince_track.ui.servicios
+ package com.example.lince_track.ui.servicios
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -42,6 +42,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -226,9 +227,9 @@ private fun TopBar() {
 
 @Composable
 private fun SummaryKpiCard(servicios: List<Servicio>, terminados: Int, onVerTerminados: () -> Unit) {
-    val aceptados = servicios.filter { it.estado == EstadoServicio.ACEPTADO }
-    val pendientes = servicios.filter { it.estado == EstadoServicio.PENDIENTE }
-    val saldo = aceptados.sumOf { it.tarifa }
+    val aceptados = servicios.count { it.estado == EstadoServicio.ACEPTADO }
+    val pendientes = servicios.count { it.estado == EstadoServicio.PENDIENTE }
+    val rechazados = servicios.count { it.estado == EstadoServicio.RECHAZADO }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -236,51 +237,65 @@ private fun SummaryKpiCard(servicios: List<Servicio>, terminados: Int, onVerTerm
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
+        Text(
+            text = "Resumen",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(start = 16.dp, top = 12.dp)
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
+                .padding(top = 8.dp, bottom = 12.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Column {
-                if (saldo > 0) {
-                    Text(
-                        text = "Saldo acumulado hoy:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "${formatPrecioCLP(saldo)} CLP",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                } else {
-                    Text(
-                        text = "Resumen de hoy",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = (aceptados.size + pendientes.size).toString(),
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = if (pendientes.size == 1) "1 pendiente" else "${pendientes.size} pendientes",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            KpiStat(
+                valor = "$aceptados",
+                etiqueta = "Aceptados",
+                colorValor = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.weight(1f)
+            )
+            KpiStat(
+                valor = "$pendientes",
+                etiqueta = "Pendientes",
+                colorValor = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.weight(1f)
+            )
+            KpiStat(
+                valor = "$rechazados",
+                etiqueta = "Rechazados",
+                colorValor = MaterialTheme.colorScheme.error,
+                modifier = Modifier.weight(1f)
+            )
         }
         VerTerminadosBoton(terminados, onVerTerminados)
+    }
+}
+
+@Composable
+private fun KpiStat(
+    valor: String,
+    etiqueta: String,
+    colorValor: Color,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = valor,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Black,
+            color = colorValor
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = etiqueta,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

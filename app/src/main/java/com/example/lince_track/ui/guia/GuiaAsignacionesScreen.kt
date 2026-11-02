@@ -241,10 +241,17 @@ private fun SummaryKpiCard(servicios: List<Servicio>, terminados: Int, onVerTerm
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
+        Text(
+            text = "Resumen",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(start = 16.dp, top = 12.dp)
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp),
+                .padding(top = 8.dp, bottom = 12.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             KpiStat(
