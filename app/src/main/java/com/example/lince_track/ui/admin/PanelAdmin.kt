@@ -40,7 +40,7 @@ data class FilaPanel(
 object PanelAdmin {
 
     const val RECHAZADO_EN_API = "Rechazado en Southbound"
-    private const val MOTIVO_DESCONOCIDO = "Motivo no indicado"
+    const val MOTIVO_DESCONOCIDO = "Motivo no indicado"
 
     fun totales(servicios: List<Servicio>) = TotalesPanel(
         pendientes = servicios.count { it.estado == EstadoServicio.PENDIENTE },
