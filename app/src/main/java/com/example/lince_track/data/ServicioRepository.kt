@@ -366,6 +366,9 @@ object ServicioRepository {
         }
         val actual = buscarPorId(id)
             ?: return Result.failure(IllegalStateException("Asignación no encontrada"))
+        if (_checkins.value[id]?.finalizado == true) {
+            return Result.failure(IllegalStateException("Este servicio ya terminó"))
+        }
         if (actual.estado !in desde) {
             return Result.failure(IllegalStateException("Esta asignación ya fue respondida"))
         }

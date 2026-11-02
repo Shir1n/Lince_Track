@@ -4,7 +4,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.animation.AnimatedContentTransitionScope
@@ -56,6 +55,7 @@ import com.example.lince_track.ui.calendario.CalendarioScreen
 import com.example.lince_track.ui.detalle.DetalleServicioScreen
 import com.example.lince_track.ui.guia.ConexionConductorScreen
 import com.example.lince_track.ui.guia.GuiaAsignacionesScreen
+import com.example.lince_track.ui.historial.ServiciosTerminadosScreen
 import com.example.lince_track.ui.login.LoginScreen
 import com.example.lince_track.ui.perfil.PerfilRealScreen
 import com.example.lince_track.ui.perfil.PerfilScreen
@@ -110,6 +110,7 @@ object Routes {
     const val RUTA_MAPA = "ruta_mapa/{servicioId}"
     const val CALENDARIO = "calendario"
     const val ALERTAS = "alertas"
+    const val TERMINADOS = "terminados"
     const val PERFIL = "perfil"
     const val AJUSTES = "ajustes"
 
@@ -251,6 +252,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 popExitTransition = { bottomNavExitTransition() }
             ) {
                 ServiciosScreen(
+                    onVerTerminados = { navController.navigate(Routes.TERMINADOS) },
                     onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) },
                     onRouteClick = { id -> navController.navigate(Routes.rutaMapa(id)) }
                 )
@@ -332,6 +334,13 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 AjustesScreen(onBack = { navController.popBackStack() })
             }
 
+            composable(Routes.TERMINADOS) {
+                ServiciosTerminadosScreen(
+                    onBack = { navController.popBackStack() },
+                    onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) }
+                )
+            }
+
             // Pantallas del guía
             composable(
                 route = Routes.GUIA_ASIGNACIONES,
@@ -341,6 +350,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 popExitTransition = { bottomNavExitTransition() }
             ) {
                 GuiaAsignacionesScreen(
+                    onVerTerminados = { navController.navigate(Routes.TERMINADOS) },
                     onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) },
                     onRouteClick = { id -> navController.navigate(Routes.rutaMapa(id)) }
                 )

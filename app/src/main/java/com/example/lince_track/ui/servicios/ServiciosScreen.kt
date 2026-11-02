@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.EstadoServicio
+import com.example.lince_track.data.ReglasCheckin
 import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
@@ -56,20 +57,23 @@ import com.example.lince_track.data.formatPrecioCLP
 import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.RejectServicioDialog
+import com.example.lince_track.ui.historial.VerTerminadosBoton
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import com.example.lince_track.ui.theme.BarraSuperior
 
 @Composable
 fun ServiciosScreen(
+    onVerTerminados: () -> Unit = {},
     onServiceClick: (String) -> Unit = {},
     onRouteClick: (String) -> Unit = {}
 ) {
     val servicios by ServicioRepository.servicios.collectAsState()
     val error by ServicioRepository.error.collectAsState()
     val hoy = LocalDate.now()
-    val serviciosHoy = remember(servicios, hoy) {
-        servicios.filter { it.fecha == hoy }.sortedBy { it.horaInicio }
+    val checkins by ServicioRepository.checkins.collectAsState()
+    val serviciosHoy = remember(servicios, checkins, hoy) {
+        ReglasCheckin.porRealizar(servicios, checkins).filter { it.fecha == hoy }.sortedBy { it.horaInicio }
     }
 
     val scope = rememberCoroutineScope()
@@ -106,7 +110,7 @@ fun ServiciosScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                SummaryKpiCard(serviciosHoy)
+                SummaryKpiCard(serviciosHoy, ReglasCheckin.terminados(servicios, checkins).size, onVerTerminados)
 
                 Text(
                     text = "Servicios de Hoy - ${formatFechaCorta(hoy)}",
@@ -221,7 +225,7 @@ private fun TopBar() {
 }
 
 @Composable
-private fun SummaryKpiCard(servicios: List<Servicio>) {
+private fun SummaryKpiCard(servicios: List<Servicio>, terminados: Int, onVerTerminados: () -> Unit) {
     val aceptados = servicios.filter { it.estado == EstadoServicio.ACEPTADO }
     val pendientes = servicios.filter { it.estado == EstadoServicio.PENDIENTE }
     val saldo = aceptados.sumOf { it.tarifa }
@@ -276,6 +280,7 @@ private fun SummaryKpiCard(servicios: List<Servicio>) {
                 )
             }
         }
+        VerTerminadosBoton(terminados, onVerTerminados)
     }
 }
 

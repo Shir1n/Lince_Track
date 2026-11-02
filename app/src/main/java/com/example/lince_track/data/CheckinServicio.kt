@@ -41,6 +41,26 @@ object ReglasCheckin {
         return if (checkin.gpsReal) base else "$base (GPS simulado)"
     }
 
+    /** true si ya se registró el check-out, salvo que la API lo haya cancelado después. */
+    fun estaTerminado(servicio: Servicio, checkin: CheckinServicio?): Boolean =
+        checkin?.finalizado == true && servicio.estado == EstadoServicio.ACEPTADO
+
+    /** Los que aún no terminan: lo que muestra la lista de trabajo del día. */
+    fun porRealizar(servicios: List<Servicio>, checkins: Map<String, CheckinServicio>): List<Servicio> =
+        servicios.filterNot { estaTerminado(it, checkins[it.id]) }
+
+    /** Del más reciente al más antiguo, según la hora del check-out. */
+    fun terminados(servicios: List<Servicio>, checkins: Map<String, CheckinServicio>): List<Servicio> =
+        servicios
+            .filter { estaTerminado(it, checkins[it.id]) }
+            .sortedByDescending { checkins[it.id]?.checkOutEn }
+
+    /** Hora real de inicio y de término: "10:32 a 12:40". */
+    fun horario(checkin: CheckinServicio, zona: ZoneId = ZoneId.systemDefault()): String {
+        val inicio = hora(checkin.checkInEn, zona)
+        return checkin.checkOutEn?.let { "$inicio a ${hora(it, zona)}" } ?: inicio
+    }
+
     private fun hora(milisegundos: Long, zona: ZoneId): String =
         formatHora(Instant.ofEpochMilli(milisegundos).atZone(zona).toLocalTime())
 }
