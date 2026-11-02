@@ -552,6 +552,7 @@ private fun GuideCard(servicio: Servicio) {
     val esGuia = rolActual == Rol.GUIA
     val etiqueta = if (esGuia) "Conductor Asignado" else "Guía Asignado"
     val nombre = if (esGuia) servicio.conductor else servicio.guia
+    val context = LocalContext.current
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -573,7 +574,7 @@ private fun GuideCard(servicio: Servicio) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            IconButton(onClick = {}) {
+            IconButton(onClick = { abrirWhatsApp(context, servicio.telefonoCompanero) }) {
                 Box(
                     modifier = Modifier
                         .size(44.dp)
@@ -582,7 +583,7 @@ private fun GuideCard(servicio: Servicio) {
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Call,
-                        contentDescription = if (esGuia) "Llamar al conductor" else "Llamar al guía",
+                        contentDescription = if (esGuia) "Abrir WhatsApp del conductor" else "Abrir WhatsApp del guía",
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }

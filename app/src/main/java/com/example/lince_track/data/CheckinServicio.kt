@@ -18,7 +18,8 @@ data class CheckinServicio(
     val checkInEn: Long,
     val distanciaM: Int,
     val gpsReal: Boolean,
-    val checkOutEn: Long? = null
+    val checkOutEn: Long? = null,
+    val uid: String? = null
 ) {
     val finalizado: Boolean get() = checkOutEn != null
 }

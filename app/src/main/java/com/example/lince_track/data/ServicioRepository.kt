@@ -93,7 +93,9 @@ object ServicioRepository {
      * Check-ins guardados en Firestore: id del servicio → check-in.
      * Los del usuario o, para el administrador, los de todos.
      */
-    val checkins: StateFlow<Map<String, CheckinServicio>> = _checkins.asStateFlow()
+    val checkins: StateFlow<Map<String, CheckinServicio>> =
+        combine(_checkins, _asignaciones, ReglasAsignacion::checkinsVigentes)
+            .stateIn(scope, SharingStarted.Eagerly, emptyMap())
     private var escuchaCheckins: Job? = null
 
     val servicios: StateFlow<List<Servicio>> =
@@ -259,7 +261,7 @@ object ServicioRepository {
         }
         val servicio = buscarPorId(id)
             ?: return Result.failure(IllegalStateException("Asignación no encontrada"))
-        if (!ReglasIncidencia.puedeReportar(servicio, _checkins.value[id])) {
+        if (!ReglasIncidencia.puedeReportar(servicio, checkins.value[id])) {
             return Result.failure(IllegalStateException("Este servicio ya no admite incidencias"))
         }
         val texto = detalle.trim()
@@ -278,19 +280,52 @@ object ServicioRepository {
     }
 
     /** @return en caso de éxito, un aviso para mostrar al usuario (null si no hay nada que avisar). */
-    suspend fun resolverIncidencia(incidencia: IncidenciaServicio): Result<String?> {
+    suspend fun resolverIncidencia(incidencia: IncidenciaServicio, respuesta: String = ""): Result<String?> {
+        val texto = respuesta.trim()
+        if (!ReglasIncidencia.respuestaValida(texto, obligatoria = false)) {
+            return Result.failure(IllegalArgumentException("El mensaje es demasiado largo"))
+        }
+        return gestionarIncidencia("No se pudo marcar como resuelta. Intenta nuevamente.") { uid ->
+            IncidenciaRepository.resolver(incidencia.id, uid, texto)
+        }
+    }
+
+    /** @return en caso de éxito, un aviso para mostrar al usuario (null si no hay nada que avisar). */
+    suspend fun responderIncidencia(incidencia: IncidenciaServicio, respuesta: String): Result<String?> {
+        val texto = respuesta.trim()
+        if (!ReglasIncidencia.respuestaValida(texto, obligatoria = true)) {
+            return Result.failure(IllegalArgumentException("Escribe una respuesta"))
+        }
+        return gestionarIncidencia("No se pudo enviar la respuesta. Intenta nuevamente.") { uid ->
+            IncidenciaRepository.responder(incidencia.id, uid, texto)
+        }
+    }
+
+    private suspend fun gestionarIncidencia(mensajeError: String, guardar: suspend (uid: String) -> Boolean): Result<String?> {
         val uid = AuthRepository.usuarioActual?.uid
         if (uid == null || AuthRepository.perfilActual.value?.rol != Rol.ADMINISTRADOR) {
-            return Result.failure(IllegalStateException("Solo el administrador puede resolver incidencias"))
+            return Result.failure(IllegalStateException("Solo el administrador gestiona incidencias"))
         }
         return try {
-            Result.success(if (IncidenciaRepository.resolver(incidencia.id, uid)) null else RESPUESTA_EN_COLA)
+            Result.success(if (guardar(uid)) null else RESPUESTA_EN_COLA)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            LinceLogger.e("SERVICIOS", "No se pudo resolver la incidencia", e)
-            Result.failure(IllegalStateException("No se pudo marcar como resuelta. Intenta nuevamente."))
+            LinceLogger.e("SERVICIOS", "No se pudo gestionar la incidencia", e)
+            Result.failure(IllegalStateException(mensajeError))
         }
+    }
+
+    /** Teléfonos de las cuentas: uid → teléfono. Vacío si no se pudieron leer. */
+    suspend fun telefonosDelPersonal(): Map<String, String> = try {
+        AsignacionRepository.personal()
+            .filter { it.telefono.isNotBlank() }
+            .associate { it.uid to it.telefono }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        LinceLogger.e("SERVICIOS", "No se pudieron leer los teléfonos", e)
+        emptyMap()
     }
 
     /** Cuentas a las que se les puede reasignar el servicio. */
@@ -316,7 +351,11 @@ object ServicioRepository {
         if (uid == null || AuthRepository.perfilActual.value?.rol != Rol.ADMINISTRADOR) {
             return Result.failure(IllegalStateException("Solo el administrador puede reasignar"))
         }
-        if (!ReglasAsignacion.puedeReasignar(servicio, _checkins.value[servicio.id])) {
+        val checkin = checkins.value[servicio.id]
+        val conIncidencia = _incidencias.value.any { it.servicioId == servicio.id && !it.resuelta }
+        val permitido = ReglasAsignacion.puedeReasignar(servicio, checkin) ||
+            (conIncidencia && ReglasAsignacion.puedeReemplazar(servicio, checkin))
+        if (!permitido) {
             return Result.failure(IllegalStateException("Este servicio ya no se puede reasignar"))
         }
         return try {
@@ -426,7 +465,7 @@ object ServicioRepository {
             return Result.failure(IllegalStateException("Esta asignación ya fue respondida"))
         }
         return try {
-            val confirmada = RespuestaRepository.guardar(uid, perfil.rol, perfil.nombre.orEmpty(), id, actual.fecha.toString(), nuevoEstado, motivo, observaciones)
+            val confirmada = RespuestaRepository.guardar(uid, perfil.rol, perfil.nombre.orEmpty(), perfil.telefono.orEmpty(), id, actual.fecha.toString(), nuevoEstado, motivo, observaciones)
             Result.success(if (confirmada) null else RESPUESTA_EN_COLA)
         } catch (e: CancellationException) {
             throw e

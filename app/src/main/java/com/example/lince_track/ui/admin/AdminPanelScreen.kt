@@ -1,11 +1,15 @@
 package com.example.lince_track.ui.admin
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,10 +43,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.lince_track.data.PersonaDisponible
+import com.example.lince_track.data.IncidenciaServicio
+import com.example.lince_track.data.ReglasAsignacion
 import com.example.lince_track.data.ReglasIncidencia
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
@@ -51,6 +58,8 @@ import com.example.lince_track.data.formatHora
 import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.IncidenciaCard
+import com.example.lince_track.ui.components.MensajeIncidenciaDialog
+import com.example.lince_track.util.abrirWhatsApp
 import java.time.LocalDate
 import kotlinx.coroutines.launch
 import com.example.lince_track.ui.theme.BarraSuperior
@@ -59,6 +68,7 @@ import com.example.lince_track.ui.theme.BarraSuperior
  * Panel del administrador: estado de los servicios de hoy y respuestas de conductores
  * y guías. Se actualiza solo cuando alguien responde.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
     val servicios by ServicioRepository.servicios.collectAsState()
@@ -68,6 +78,12 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
     val error by ServicioRepository.error.collectAsState()
     var filtro by rememberSaveable { mutableStateOf(FiltroPanel.TODOS) }
     var porReasignar by remember { mutableStateOf<Servicio?>(null) }
+    var incidenciaDelReemplazo by remember { mutableStateOf<IncidenciaServicio?>(null) }
+    var porResponder by remember { mutableStateOf<IncidenciaServicio?>(null) }
+    var porResolver by remember { mutableStateOf<IncidenciaServicio?>(null) }
+    var verResueltas by rememberSaveable { mutableStateOf(false) }
+    var telefonos by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -78,6 +94,17 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
         PanelAdmin.filas(serviciosHoy, respuestas, filtro, checkins, incidencias)
     }
     val incidenciasAbiertas = remember(incidencias) { ReglasIncidencia.abiertas(incidencias) }
+    val incidenciasResueltas = remember(incidencias) { ReglasIncidencia.resueltas(incidencias) }
+
+    LaunchedEffect(Unit) { telefonos = ServicioRepository.telefonosDelPersonal() }
+
+    fun mostrarResultado(resultado: Result<String?>, exito: String? = null) {
+        scope.launch {
+            resultado
+                .onSuccess { aviso -> (aviso ?: exito)?.let { snackbarHostState.showSnackbar(it) } }
+                .onFailure { e -> snackbarHostState.showSnackbar(e.message ?: "No se pudo completar la operación") }
+        }
+    }
     // Un rechazo de otro día también hay que resolverlo: no puede quedar escondido hasta esa fecha.
     val rechazadosProximos = remember(servicios, respuestas, checkins, hoy) {
         PanelAdmin.filas(servicios.filter { it.fecha.isAfter(hoy) }, respuestas, FiltroPanel.RECHAZADOS, checkins)
@@ -138,14 +165,52 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
                         incidencia = incidencia,
                         mostrarServicio = true,
                         onClick = { onServiceClick(incidencia.servicioId) },
-                        onResolver = {
-                            scope.launch {
-                                ServicioRepository.resolverIncidencia(incidencia)
-                                    .onSuccess { aviso -> if (aviso != null) snackbarHostState.showSnackbar(aviso) }
-                                    .onFailure { e -> snackbarHostState.showSnackbar(e.message ?: "No se pudo marcar como resuelta") }
+                        onResolver = { porResolver = incidencia },
+                        acciones = {
+                            val servicio = servicios.find { it.id == incidencia.servicioId }
+                            val telefono = telefonos[incidencia.uid]
+                            FlowRow {
+                                TextButton(onClick = { porResponder = incidencia }) {
+                                    Text(if (incidencia.enGestion) "Actualizar respuesta" else "Responder")
+                                }
+                                if (servicio != null && ReglasAsignacion.puedeReemplazar(servicio, checkins[servicio.id])) {
+                                    TextButton(onClick = {
+                                        incidenciaDelReemplazo = incidencia
+                                        porReasignar = servicio
+                                    }) {
+                                        Text("Enviar reemplazo")
+                                    }
+                                }
+                                if (telefono != null) {
+                                    TextButton(onClick = {
+                                        context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$telefono")))
+                                    }) {
+                                        Text("Llamar")
+                                    }
+                                    TextButton(onClick = { abrirWhatsApp(context, telefono) }) {
+                                        Text("WhatsApp")
+                                    }
+                                }
                             }
                         }
                     )
+                }
+            }
+
+            if (incidenciasResueltas.isNotEmpty()) {
+                TextButton(onClick = { verResueltas = !verResueltas }) {
+                    Text(
+                        if (verResueltas) "Ocultar incidencias resueltas" else "Ver incidencias resueltas (${incidenciasResueltas.size})"
+                    )
+                }
+                if (verResueltas) {
+                    incidenciasResueltas.forEach { incidencia ->
+                        IncidenciaCard(
+                            incidencia = incidencia,
+                            mostrarServicio = true,
+                            onClick = { onServiceClick(incidencia.servicioId) }
+                        )
+                    }
                 }
             }
 
@@ -211,14 +276,47 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
     porReasignar?.let { servicio ->
         ReasignarDialog(
             servicio = servicio,
-            onDismiss = { porReasignar = null },
-            onElegir = { persona ->
+            onDismiss = {
                 porReasignar = null
+                incidenciaDelReemplazo = null
+            },
+            onElegir = { persona ->
+                val incidencia = incidenciaDelReemplazo
+                porReasignar = null
+                incidenciaDelReemplazo = null
                 scope.launch {
-                    ServicioRepository.reasignar(servicio, persona)
-                        .onSuccess { aviso -> snackbarHostState.showSnackbar(aviso ?: "Asignado a ${persona.nombre}") }
-                        .onFailure { e -> snackbarHostState.showSnackbar(e.message ?: "No se pudo reasignar") }
+                    val resultado = ServicioRepository.reasignar(servicio, persona)
+                    mostrarResultado(resultado, "Asignado a ${persona.nombre}")
+                    // Quien reportó deja de ver el servicio: hay que contarle quién lo reemplaza.
+                    if (resultado.isSuccess && incidencia != null) {
+                        ServicioRepository.responderIncidencia(incidencia, "Se envió a ${persona.nombre} como reemplazo")
+                    }
                 }
+            }
+        )
+    }
+
+    porResponder?.let { incidencia ->
+        MensajeIncidenciaDialog(
+            titulo = "Responder a ${incidencia.nombre}",
+            obligatorio = true,
+            textoInicial = incidencia.respuesta,
+            onDismiss = { porResponder = null },
+            onConfirm = { mensaje ->
+                porResponder = null
+                scope.launch { mostrarResultado(ServicioRepository.responderIncidencia(incidencia, mensaje), "Respuesta enviada") }
+            }
+        )
+    }
+
+    porResolver?.let { incidencia ->
+        MensajeIncidenciaDialog(
+            titulo = "Marcar como resuelta",
+            obligatorio = false,
+            onDismiss = { porResolver = null },
+            onConfirm = { mensaje ->
+                porResolver = null
+                scope.launch { mostrarResultado(ServicioRepository.resolverIncidencia(incidencia, mensaje), "Incidencia resuelta") }
             }
         )
     }

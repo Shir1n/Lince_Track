@@ -121,16 +121,76 @@ fun ReportarIncidenciaDialog(
     )
 }
 
+/** Mensaje de Coordinación para quien reportó. */
+@Composable
+fun MensajeIncidenciaDialog(
+    titulo: String,
+    obligatorio: Boolean,
+    textoInicial: String = "",
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var mensaje by rememberSaveable { mutableStateOf(textoInicial) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(28.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Text(
+                text = titulo,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
+        text = {
+            OutlinedTextField(
+                value = mensaje,
+                onValueChange = { mensaje = it.take(ReglasIncidencia.MAX_DETALLE) },
+                placeholder = {
+                    Text(
+                        text = if (obligatorio) "Mensaje para quien reportó (Obligatorio)..." else "Mensaje para quien reportó...",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(mensaje.trim()) },
+                enabled = ReglasIncidencia.respuestaValida(mensaje, obligatorio),
+                shape = RoundedCornerShape(50)
+            ) {
+                Text("ENVIAR", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = "CANCELAR",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    )
+}
+
 /**
  * Una incidencia. Con [onResolver] muestra el botón para cerrarla; con [mostrarServicio] indica
- * de qué servicio y quién la reportó, para cuando se ve fuera del detalle.
+ * de qué servicio y quién la reportó, para cuando se ve fuera del detalle. En [acciones] van los
+ * demás botones de Coordinación.
  */
 @Composable
 fun IncidenciaCard(
     incidencia: IncidenciaServicio,
     mostrarServicio: Boolean = false,
     onClick: (() -> Unit)? = null,
-    onResolver: (() -> Unit)? = null
+    onResolver: (() -> Unit)? = null,
+    acciones: (@Composable () -> Unit)? = null
 ) {
     Card(
         modifier = Modifier
@@ -141,7 +201,7 @@ fun IncidenciaCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = ReglasIncidencia.resumen(incidencia),
+                text = "${ReglasIncidencia.resumen(incidencia)} • ${incidencia.estadoTexto}",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = if (incidencia.resuelta) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
@@ -163,18 +223,25 @@ fun IncidenciaCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            if (incidencia.resuelta) {
+            if (incidencia.respuesta.isNotBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Resuelta",
-                    style = MaterialTheme.typography.labelMedium,
+                    text = "Coordinación: ${incidencia.respuesta}",
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.secondary
                 )
-            } else if (onResolver != null) {
-                Spacer(modifier = Modifier.height(10.dp))
-                OutlinedButton(onClick = onResolver, shape = RoundedCornerShape(50)) {
-                    Text("Marcar resuelta", fontWeight = FontWeight.Bold)
+            }
+            if (!incidencia.resuelta) {
+                if (onResolver != null) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedButton(onClick = onResolver, shape = RoundedCornerShape(50)) {
+                        Text("Marcar resuelta", fontWeight = FontWeight.Bold)
+                    }
+                }
+                acciones?.let {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    it()
                 }
             }
         }

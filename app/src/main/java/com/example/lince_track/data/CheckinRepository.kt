@@ -79,7 +79,8 @@ object CheckinRepository {
             checkInEn = checkInEn,
             distanciaM = getLong("distanciaM")?.toInt() ?: 0,
             gpsReal = getBoolean("gpsReal") ?: false,
-            checkOutEn = getTimestamp("checkOutEn", estimada)?.toDate()?.time
+            checkOutEn = getTimestamp("checkOutEn", estimada)?.toDate()?.time,
+            uid = getString("uid")
         )
     }
 }

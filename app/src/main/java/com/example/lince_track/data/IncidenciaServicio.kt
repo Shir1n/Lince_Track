@@ -30,8 +30,19 @@ data class IncidenciaServicio(
     val tipo: TipoIncidencia,
     val detalle: String,
     val creadaEn: Long,
-    val resuelta: Boolean = false
-)
+    val resuelta: Boolean = false,
+    /** true desde que Coordinación respondió, hasta que la marca como resuelta. */
+    val enGestion: Boolean = false,
+    /** Lo último que Coordinación le dijo a quien reportó (vacío si aún no responde). */
+    val respuesta: String = ""
+) {
+    val estadoTexto: String
+        get() = when {
+            resuelta -> "Resuelta"
+            enGestion -> "En gestión"
+            else -> "Abierta"
+        }
+}
 
 object ReglasIncidencia {
 
@@ -40,6 +51,14 @@ object ReglasIncidencia {
     /** Un tipo que exige texto no se acepta con el detalle vacío. */
     fun detalleValido(tipo: TipoIncidencia?, detalle: String): Boolean =
         tipo != null && detalle.length <= MAX_DETALLE && (!tipo.requiereTexto || detalle.isNotBlank())
+
+    /** La respuesta de Coordinación es obligatoria al responder y opcional al resolver. */
+    fun respuestaValida(texto: String, obligatoria: Boolean): Boolean =
+        texto.length <= MAX_DETALLE && (!obligatoria || texto.isNotBlank())
+
+    /** Las ya cerradas, de la más reciente a la más antigua. */
+    fun resueltas(incidencias: List<IncidenciaServicio>): List<IncidenciaServicio> =
+        incidencias.filter { it.resuelta }.sortedByDescending { it.creadaEn }
 
     /** Se reporta mientras el servicio está a cargo de la persona: aceptado y sin check-out. */
     fun puedeReportar(servicio: Servicio, checkin: CheckinServicio?): Boolean =

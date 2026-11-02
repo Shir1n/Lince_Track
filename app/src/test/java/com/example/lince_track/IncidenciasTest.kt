@@ -1,9 +1,12 @@
 package com.example.lince_track
 
+import com.example.lince_track.data.AsignacionServicio
+import com.example.lince_track.data.AvisoLocal
 import com.example.lince_track.data.CambiosServicios
 import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.EstadoServicio
 import com.example.lince_track.data.IncidenciaServicio
+import com.example.lince_track.data.ReglasAsignacion
 import com.example.lince_track.data.ReglasIncidencia
 import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
@@ -99,6 +102,66 @@ class IncidenciasTest {
         )
 
         assertEquals("Incidencia resuelta", avisos.single().titulo)
+    }
+
+    @Test
+    fun `avisa a quien reporto cuando Coordinacion responde`() {
+        val avisos = CambiosServicios.incidencias(
+            listOf(incidencia("1")),
+            listOf(incidencia("1").copy(enGestion = true, respuesta = "Va un reemplazo")),
+            Rol.GUIA
+        )
+
+        assertEquals(AvisoLocal("8941", "Coordinación respondió", "Va un reemplazo"), avisos.single())
+    }
+
+    @Test
+    fun `al resolver el aviso lleva el mensaje de Coordinacion`() {
+        val avisos = CambiosServicios.incidencias(
+            listOf(incidencia("1")),
+            listOf(incidencia("1", resuelta = true).copy(respuesta = "Se cambió el vehículo")),
+            Rol.CONDUCTOR
+        )
+
+        assertEquals(AvisoLocal("8941", "Incidencia resuelta", "Se cambió el vehículo"), avisos.single())
+    }
+
+    @Test
+    fun `el estado pasa de abierta a en gestion y a resuelta`() {
+        assertEquals("Abierta", incidencia("1").estadoTexto)
+        assertEquals("En gestión", incidencia("1").copy(enGestion = true).estadoTexto)
+        assertEquals("Resuelta", incidencia("1", resuelta = true).copy(enGestion = true).estadoTexto)
+    }
+
+    @Test
+    fun `la respuesta es obligatoria al responder y opcional al resolver`() {
+        assertFalse(ReglasIncidencia.respuestaValida("  ", obligatoria = true))
+        assertTrue(ReglasIncidencia.respuestaValida("Va en camino", obligatoria = true))
+        assertTrue(ReglasIncidencia.respuestaValida("", obligatoria = false))
+        assertFalse(ReglasIncidencia.respuestaValida("x".repeat(501), obligatoria = false))
+    }
+
+    @Test
+    fun `se puede enviar reemplazo a un servicio aceptado o en curso`() {
+        val aceptado = servicio.copy(estado = EstadoServicio.ACEPTADO)
+
+        assertTrue(ReglasAsignacion.puedeReemplazar(aceptado, null))
+        assertTrue(ReglasAsignacion.puedeReemplazar(aceptado, checkin(null)))
+        assertFalse(ReglasAsignacion.puedeReemplazar(aceptado, checkin(5_000L)))
+        assertFalse(ReglasAsignacion.puedeReemplazar(aceptado.copy(cancelado = true), null))
+    }
+
+    @Test
+    fun `el check-in de quien fue reemplazado deja de contar`() {
+        val anterior = checkin(null).copy(servicioId = "8941", uid = "uid-carlos")
+        val asignaciones = mapOf("8941" to AsignacionServicio("8941", "uid-patricio", "Patricio Lagos"))
+
+        assertTrue(ReglasAsignacion.checkinsVigentes(mapOf("8941" to anterior), asignaciones).isEmpty())
+        val delReemplazo = anterior.copy(uid = "uid-patricio")
+        assertEquals(
+            mapOf("8941" to delReemplazo),
+            ReglasAsignacion.checkinsVigentes(mapOf("8941" to delReemplazo), asignaciones)
+        )
     }
 
     @Test

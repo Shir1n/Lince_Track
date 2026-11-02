@@ -31,16 +31,18 @@ object ReglasCompanero {
     fun completar(servicio: Servicio, candidatos: List<Servicio>): Servicio {
         val companero = buscar(servicio, candidatos) ?: return servicio
         val aceptado = companero.estado == EstadoServicio.ACEPTADO
+        val conTelefono = servicio.copy(telefonoCompanero = if (aceptado) companero.telefonoResponsable else "")
         return if (servicio.esGuiado) {
-            servicio.copy(conductor = if (aceptado) companero.conductor else SIN_ASIGNAR)
+            conTelefono.copy(conductor = if (aceptado) companero.conductor else SIN_ASIGNAR)
         } else {
-            servicio.copy(guia = if (aceptado) companero.guia else SIN_ASIGNAR)
+            conTelefono.copy(guia = if (aceptado) companero.guia else SIN_ASIGNAR)
         }
     }
 
-    /** Aplica al servicio de otra persona lo que ella publicó: su estado y su nombre real. */
+    /** Aplica al servicio de otra persona lo que ella publicó: su estado, su teléfono y su nombre real. */
     fun aplicarPublicado(companero: Servicio, publicado: RespuestaServicio?): Servicio {
         val conEstado = ReglasRespuesta.aplicar(companero, publicado)
+            .copy(telefonoResponsable = publicado?.telefono.orEmpty())
         val nombre = publicado?.nombre?.takeIf { it.isNotBlank() } ?: return conEstado
         return if (companero.esGuiado) conEstado.copy(guia = nombre) else conEstado.copy(conductor = nombre)
     }
