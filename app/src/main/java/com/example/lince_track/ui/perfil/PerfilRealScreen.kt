@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,6 +47,7 @@ import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.servicios.FiltroServicios
 import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.components.SoporteDialog
+import com.example.lince_track.ui.theme.BarraSuperior
 
 /**
  * Perfil con datos reales: la cuenta (`usuarios/{uid}`) y los servicios de la API. Lo que no
@@ -79,13 +79,12 @@ fun PerfilRealScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.primary)
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .background(BarraSuperior.fondo)
+                .padding(horizontal = 16.dp, vertical = 11.dp)
         ) {
             Text(
                 text = "Mi Perfil",
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = BarraSuperior.contenido,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )

@@ -113,6 +113,7 @@ import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import java.util.Locale
 import kotlin.math.roundToInt
+import com.example.lince_track.ui.theme.BarraSuperior
 
 enum class RolMapa(val label: String) {
     TRANSPORTISTA("Transportista"),
@@ -647,8 +648,8 @@ private fun RutaTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp)
-            .background(MaterialTheme.colorScheme.primary)
+            .height(58.dp)
+            .background(BarraSuperior.fondo)
             .padding(horizontal = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -661,12 +662,12 @@ private fun RutaTopBar(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Volver",
-                    tint = MaterialTheme.colorScheme.onPrimary
+                    tint = BarraSuperior.contenido
                 )
             }
             Text(
                 text = if (activeRole == RolMapa.COORDINADOR) "Ruta del Servicio" else "Ruta y Check-in",
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = BarraSuperior.contenido,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )

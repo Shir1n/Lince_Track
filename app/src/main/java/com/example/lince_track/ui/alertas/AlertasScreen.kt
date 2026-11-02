@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lince_track.ui.theme.BarraSuperior
 
 enum class TipoAlerta {
     ATRASO,
@@ -156,14 +157,13 @@ private fun AlertasHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.primary)
-            .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .background(BarraSuperior.fondo)
+            .padding(horizontal = 16.dp, vertical = 13.dp)
     ) {
         Column {
             Text(
                 text = "Centro de Alertas",
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = BarraSuperior.contenido,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -178,15 +178,15 @@ private fun AlertasHeader(
                     val selected = filtro == filtroSeleccionado
                     Surface(
                         shape = RoundedCornerShape(50),
-                        color = if (selected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f),
-                        border = if (selected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.35f)),
+                        color = if (selected) MaterialTheme.colorScheme.surface else BarraSuperior.contenido.copy(alpha = 0.15f),
+                        border = if (selected) null else BorderStroke(1.dp, BarraSuperior.contenido.copy(alpha = 0.35f)),
                         modifier = Modifier.clickable { onSeleccionarFiltro(filtro) }
                     ) {
                         Text(
                             text = filtro.label,
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimary,
+                            color = if (selected) MaterialTheme.colorScheme.onSurface else BarraSuperior.contenido,
                             modifier = Modifier.padding(horizontal = 18.dp, vertical = 7.dp)
                         )
                     }

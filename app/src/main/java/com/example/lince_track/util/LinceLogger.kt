@@ -77,6 +77,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.osmdroid.config.Configuration
+import com.example.lince_track.ui.theme.BarraSuperior
 
 enum class LogLevel(val label: String) {
     INFO("INFO"),
@@ -238,7 +239,7 @@ fun LinceLogConsoleDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.primary)
+                        .background(BarraSuperior.fondo)
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -248,19 +249,19 @@ fun LinceLogConsoleDialog(
                             text = "Consola de Diagnóstico Lince",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary
+                            color = BarraSuperior.contenido
                         )
                         Text(
                             text = "${allLogs.size} eventos registrados en sesión",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                            color = BarraSuperior.contenido.copy(alpha = 0.8f)
                         )
                     }
                     IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Cerrar consola",
-                            tint = MaterialTheme.colorScheme.onPrimary
+                            tint = BarraSuperior.contenido
                         )
                     }
                 }

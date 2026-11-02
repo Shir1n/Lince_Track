@@ -28,7 +28,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -55,6 +61,7 @@ import com.example.lince_track.ui.perfil.PerfilRealScreen
 import com.example.lince_track.ui.perfil.PerfilScreen
 import com.example.lince_track.ui.ruta.RutaMapaScreen
 import com.example.lince_track.ui.servicios.ServiciosScreen
+import com.example.lince_track.ui.theme.BarraSuperior
 
 private fun getBottomNavIndex(route: String?): Int {
     return when (route) {
@@ -210,6 +217,13 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             }
         }
     ) { innerPadding ->
+        // El contenido parte bajo la barra de estado: esta franja le da su color de fondo.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsTopHeight(WindowInsets.statusBars)
+                .background(BarraSuperior.estado)
+        )
         NavHost(
             navController = navController,
             startDestination = Routes.LOGIN,

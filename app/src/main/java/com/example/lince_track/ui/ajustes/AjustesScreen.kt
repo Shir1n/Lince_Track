@@ -43,6 +43,7 @@ import com.example.lince_track.ui.theme.themeModeFlow
 import com.example.lince_track.util.LinceLogConsoleDialog
 import com.example.lince_track.util.LinceLogger
 import kotlinx.coroutines.launch
+import com.example.lince_track.ui.theme.BarraSuperior
 
 @Composable
 fun AjustesScreen(onBack: () -> Unit = {}) {
@@ -150,8 +151,8 @@ private fun AjustesTopBar(onBack: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp)
-            .background(MaterialTheme.colorScheme.primary)
+            .height(51.dp)
+            .background(BarraSuperior.fondo)
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -159,12 +160,12 @@ private fun AjustesTopBar(onBack: () -> Unit) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Volver",
-                tint = MaterialTheme.colorScheme.onPrimary
+                tint = BarraSuperior.contenido
             )
         }
         Text(
             text = "Ajustes",
-            color = MaterialTheme.colorScheme.onPrimary,
+            color = BarraSuperior.contenido,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )

@@ -58,6 +58,7 @@ import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.RejectServicioDialog
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import com.example.lince_track.ui.theme.BarraSuperior
 
 @Composable
 fun ServiciosScreen(
@@ -179,8 +180,8 @@ private fun TopBar() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp)
-            .background(MaterialTheme.colorScheme.primary)
+            .height(72.dp)
+            .background(BarraSuperior.fondo)
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.CenterStart
     ) {
@@ -191,7 +192,7 @@ private fun TopBar() {
         ) {
             Text(
                 text = "Lince Track",
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = BarraSuperior.contenido,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
