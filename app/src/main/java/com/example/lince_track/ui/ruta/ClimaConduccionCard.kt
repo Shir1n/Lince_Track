@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -58,13 +59,15 @@ import com.example.lince_track.data.clima.ClimaInfo
 import com.example.lince_track.data.clima.NivelRiesgo
 import com.example.lince_track.data.clima.PresetClima
 import com.example.lince_track.data.clima.RecomendacionConduccion
+import com.example.lince_track.data.clima.RecomendacionVestimenta
 import com.example.lince_track.data.clima.TipoClima
 import kotlin.math.roundToInt
 
 @Composable
 fun ClimaConduccionCard(
     clima: ClimaInfo,
-    recomendacion: RecomendacionConduccion,
+    recomendacion: RecomendacionConduccion? = null,
+    recomendacionVestimenta: RecomendacionVestimenta? = null,
     presetActual: PresetClima,
     cargando: Boolean,
     onPresetSelected: (PresetClima) -> Unit,
@@ -207,8 +210,9 @@ fun ClimaConduccionCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Caja de recomendación personalizada con nivel de alerta
-            val alertBadgeBg = when (recomendacion.nivel) {
+            // Caja de recomendación personalizada (conducción para transportista o vestimenta para guía)
+            val nivelActual = recomendacionVestimenta?.nivel ?: recomendacion?.nivel ?: NivelRiesgo.OPTIMO
+            val alertBadgeBg = when (nivelActual) {
                 NivelRiesgo.PELIGRO -> Color(0xFFDC2626)
                 NivelRiesgo.PRECAUCION -> Color(0xFFD97706)
                 NivelRiesgo.OPTIMO -> Color(0xFF059669)
@@ -229,14 +233,17 @@ fun ClimaConduccionCard(
                     .padding(10.dp)
             ) {
                 Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Box(
                             modifier = Modifier
                                 .background(alertBadgeBg, CircleShape)
                                 .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = recomendacion.nivel.label.uppercase(),
+                                text = if (recomendacionVestimenta != null) "GUÍA" else nivelActual.label.uppercase(),
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -244,41 +251,77 @@ fun ClimaConduccionCard(
                         }
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = recomendacion.alertaCorta,
+                            text = recomendacionVestimenta?.alertaCorta ?: recomendacion?.alertaCorta.orEmpty(),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = contentColor
+                            color = contentColor,
+                            modifier = Modifier.weight(1f)
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = recomendacion.mensajePersonalizado,
+                        text = recomendacionVestimenta?.mensajePersonalizado ?: recomendacion?.mensajePersonalizado.orEmpty(),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = contentColor,
                         lineHeight = 16.sp
                     )
 
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    recomendacion.consejos.take(2).forEach { consejo ->
-                        Row(
-                            modifier = Modifier.padding(vertical = 1.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                    // Modo Guía: Vestimenta sugerida con FlowRow adaptable
+                    if (recomendacionVestimenta != null && recomendacionVestimenta.vestimentaSugerida.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Recomendación de vestimenta:",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = contentColor
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(4.dp)
-                                    .background(contentColor, CircleShape)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = consejo,
-                                fontSize = 11.sp,
-                                color = secondaryTextColor
-                            )
+                            recomendacionVestimenta.vestimentaSugerida.forEach { prenda ->
+                                Box(
+                                    modifier = Modifier
+                                        .background(contentColor.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = prenda,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = contentColor
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Modo Conductor: Consejos viales
+                    val consejos = recomendacionVestimenta?.consejosGrupo ?: recomendacion?.consejos.orEmpty()
+                    if (consejos.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        consejos.take(2).forEach { consejo ->
+                            Row(
+                                modifier = Modifier.padding(vertical = 1.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(4.dp)
+                                        .background(contentColor, CircleShape)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = consejo,
+                                    fontSize = 11.sp,
+                                    color = secondaryTextColor
+                                )
+                            }
                         }
                     }
                 }

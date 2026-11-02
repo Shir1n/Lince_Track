@@ -4,7 +4,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.animation.AnimatedContentTransitionScope
@@ -35,6 +34,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -56,11 +58,10 @@ import com.example.lince_track.ui.calendario.CalendarioScreen
 import com.example.lince_track.ui.detalle.DetalleServicioScreen
 import com.example.lince_track.ui.guia.ConexionConductorScreen
 import com.example.lince_track.ui.guia.GuiaAsignacionesScreen
+import com.example.lince_track.ui.historial.ServiciosTerminadosScreen
 import com.example.lince_track.ui.login.LoginScreen
 import com.example.lince_track.ui.perfil.PerfilRealScreen
-import com.example.lince_track.ui.perfil.PerfilScreen
 import com.example.lince_track.ui.ruta.RutaMapaScreen
-import com.example.lince_track.ui.servicios.ServiciosScreen
 import com.example.lince_track.ui.theme.BarraSuperior
 
 private fun getBottomNavIndex(route: String?): Int {
@@ -105,11 +106,13 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.bottomNavExitTrans
 
 object Routes {
     const val LOGIN = "login"
+    const val MAIN_CONDUCTOR = "main_conductor"
     const val SERVICIOS = "servicios"
     const val DETALLE_SERVICIO = "detalle_servicio/{servicioId}"
     const val RUTA_MAPA = "ruta_mapa/{servicioId}"
     const val CALENDARIO = "calendario"
     const val ALERTAS = "alertas"
+    const val TERMINADOS = "terminados"
     const val PERFIL = "perfil"
     const val AJUSTES = "ajustes"
 
@@ -159,6 +162,12 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
     val currentRoute = backStackEntry?.destination?.route
     val rol by AuthRepository.rolActual.collectAsState()
 
+    val items = bottomNavItems(rol)
+    // El conductor cambia de pestaña con swipe (HorizontalPager); guía y admin siguen con NavHost.
+    val esConductor = rol != Rol.GUIA && rol != Rol.ADMINISTRADOR
+    val pagerState = rememberPagerState(pageCount = { items.size })
+    val scope = rememberCoroutineScope()
+
     // Si Android mató el proceso, la navegación se restaura sin pasar por el login:
     // hay que recuperar aquí el perfil de la sesión.
     LaunchedEffect(currentRoute) {
@@ -168,10 +177,17 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         ) {
             AuthRepository.cargarRolActual(usuario.uid)
         }
+        // Al volver al login (cierre de sesión) el pager vuelve a la primera pestaña.
+        if (currentRoute == Routes.LOGIN) {
+            pagerState.scrollToPage(0)
+        }
     }
 
-    val items = bottomNavItems(rol)
-    val showBottomBar = items.any { it.route == currentRoute }
+    val showBottomBar = if (esConductor) {
+        currentRoute == Routes.MAIN_CONDUCTOR
+    } else {
+        items.any { it.route == currentRoute }
+    }
     val containerColor = MaterialTheme.colorScheme.background
 
     Scaffold(
@@ -181,11 +197,20 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surface
                 ) {
-                    items.forEach { item ->
+                    items.forEachIndexed { index, item ->
+                        val seleccionado = if (esConductor) {
+                            pagerState.currentPage == index
+                        } else {
+                            currentRoute == item.route
+                        }
                         NavigationBarItem(
-                            selected = currentRoute == item.route,
+                            selected = seleccionado,
                             onClick = {
-                                if (currentRoute != item.route) {
+                                if (esConductor) {
+                                    if (pagerState.currentPage != index) {
+                                        scope.launch { pagerState.animateScrollToPage(index) }
+                                    }
+                                } else if (currentRoute != item.route) {
                                     navController.navigate(item.route) {
                                         popUpTo(navController.graph.findStartDestination().id) {
                                             saveState = true
@@ -200,7 +225,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                                 Text(
                                     text = item.label,
                                     style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = if (currentRoute == item.route) FontWeight.Bold else FontWeight.Medium
+                                    fontWeight = if (seleccionado) FontWeight.Bold else FontWeight.Medium
                                 )
                             },
                             alwaysShowLabel = true,
@@ -235,7 +260,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                         val destino = when (rol) {
                             Rol.GUIA -> Routes.GUIA_ASIGNACIONES
                             Rol.ADMINISTRADOR -> Routes.ADMIN_PANEL
-                            else -> Routes.SERVICIOS
+                            else -> Routes.MAIN_CONDUCTOR
                         }
                         navController.navigate(destino) {
                             popUpTo(Routes.LOGIN) { inclusive = true }
@@ -243,16 +268,19 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                     }
                 )
             }
-            composable(
-                route = Routes.SERVICIOS,
-                enterTransition = { bottomNavEnterTransition() },
-                exitTransition = { bottomNavExitTransition() },
-                popEnterTransition = { bottomNavEnterTransition() },
-                popExitTransition = { bottomNavExitTransition() }
-            ) {
-                ServiciosScreen(
+            composable(route = Routes.MAIN_CONDUCTOR) {
+                PestanasConductor(
+                    pagerState = pagerState,
+                    onVerTerminados = { navController.navigate(Routes.TERMINADOS) },
                     onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) },
-                    onRouteClick = { id -> navController.navigate(Routes.rutaMapa(id)) }
+                    onRouteClick = { id -> navController.navigate(Routes.rutaMapa(id)) },
+                    onLogout = {
+                        AuthRepository.cerrarSesion()
+                        navController.navigate(Routes.LOGIN) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    },
+                    onOpenSettings = { navController.navigate(Routes.AJUSTES) }
                 )
             }
             composable(
@@ -306,30 +334,15 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                     onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) }
                 )
             }
-            composable(
-                route = Routes.PERFIL,
-                enterTransition = { bottomNavEnterTransition() },
-                exitTransition = { bottomNavExitTransition() },
-                popEnterTransition = { bottomNavEnterTransition() },
-                popExitTransition = { bottomNavExitTransition() }
-            ) {
-                val onLogout = {
-                    AuthRepository.cerrarSesion()
-                    navController.navigate(Routes.LOGIN) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                }
-                val onOpenSettings = { navController.navigate(Routes.AJUSTES) }
-                // PerfilScreen queda como placeholder; las cuentas marcadas usan el perfil con datos reales.
-                val perfil by AuthRepository.perfilActual.collectAsState()
-                if (perfil?.perfilNuevo == true) {
-                    PerfilRealScreen(onLogout = onLogout, onOpenSettings = onOpenSettings)
-                } else {
-                    PerfilScreen(onLogout = onLogout, onOpenSettings = onOpenSettings)
-                }
-            }
             composable(Routes.AJUSTES) {
                 AjustesScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable(Routes.TERMINADOS) {
+                ServiciosTerminadosScreen(
+                    onBack = { navController.popBackStack() },
+                    onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) }
+                )
             }
 
             // Pantallas del guía
@@ -341,6 +354,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 popExitTransition = { bottomNavExitTransition() }
             ) {
                 GuiaAsignacionesScreen(
+                    onVerTerminados = { navController.navigate(Routes.TERMINADOS) },
                     onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) },
                     onRouteClick = { id -> navController.navigate(Routes.rutaMapa(id)) }
                 )

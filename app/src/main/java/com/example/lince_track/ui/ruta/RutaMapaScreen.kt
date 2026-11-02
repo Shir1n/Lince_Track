@@ -81,6 +81,8 @@ import com.example.lince_track.BuildConfig
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.ReglasCheckin
+import com.example.lince_track.data.ReglasIncidencia
+import com.example.lince_track.ui.components.ReportarIncidenciaDialog
 import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
@@ -205,6 +207,7 @@ private fun RutaMapaContenido(
 
     var procesando by remember { mutableStateOf(false) }
     var showExternalNavDialog by remember { mutableStateOf(false) }
+    var showIncidenciaDialog by remember { mutableStateOf(false) }
     var recentrarMapa by remember { mutableIntStateOf(0) }
 
     var hasLocationPermission by remember {
@@ -342,18 +345,52 @@ private fun RutaMapaContenido(
     var climaInfo by remember { mutableStateOf(PresetClima.REAL.clima) }
     var cargandoClima by remember { mutableStateOf(false) }
 
+    var ultimaUbicacionClima by remember { mutableStateOf<GeoPoint?>(null) }
+    var ultimoTimestampClimaMs by remember { mutableStateOf(0L) }
+
+    suspend fun refrescarClima(lat: Double, lon: Double, forzar: Boolean = false) {
+        val ahora = System.currentTimeMillis()
+        val minutosTranscurridos = (ahora - ultimoTimestampClimaMs) / (1000 * 60)
+        val distanciaKm = if (ultimaUbicacionClima != null) {
+            calculateDistanceMeters(ultimaUbicacionClima!!, GeoPoint(lat, lon)).toFloat() / 1000f
+        } else {
+            Float.MAX_VALUE
+        }
+
+        if (forzar || minutosTranscurridos >= 15L || distanciaKm >= 5f) {
+            cargandoClima = true
+            LinceLogger.i(
+                tag = "CLIMA",
+                message = "Consultando Open-Meteo",
+                details = "forzar=$forzar, minutos=$minutosTranscurridos, distanciaKm=${distanciaKm.roundToInt()}"
+            )
+            val res = ClimaService.consultarOpenMeteo(lat, lon)
+            res.onSuccess {
+                climaInfo = it
+                ultimaUbicacionClima = GeoPoint(lat, lon)
+                ultimoTimestampClimaMs = ahora
+            }
+            cargandoClima = false
+        }
+    }
+
     val zonaActual = remember(userGeoPoint) { zonaClima(userGeoPoint.latitude, userGeoPoint.longitude) }
 
-    // La tarjeta de clima solo se muestra al transportista.
+    // La tarjeta de clima se muestra a transportistas (conducción) y guías (vestimenta de grupo).
+    val mostrarClima = activeRole == RolMapa.TRANSPORTISTA || activeRole == RolMapa.GUIA
+
     LaunchedEffect(zonaActual, presetClima, activeRole) {
-        if (activeRole != RolMapa.TRANSPORTISTA) return@LaunchedEffect
+        if (!mostrarClima) return@LaunchedEffect
         if (presetClima == PresetClima.REAL) {
-            cargandoClima = true
-            val res = ClimaService.consultarOpenMeteo(userGeoPoint.latitude, userGeoPoint.longitude)
-            res.onSuccess { climaInfo = it }
-            cargandoClima = false
+            refrescarClima(userGeoPoint.latitude, userGeoPoint.longitude, forzar = true)
         } else {
             climaInfo = presetClima.clima
+        }
+    }
+
+    LaunchedEffect(userGeoPoint) {
+        if (mostrarClima && presetClima == PresetClima.REAL) {
+            refrescarClima(userGeoPoint.latitude, userGeoPoint.longitude, forzar = false)
         }
     }
 
@@ -361,6 +398,14 @@ private fun RutaMapaContenido(
         ClimaService.generarRecomendacion(
             clima = climaInfo,
             nombreConductor = if (servicio.esGuiado) "" else servicio.conductor,
+            destino = servicio.destino
+        )
+    }
+
+    val recomendacionVestimenta = remember(climaInfo, servicio) {
+        ClimaService.generarRecomendacionVestimenta(
+            clima = climaInfo,
+            nombreGuia = if (servicio.esGuiado) servicio.guia else "",
             destino = servicio.destino
         )
     }
@@ -432,42 +477,13 @@ private fun RutaMapaContenido(
                     )
 
                     if (!esCoordinador) {
-                        // Velocímetro GPS en tiempo real
-                        val limiteVelocidad = when (climaInfo.tipo) {
-                            TipoClima.LLUVIA_FUERTE, TipoClima.TORMENTA, TipoClima.NIEVE -> 50
-                            TipoClima.NIEBLA -> 45
-                            TipoClima.LLUVIA_MODERADA, TipoClima.VIENTO_FUERTE -> 70
-                            else -> 100
-                        }
-                        val velocidadExcedida = currentSpeedKmh.roundToInt() > limiteVelocidad
-
-                        Surface(
-                            shape = RoundedCornerShape(50),
-                            color = if (velocidadExcedida) Color(0xFFDC2626) else MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
-                            shadowElevation = 3.dp,
+                        GpsSpeedometerBadge(
+                            speedProvider = { currentSpeedKmh },
+                            tipoClima = climaInfo.tipo,
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .padding(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Speed,
-                                    contentDescription = "Velocidad GPS",
-                                    tint = if (velocidadExcedida) Color.White else MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(17.dp)
-                                )
-                                Spacer(modifier = Modifier.width(5.dp))
-                                Text(
-                                    text = "${currentSpeedKmh.roundToInt()} km/h",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = if (velocidadExcedida) Color.White else MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
+                        )
                     }
 
                     ExtendedFloatingActionButton(
@@ -544,21 +560,19 @@ private fun RutaMapaContenido(
                     }
                 }
 
-                if (activeRole == RolMapa.TRANSPORTISTA) {
+                if (mostrarClima) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                         ClimaConduccionCard(
                             clima = climaInfo,
-                            recomendacion = recomendacionConduccion,
+                            recomendacion = if (activeRole == RolMapa.TRANSPORTISTA) recomendacionConduccion else null,
+                            recomendacionVestimenta = if (activeRole == RolMapa.GUIA) recomendacionVestimenta else null,
                             presetActual = presetClima,
                             cargando = cargandoClima,
                             onPresetSelected = { presetClima = it },
                             onRefrescarGps = {
                                 scope.launch {
-                                    cargandoClima = true
-                                    val res = ClimaService.consultarOpenMeteo(userGeoPoint.latitude, userGeoPoint.longitude)
-                                    res.onSuccess { climaInfo = it }
-                                    cargandoClima = false
+                                    refrescarClima(userGeoPoint.latitude, userGeoPoint.longitude, forzar = true)
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
@@ -577,6 +591,7 @@ private fun RutaMapaContenido(
                 userPoint = userGeoPoint,
                 isUsingRealGps = isUsingRealGps,
                 procesando = procesando,
+                onReportarIncidencia = { showIncidenciaDialog = true },
                 onPrimaryAction = {
                     val esGuia = activeRole == RolMapa.GUIA
                     if (!isCheckInDone) {
@@ -615,6 +630,20 @@ private fun RutaMapaContenido(
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
+
+    if (showIncidenciaDialog) {
+        ReportarIncidenciaDialog(
+            onDismiss = { showIncidenciaDialog = false },
+            onConfirm = { tipo, detalle ->
+                showIncidenciaDialog = false
+                scope.launch {
+                    ServicioRepository.reportarIncidencia(servicio.id, tipo, detalle)
+                        .onSuccess { aviso -> snackbarHostState.showSnackbar(aviso ?: "Incidencia enviada a Coordinación") }
+                        .onFailure { e -> snackbarHostState.showSnackbar(e.message ?: "No se pudo enviar la incidencia") }
+                }
+            }
         )
     }
 
@@ -789,6 +818,50 @@ private fun ServiceRouteHeaderCard(
 }
 
 @Composable
+private fun GpsSpeedometerBadge(
+    speedProvider: () -> Float,
+    tipoClima: TipoClima,
+    modifier: Modifier = Modifier
+) {
+    val speed = speedProvider()
+    val limiteVelocidad = remember(tipoClima) {
+        when (tipoClima) {
+            TipoClima.LLUVIA_FUERTE, TipoClima.TORMENTA, TipoClima.NIEVE -> 50
+            TipoClima.NIEBLA -> 45
+            TipoClima.LLUVIA_MODERADA, TipoClima.VIENTO_FUERTE -> 70
+            else -> 100
+        }
+    }
+    val velocidadExcedida = speed.roundToInt() > limiteVelocidad
+
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = if (velocidadExcedida) Color(0xFFDC2626) else MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        shadowElevation = 3.dp,
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Speed,
+                contentDescription = "Velocidad GPS",
+                tint = if (velocidadExcedida) Color.White else MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(17.dp)
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text(
+                text = "${speed.roundToInt()} km/h",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = if (velocidadExcedida) Color.White else MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
 private fun OsmMapContainer(
     context: Context,
     userPoint: GeoPoint,
@@ -925,6 +998,7 @@ private fun RoleBottomActionPanel(
     userPoint: GeoPoint,
     isUsingRealGps: Boolean,
     procesando: Boolean,
+    onReportarIncidencia: () -> Unit,
     onPrimaryAction: () -> Unit
 ) {
     val isCheckInDone = checkin != null
@@ -1024,6 +1098,12 @@ private fun RoleBottomActionPanel(
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
+                }
+
+                if (ReglasIncidencia.puedeReportar(servicio, checkin)) {
+                    TextButton(onClick = onReportarIncidencia) {
+                        Text("Reportar incidencia", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }

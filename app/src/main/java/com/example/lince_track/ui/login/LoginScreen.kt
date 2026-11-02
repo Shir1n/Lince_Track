@@ -156,7 +156,52 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                SuggestionChip(
+                    onClick = {
+                        email = "admintest@southbound.cl"
+                        password = "123456"
+                        viewModel.limpiarError()
+                    },
+                    enabled = !estado.cargando,
+                    label = { Text("Admin", style = MaterialTheme.typography.labelMedium) }
+                )
+                SuggestionChip(
+                    onClick = {
+                        email = "guiatest@southbound.cl"
+                        password = "123456"
+                        viewModel.limpiarError()
+                    },
+                    enabled = !estado.cargando,
+                    label = { Text("Guía", style = MaterialTheme.typography.labelMedium) }
+                )
+                SuggestionChip(
+                    onClick = {
+                        email = "pilototest@southbound.cl"
+                        password = "123456"
+                        viewModel.limpiarError()
+                    },
+                    enabled = !estado.cargando,
+                    label = { Text("Conductor", style = MaterialTheme.typography.labelMedium) }
+                )
+                SuggestionChip(
+                    onClick = {
+                        email = "piloto1@southbound.cl"
+                        password = "123456"
+                        viewModel.limpiarError()
+                    },
+                    enabled = !estado.cargando,
+                    label = { Text("Piloto 1", style = MaterialTheme.typography.labelMedium) }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
 
             Button(
                 onClick = { viewModel.iniciarSesion(email, password) },

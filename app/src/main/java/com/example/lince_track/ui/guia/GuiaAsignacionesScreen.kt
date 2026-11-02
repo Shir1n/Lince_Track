@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lince_track.data.EstadoServicio
+import com.example.lince_track.data.ReglasCheckin
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.formatFechaCorta
@@ -55,6 +56,7 @@ import com.example.lince_track.data.formatHora
 import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.RejectServicioDialog
+import com.example.lince_track.ui.historial.VerTerminadosBoton
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import com.example.lince_track.ui.theme.BarraSuperior
@@ -67,14 +69,16 @@ import com.example.lince_track.ui.theme.BarraSuperior
  */
 @Composable
 fun GuiaAsignacionesScreen(
+    onVerTerminados: () -> Unit = {},
     onServiceClick: (String) -> Unit = {},
     onRouteClick: (String) -> Unit = {}
 ) {
     val servicios by ServicioRepository.servicios.collectAsState()
     val error by ServicioRepository.error.collectAsState()
     val hoy = LocalDate.now()
-    val serviciosHoy = remember(servicios, hoy) {
-        servicios.filter { it.fecha == hoy }.sortedBy { it.horaInicio }
+    val checkins by ServicioRepository.checkins.collectAsState()
+    val serviciosHoy = remember(servicios, checkins, hoy) {
+        ReglasCheckin.porRealizar(servicios, checkins).filter { it.fecha == hoy }.sortedBy { it.horaInicio }
     }
 
     val scope = rememberCoroutineScope()
@@ -111,7 +115,7 @@ fun GuiaAsignacionesScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                SummaryKpiCard(serviciosHoy)
+                SummaryKpiCard(serviciosHoy, ReglasCheckin.terminados(servicios, checkins).size, onVerTerminados)
 
                 Text(
                     text = "Mis Asignaciones de Hoy - ${formatFechaCorta(hoy)}",
@@ -226,7 +230,7 @@ private fun TopBar() {
 }
 
 @Composable
-private fun SummaryKpiCard(servicios: List<Servicio>) {
+private fun SummaryKpiCard(servicios: List<Servicio>, terminados: Int, onVerTerminados: () -> Unit) {
     val aceptados = servicios.filter { it.estado == EstadoServicio.ACEPTADO }
     val pendientes = servicios.filter { it.estado == EstadoServicio.PENDIENTE }
     val totalPasajeros = (aceptados + pendientes).sumOf { it.pasajeros }
@@ -237,10 +241,17 @@ private fun SummaryKpiCard(servicios: List<Servicio>) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
+        Text(
+            text = "Resumen",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(start = 16.dp, top = 12.dp)
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp),
+                .padding(top = 8.dp, bottom = 12.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             KpiStat(
@@ -262,6 +273,7 @@ private fun SummaryKpiCard(servicios: List<Servicio>) {
                 modifier = Modifier.weight(1f)
             )
         }
+        VerTerminadosBoton(terminados, onVerTerminados)
     }
 }
 

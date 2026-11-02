@@ -16,6 +16,31 @@ object CambiosServicios {
     ): List<AvisoLocal> =
         if (rol == Rol.ADMINISTRADOR) paraAdministrador(antes, ahora) else paraPersonal(antes, ahora, hoy)
 
+    /** Al administrador, lo nuevo; a quien reportó, cuando se resuelve. */
+    fun incidencias(
+        antes: List<IncidenciaServicio>,
+        ahora: List<IncidenciaServicio>,
+        rol: Rol
+    ): List<AvisoLocal> {
+        val previas = antes.associateBy { it.id }
+        return ahora.mapNotNull { incidencia ->
+            val previa = previas[incidencia.id]
+            when {
+                rol == Rol.ADMINISTRADOR && previa == null && !incidencia.resuelta -> AvisoLocal(
+                    incidencia.servicioId,
+                    "Incidencia: ${incidencia.tipo.etiqueta}",
+                    "${incidencia.nombre} en ${incidencia.titulo}"
+                )
+                rol != Rol.ADMINISTRADOR && previa?.resuelta == false && incidencia.resuelta -> AvisoLocal(
+                    incidencia.servicioId,
+                    "Incidencia resuelta",
+                    "${incidencia.tipo.etiqueta} en ${incidencia.titulo}"
+                )
+                else -> null
+            }
+        }
+    }
+
     private fun paraAdministrador(antes: List<Servicio>, ahora: List<Servicio>): List<AvisoLocal> {
         val previos = antes.associateBy { it.id }
         return ahora.mapNotNull { servicio ->
