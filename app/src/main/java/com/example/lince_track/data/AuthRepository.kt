@@ -127,6 +127,7 @@ object AuthRepository {
         return PerfilUsuario(
             rol = rol,
             nombre = documento.getString("nombre"),
+            telefono = documento.getString("telefono"),
             transportistaId = documento.idPersona("transportistaId"),
             guiaId = documento.idPersona("guiaId"),
             perfilNuevo = documento.get("perfilNuevo") == true

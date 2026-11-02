@@ -45,7 +45,11 @@ data class Servicio(
     /** Id en la API de quien trae asignado: transportista o guía según el tipo. */
     val responsableId: Long? = null,
     /** true si el administrador eligió a otra persona (ver ReglasAsignacion). */
-    val reasignado: Boolean = false
+    val reasignado: Boolean = false,
+    /** Teléfono que publicó quien aceptó este servicio (vacío si no hay). */
+    val telefonoResponsable: String = "",
+    /** Teléfono de la otra persona del tour, una vez que aceptó (vacío si no hay). */
+    val telefonoCompanero: String = ""
 )
 
 data class VehiculoServicio(

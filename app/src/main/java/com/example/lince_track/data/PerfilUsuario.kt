@@ -11,6 +11,7 @@ package com.example.lince_track.data
 data class PerfilUsuario(
     val rol: Rol,
     val nombre: String? = null,
+    val telefono: String? = null,
     val transportistaId: Long? = null,
     val guiaId: Long? = null,
     val perfilNuevo: Boolean = false

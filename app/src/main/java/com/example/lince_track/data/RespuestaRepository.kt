@@ -60,7 +60,7 @@ object RespuestaRepository {
 
     /**
      * Estado publicado de cada servicio desde la fecha [desde] (AAAA-MM-DD): id del servicio →
-     * estado y nombre. Es lo que ve la otra persona del tour; no incluye motivo ni observaciones.
+     * estado, nombre y teléfono. Es lo que ve la otra persona del tour; no incluye motivo ni observaciones.
      */
     fun observarEstados(desde: String): Flow<Map<String, RespuestaServicio>> = callbackFlow {
         val registro = firestore.collection(COLECCION_ESTADOS)
@@ -77,7 +77,12 @@ object RespuestaRepository {
                         else -> null
                     }
                     estado?.let {
-                        RespuestaServicio(servicioId = documento.id, estado = it, nombre = documento.getString("nombre"))
+                        RespuestaServicio(
+                            servicioId = documento.id,
+                            estado = it,
+                            nombre = documento.getString("nombre"),
+                            telefono = documento.getString("telefono")
+                        )
                     }
                 }
                 trySend(estados.associateBy { it.servicioId })
@@ -93,6 +98,7 @@ object RespuestaRepository {
         uid: String,
         rol: Rol,
         nombre: String,
+        telefono: String,
         servicioId: String,
         fecha: String,
         estado: EstadoServicio,
@@ -116,6 +122,7 @@ object RespuestaRepository {
             "servicioId" to servicioId,
             "rol" to rol.id,
             "nombre" to nombre,
+            "telefono" to telefono,
             "estado" to codigoEstado,
             "fecha" to fecha,
             "actualizadoEn" to FieldValue.serverTimestamp()

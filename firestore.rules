@@ -73,7 +73,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // estadosServicio/{servicioId}: { uid, servicioId, rol, nombre, estado, fecha, actualizadoEn }
+    // estadosServicio/{servicioId}: { uid, servicioId, rol, nombre, telefono, estado, fecha, actualizadoEn }
     // Lo que el guía y el conductor de un mismo tour necesitan saber del otro. Sin motivo ni
     // observaciones, que siguen privados en "respuestas". Solo quien lo publicó puede cambiarlo.
     function estadoValido(servicioId) {
@@ -83,11 +83,12 @@ service cloud.firestore {
         && d.rol == perfil().rol
         && d.rol in ['conductor', 'guia']
         && d.nombre == perfil().get('nombre', '')
+        && (!('telefono' in d) || d.telefono == perfil().get('telefono', ''))
         && d.servicioId == servicioId
         && d.estado in ['aceptado', 'rechazado']
         && d.fecha is string
         && d.actualizadoEn == request.time
-        && d.keys().hasOnly(['uid', 'servicioId', 'rol', 'nombre', 'estado', 'fecha', 'actualizadoEn']);
+        && d.keys().hasOnly(['uid', 'servicioId', 'rol', 'nombre', 'telefono', 'estado', 'fecha', 'actualizadoEn']);
     }
 
     match /estadosServicio/{servicioId} {
@@ -134,7 +135,9 @@ service cloud.firestore {
     }
 
     // incidencias/{id}: { uid, rol, nombre, servicioId, titulo, tipo, detalle, fecha, creadaEn, resuelta,
-    //                     resueltaEn, resueltaPor (solo tras resolverla) }
+    //                     lat, lon (opcionales, van juntas),
+    //                     enGestion, respuesta, atendidaEn, atendidaPor (tras responderla),
+    //                     resueltaEn, resueltaPor (tras resolverla) }
     // Las reporta el conductor o guía y solo el administrador las cierra. Igual que en "respuestas",
     // que el servicio sea de esa persona lo revisa la app.
     function incidenciaValida() {
@@ -154,23 +157,40 @@ service cloud.firestore {
         && d.fecha is string
         && d.creadaEn == request.time
         && d.resuelta == false
-        && d.keys().hasOnly(['uid', 'rol', 'nombre', 'servicioId', 'titulo', 'tipo', 'detalle', 'fecha', 'creadaEn', 'resuelta']);
+        && (('lat' in d) == ('lon' in d))
+        && (!('lat' in d) || (d.lat is number && d.lon is number))
+        && d.keys().hasOnly(['uid', 'rol', 'nombre', 'servicioId', 'titulo', 'tipo', 'detalle', 'fecha', 'creadaEn', 'resuelta', 'lat', 'lon']);
+    }
+
+    function respuestaIncidenciaValida() {
+      let d = request.resource.data;
+      return esAdmin()
+        && resource.data.resuelta == false
+        && d.diff(resource.data).affectedKeys().hasOnly(['enGestion', 'respuesta', 'atendidaEn', 'atendidaPor'])
+        && d.enGestion == true
+        && d.respuesta is string
+        && d.respuesta.trim().size() > 0
+        && d.respuesta.size() <= 500
+        && d.atendidaEn == request.time
+        && d.atendidaPor == request.auth.uid;
     }
 
     function resolucionValida() {
       let d = request.resource.data;
       return esAdmin()
         && resource.data.resuelta == false
-        && d.diff(resource.data).affectedKeys().hasOnly(['resuelta', 'resueltaEn', 'resueltaPor'])
+        && d.diff(resource.data).affectedKeys().hasOnly(['resuelta', 'resueltaEn', 'resueltaPor', 'respuesta'])
         && d.resuelta == true
         && d.resueltaEn == request.time
-        && d.resueltaPor == request.auth.uid;
+        && d.resueltaPor == request.auth.uid
+        && d.get('respuesta', '') is string
+        && d.get('respuesta', '').size() <= 500;
     }
 
     match /incidencias/{id} {
       allow read: if signedIn() && (resource.data.uid == request.auth.uid || esAdmin());
       allow create: if incidenciaValida();
-      allow update: if resolucionValida();
+      allow update: if resolucionValida() || respuestaIncidenciaValida();
       allow delete: if false;
     }
 

@@ -34,7 +34,12 @@ object CambiosServicios {
                 rol != Rol.ADMINISTRADOR && previa?.resuelta == false && incidencia.resuelta -> AvisoLocal(
                     incidencia.servicioId,
                     "Incidencia resuelta",
-                    "${incidencia.tipo.etiqueta} en ${incidencia.titulo}"
+                    incidencia.respuesta.ifBlank { "${incidencia.tipo.etiqueta} en ${incidencia.titulo}" }
+                )
+                rol != Rol.ADMINISTRADOR && previa != null && previa.respuesta != incidencia.respuesta -> AvisoLocal(
+                    incidencia.servicioId,
+                    "Coordinación respondió",
+                    incidencia.respuesta
                 )
                 else -> null
             }

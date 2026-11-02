@@ -83,6 +83,7 @@ import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.ReglasCheckin
 import com.example.lince_track.data.ReglasIncidencia
 import com.example.lince_track.ui.components.ReportarIncidenciaDialog
+import com.example.lince_track.ui.components.rememberEnviarIncidencia
 import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
@@ -195,6 +196,7 @@ private fun RutaMapaContenido(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val enviarIncidencia = rememberEnviarIncidencia(servicio.id, snackbarHostState)
 
     val rol by AuthRepository.rolActual.collectAsState()
     val activeRole = RolMapa.desde(rol)
@@ -638,11 +640,7 @@ private fun RutaMapaContenido(
             onDismiss = { showIncidenciaDialog = false },
             onConfirm = { tipo, detalle ->
                 showIncidenciaDialog = false
-                scope.launch {
-                    ServicioRepository.reportarIncidencia(servicio.id, tipo, detalle)
-                        .onSuccess { aviso -> snackbarHostState.showSnackbar(aviso ?: "Incidencia enviada a Coordinación") }
-                        .onFailure { e -> snackbarHostState.showSnackbar(e.message ?: "No se pudo enviar la incidencia") }
-                }
+                enviarIncidencia(tipo, detalle)
             }
         )
     }

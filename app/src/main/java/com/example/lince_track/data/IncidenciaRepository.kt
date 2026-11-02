@@ -44,30 +44,50 @@ object IncidenciaRepository {
         nombre: String,
         servicio: Servicio,
         tipo: TipoIncidencia,
-        detalle: String
+        detalle: String,
+        ubicacion: Ubicacion?
     ): Boolean = firestore.collection(COLECCION).document().set(
-        mapOf(
-            "uid" to uid,
-            "rol" to rol.id,
-            "nombre" to nombre,
-            "servicioId" to servicio.id,
-            "titulo" to servicio.titulo,
-            "tipo" to tipo.codigo,
-            "detalle" to detalle,
-            "fecha" to servicio.fecha.toString(),
-            "creadaEn" to FieldValue.serverTimestamp(),
-            "resuelta" to false
-        )
+        buildMap<String, Any> {
+            put("uid", uid)
+            put("rol", rol.id)
+            put("nombre", nombre)
+            put("servicioId", servicio.id)
+            put("titulo", servicio.titulo)
+            put("tipo", tipo.codigo)
+            put("detalle", detalle)
+            put("fecha", servicio.fecha.toString())
+            put("creadaEn", FieldValue.serverTimestamp())
+            put("resuelta", false)
+            if (ubicacion != null) {
+                put("lat", ubicacion.lat)
+                put("lon", ubicacion.lon)
+            }
+        }
     ).confirmada()
 
     /** @return true si el servidor lo confirmó; false si sigue en cola por falta de conexión. */
-    suspend fun resolver(id: String, adminUid: String): Boolean =
+    suspend fun responder(id: String, adminUid: String, respuesta: String): Boolean =
         firestore.collection(COLECCION).document(id).update(
             mapOf(
-                "resuelta" to true,
-                "resueltaEn" to FieldValue.serverTimestamp(),
-                "resueltaPor" to adminUid
+                "enGestion" to true,
+                "respuesta" to respuesta,
+                "atendidaEn" to FieldValue.serverTimestamp(),
+                "atendidaPor" to adminUid
             )
+        ).confirmada()
+
+    /**
+     * Con [respuesta] vacía se mantiene la anterior.
+     * @return true si el servidor lo confirmó; false si sigue en cola por falta de conexión.
+     */
+    suspend fun resolver(id: String, adminUid: String, respuesta: String): Boolean =
+        firestore.collection(COLECCION).document(id).update(
+            buildMap<String, Any> {
+                put("resuelta", true)
+                put("resueltaEn", FieldValue.serverTimestamp())
+                put("resueltaPor", adminUid)
+                if (respuesta.isNotBlank()) put("respuesta", respuesta)
+            }
         ).confirmada()
 
     private fun DocumentSnapshot.aIncidencia(): IncidenciaServicio? {
@@ -85,7 +105,10 @@ object IncidenciaRepository {
             tipo = tipo,
             detalle = getString("detalle").orEmpty(),
             creadaEn = creadaEn,
-            resuelta = getBoolean("resuelta") == true
+            resuelta = getBoolean("resuelta") == true,
+            enGestion = getBoolean("enGestion") == true,
+            respuesta = getString("respuesta").orEmpty(),
+            ubicacion = Ubicacion.desde(getDouble("lat"), getDouble("lon"))
         )
     }
 }

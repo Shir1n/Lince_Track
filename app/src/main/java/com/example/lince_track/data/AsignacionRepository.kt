@@ -51,7 +51,8 @@ object AsignacionRepository {
             uid = documento.id,
             nombre = documento.getString("nombre").orEmpty(),
             rol = rol,
-            idApi = (documento.get(campoId) as? Number)?.toLong()
+            idApi = (documento.get(campoId) as? Number)?.toLong(),
+            telefono = documento.getString("telefono").orEmpty()
         )
     }
 
