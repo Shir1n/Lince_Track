@@ -55,7 +55,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lince_track.data.AuthRepository
+import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.EstadoServicio
+import com.example.lince_track.data.ReglasCheckin
 import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
@@ -75,6 +77,7 @@ fun DetalleServicioScreen(
 ) {
     val servicios by ServicioRepository.servicios.collectAsState()
     val servicio = remember(servicios, servicioId) { servicios.find { it.id == servicioId } }
+    val checkins by ServicioRepository.checkins.collectAsState()
  
     val scope = rememberCoroutineScope()
     var procesando by remember { mutableStateOf(false) }
@@ -152,6 +155,7 @@ fun DetalleServicioScreen(
 
             BottomActions(
                 servicio = servicio,
+                checkin = checkins[servicio.id],
                 procesando = procesando,
                 onConfirm = { operar(volverAlTerminar = false, ServicioRepository::aceptar) },
                 onReject = { showRejectDialog = true },
@@ -510,6 +514,7 @@ private fun GuideCard(servicio: Servicio) {
 @Composable
 private fun BottomActions(
     servicio: Servicio,
+    checkin: CheckinServicio?,
     procesando: Boolean,
     onConfirm: () -> Unit,
     onReject: () -> Unit,
@@ -526,6 +531,16 @@ private fun BottomActions(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Un servicio terminado ya no se responde ni se vuelve a registrar.
+        if (checkin != null && ReglasCheckin.estaTerminado(servicio, checkin)) {
+            Text(
+                text = "Servicio terminado: ${ReglasCheckin.horario(checkin)}",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.secondary
+            )
+            return@Row
+        }
         when (servicio.estado) {
             EstadoServicio.PENDIENTE -> {
                 if (procesando) {

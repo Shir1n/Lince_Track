@@ -44,7 +44,8 @@ Responde y escribe la interfaz en **español de Chile**.
   - `data/clima/` — `ClimaService` (Open-Meteo).
 - `ui/` — `navigation/AppNavHost` (rutas por rol), `login`, `servicios` (conductor), `guia` (guía),
   `detalle`, `calendario` (+ `agenda/AgendaViewModel`), `ruta` (mapa, check-in, clima), `alertas`,
-  `perfil`, `ajustes`, `components`, `theme`.
+  `historial` (servicios con check-out; solo alcanza a los últimos 7 días cargados), `perfil`, `ajustes`,
+  `components`, `theme`.
 - `util/` — `LinceLogger` (consola de logs en Ajustes), `WhatsApp.kt` (`abrirWhatsApp`).
 
 ## Fuente de datos: API de Southbound (solo lectura)
