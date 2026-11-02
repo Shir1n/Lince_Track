@@ -34,8 +34,9 @@ Responde y escribe la interfaz en **español de Chile**.
 - `app/google-services.json` está versionado y trae ambas apps (la vieja `com.example` se puede borrar en Firebase).
 
 ## Estructura (`app/src/main/java/com/example/lince_track/`)
-- `data/` — `AuthRepository` (login + rol desde Firestore), `Rol`, `Servicio` (modelo de UI),
-  `ServicioRepository` (fuente única de servicios para las pantallas).
+- `data/` — `AuthRepository` (login + `PerfilUsuario` desde Firestore), `Rol`, `Servicio` (modelo de UI),
+  `ServicioRepository` (fuente única de servicios para las pantallas), `RespuestaRepository` y
+  `RespuestaServicio` (aceptar/rechazar en Firestore).
   - `data/remote/` — `LinceApi` (Retrofit), `LinceApiClient` (header `X-API-Key`, errores → `LinceApiException`),
     `dto/LinceDtos.kt` (JSON de la API + `LinceJson`).
   - `data/servicios/` — `ServiciosDataSource` (+ `ApiServiciosDataSource`), `FakeServiciosDataSource`,
@@ -61,13 +62,20 @@ Responde y escribe la interfaz en **español de Chile**.
   RQ/null→PENDIENTE.
 - La API **no trae**: hora de término (se estima por tipo: 60/180/240 min), tarifa (queda 0),
   coordenadas (pickup/dropoff son texto), lista de pasajeros ni teléfono del líder.
-- Carga actual: oficina PUX, de hoy-7 a hoy+30, sin filtrar por persona (pendiente, ver abajo).
+- Carga actual: oficina PUX, de hoy-7 a hoy+30, filtrada según `usuarios/{uid}`: conductor por
+  `transportistaId`, guía por `guiaId` (ambos numéricos), administrador sin filtro. Sin ID no se carga nada.
 
 ## Firebase
 - Auth email/contraseña; cuentas creadas solo por el admin. Rol en `usuarios/{uid}.rol`
   (`administrador` | `conductor` | `guia`).
 - `firestore.rules` (publicadas): cada usuario lee solo su `usuarios/{uid}`, admin lee todos,
   nadie escribe roles, **todo lo demás denegado**. Nunca volver a usar comodines `{document=**}`.
+- `respuestas/{uid}_{servicioId}`: aceptar/rechazar de conductores y guías (`RespuestaRepository`).
+  Aceptado → rechazado se permite; un rechazo es definitivo. Si la API marca el servicio como
+  rechazado o cancelado (DL, CX, XX), eso manda sobre la respuesta. Las reglas no pueden comprobar que
+  el servicio sea de esa persona (vive en la API); lo revisa la app.
+- Tests de reglas en `firestore-tests/` con el emulador y un proyecto demo (`npm install`, `npm test`;
+  necesita Java en el PATH). Tras cambiar `firestore.rules`, hay que publicarlas en Firebase.
 - `storage.rules` está en el repo pero **sin uso**: Storage exige plan Blaze. Se activará Blaze
   (crédito de prueba de 90 días) recién cuando se implementen fotos; elegir región con cuota gratuita
   y crear presupuesto de $5 ese mismo día.
@@ -84,12 +92,10 @@ Responde y escribe la interfaz en **español de Chile**.
 - Textos de la UI en español; los códigos de la API se guardan como String (tolerar valores nuevos).
 
 ## Pendientes
-1. **(Shir1n, en curso)** Vincular usuario ↔ API: `usuarios/{uid}.transportistaId` o `guiaId`;
-   `AuthRepository` lo lee y `ServicioRepository` filtra con él. Elimina el guía fijo "Andrea Soto"
-   de `GuiaAsignacionesScreen`. Mientras tanto, nadie más toca `AuthRepository`, `ServicioRepository`,
-   `ServiciosScreen` ni `GuiaAsignacionesScreen`.
-2. Guardar aceptar/rechazar (con motivo y observaciones) en Firestore (`respuestas`) con reglas y tests
-   en el emulador. Hoy se guarda solo en memoria. `RejectServicioDialog` descarta el motivo: corregir.
+1. Reemplazar los IDs de prueba de `usuarios/{uid}` (`transportistaId: 14`, `guiaId: 7`) por los reales
+   cuando llegue la clave de la API: con la clave, un ID de prueba mostraría servicios de otra persona.
+2. Mostrar las respuestas (`respuestas`, motivo incluido) al administrador: hoy solo se ven en la consola
+   de Firebase y su pantalla muestra el estado de la API.
 3. Benjamin: detalle (volver de inmediato al responder; ocultar llamar/WhatsApp si no hay teléfono;
    ocultar Confirmar/Rechazar al guía), mes del calendario en español, `DarkErrorContainer` gris,
    etiquetas de Alertas en inglés ("Reasignement").

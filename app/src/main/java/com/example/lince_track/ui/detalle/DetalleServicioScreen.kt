@@ -80,14 +80,14 @@ fun DetalleServicioScreen(
     var showRejectDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    fun operar(op: suspend (String) -> Result<Unit>) {
+    fun operar(op: suspend (String) -> Result<String?>) {
         if (servicio == null || procesando) return
-        scope.launch { 
+        scope.launch {
             procesando = true
             val resultado = op(servicio.id)
             procesando = false
-            resultado.onSuccess {
-                snackbarHostState.showSnackbar("Operación completada")
+            resultado.onSuccess { aviso ->
+                snackbarHostState.showSnackbar(aviso ?: "Operación completada")
                 onBack()
             }.onFailure { e ->
                 snackbarHostState.showSnackbar(e.message ?: "No se pudo completar la operación")
@@ -162,9 +162,9 @@ fun DetalleServicioScreen(
         RejectServicioDialog(
             servicio = servicio,
             onDismiss = { showRejectDialog = false },
-            onConfirm = {
+            onConfirm = { motivo, observaciones ->
                 showRejectDialog = false
-                operar(ServicioRepository::rechazar)
+                operar { ServicioRepository.rechazar(it, motivo, observaciones) }
             }
         )
     }
@@ -505,6 +505,9 @@ private fun BottomActions(
     onReject: () -> Unit,
     onOpenRoute: () -> Unit
 ) {
+    val rol by AuthRepository.rolActual.collectAsState()
+    val puedeResponder = rol != Rol.ADMINISTRADOR
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -524,7 +527,7 @@ private fun BottomActions(
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
                     }
-                } else {
+                } else if (puedeResponder) {
                     Button(
                         onClick = onConfirm,
                         shape = RoundedCornerShape(50),
@@ -558,7 +561,7 @@ private fun BottomActions(
                         containerColor = MaterialTheme.colorScheme.primary
                     ),
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .weight(1f)
                         .height(50.dp)
                 ) {
                     Icon(
@@ -567,7 +570,25 @@ private fun BottomActions(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("VER RUTA Y CHECK-IN EN MAPA", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (puedeResponder) "VER RUTA Y CHECK-IN" else "VER RUTA Y CHECK-IN EN MAPA",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                if (puedeResponder) {
+                    OutlinedButton(
+                        onClick = onReject,
+                        enabled = !procesando,
+                        shape = RoundedCornerShape(50),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        modifier = Modifier.height(50.dp)
+                    ) {
+                        Text("Rechazar", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
             EstadoServicio.RECHAZADO -> {

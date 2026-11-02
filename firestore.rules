@@ -33,6 +33,46 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // respuestas/{uid}_{servicioId}: { uid, servicioId, rol, estado, respondidoEn,
+    //                                  motivo y observaciones (solo si está rechazado) }
+    // Cada conductor o guía responde solo con su uid. Los servicios viven en la API, así que
+    // estas reglas no pueden comprobar que el servicio sea suyo: eso lo revisa la app.
+    // Un servicio aceptado se puede rechazar después; un rechazo es definitivo.
+    function respuestaValida(respuestaId) {
+      let d = request.resource.data;
+      return tieneAcceso()
+        && d.uid == request.auth.uid
+        && d.rol == perfil().rol
+        && d.rol in ['conductor', 'guia']
+        && d.servicioId is string
+        && respuestaId == request.auth.uid + '_' + d.servicioId
+        && d.respondidoEn == request.time
+        && (respuestaAceptada(d) || respuestaRechazada(d));
+    }
+
+    function respuestaAceptada(d) {
+      return d.estado == 'aceptado'
+        && d.keys().hasOnly(['uid', 'servicioId', 'rol', 'estado', 'respondidoEn']);
+    }
+
+    function respuestaRechazada(d) {
+      return d.estado == 'rechazado'
+        && d.keys().hasOnly(['uid', 'servicioId', 'rol', 'estado', 'respondidoEn', 'motivo', 'observaciones'])
+        && d.motivo in ['falla_mecanica', 'fuerza_mayor', 'cruce_horario', 'otro']
+        && d.observaciones is string
+        && d.observaciones.size() <= 500
+        && (d.motivo != 'otro' || d.observaciones.trim().size() > 0);
+    }
+
+    match /respuestas/{respuestaId} {
+      allow read: if signedIn() && (resource.data.uid == request.auth.uid || esAdmin());
+      allow create: if respuestaValida(respuestaId);
+      allow update: if respuestaValida(respuestaId)
+        && resource.data.estado == 'aceptado'
+        && request.resource.data.estado == 'rechazado';
+      allow delete: if false;
+    }
+
     // Todo lo demás queda DENEGADO por defecto.
     // Cada colección nueva (respuestas, checkins, incidencias, alertas...) se agrega
     // aquí con su propio bloque "match" y sus reglas. No usar comodines {document=**}.

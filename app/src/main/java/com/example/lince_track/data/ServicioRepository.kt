@@ -14,14 +14,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -31,13 +29,14 @@ import kotlinx.coroutines.launch
  *   local.properties (LINCE_API_KEY), se usan datos de ejemplo con la misma forma.
  * - Solo se cargan con sesión iniciada y según el perfil del usuario (AuthRepository);
  *   al cerrar sesión se borra todo.
- * - Aceptar/rechazar se guarda por ahora solo en memoria (la API no permite escribir).
- *   El siguiente paso es guardar esas respuestas en Firestore.
+ * - Aceptar/rechazar se guarda en Firestore (la API no permite escribir); ver RespuestaRepository.
  */
 object ServicioRepository {
 
     private const val CUENTA_SIN_VINCULAR =
         "Tu cuenta aún no está vinculada. Contacta al administrador."
+    private const val RESPUESTA_EN_COLA =
+        "Sin conexión: tu respuesta se enviará al recuperar la señal."
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -52,12 +51,13 @@ object ServicioRepository {
     /** Servicios tal como llegan de la fuente (ya convertidos al modelo de la app). */
     private val serviciosFuente = MutableStateFlow<List<Servicio>>(emptyList())
 
-    /** Respuestas dadas en esta sesión: id del servicio → estado elegido. */
-    private val respuestasLocales = MutableStateFlow<Map<String, EstadoServicio>>(emptyMap())
+    /** Respuestas del usuario guardadas en Firestore: id del servicio → respuesta. */
+    private val respuestas = MutableStateFlow<Map<String, RespuestaServicio>>(emptyMap())
+    private var escuchaRespuestas: Job? = null
 
     val servicios: StateFlow<List<Servicio>> =
-        combine(serviciosFuente, respuestasLocales) { lista, respuestas ->
-            lista.map { s -> respuestas[s.id]?.let { s.copy(estado = it) } ?: s }
+        combine(serviciosFuente, respuestas) { lista, porServicio ->
+            lista.map { ReglasRespuesta.aplicar(it, porServicio[it.id]) }
         }.stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     private val _cargando = MutableStateFlow(false)
@@ -83,9 +83,17 @@ object ServicioRepository {
     private suspend fun aplicarPerfil(perfil: PerfilUsuario?) {
         // Se espera a que termine para que una carga antigua no escriba sobre los datos nuevos.
         cargaEnCurso?.cancelAndJoin()
+        escuchaRespuestas?.cancelAndJoin()
         serviciosFuente.value = emptyList()
-        respuestasLocales.value = emptyMap()
+        respuestas.value = emptyMap()
         errorCarga.value = null
+
+        val uid = AuthRepository.usuarioActual?.uid
+        if (perfil != null && perfil.rol != Rol.ADMINISTRADOR && uid != null) {
+            escuchaRespuestas = scope.launch {
+                RespuestaRepository.observar(uid).collect { respuestas.value = it }
+            }
+        }
 
         filtroActual = perfil?.let { FiltroServicios.paraPerfil(it) }
         if (perfil != null && filtroActual == null) {
@@ -126,24 +134,53 @@ object ServicioRepository {
 
     fun buscarPorId(id: String): Servicio? = servicios.value.find { it.id == id }
 
-    suspend fun aceptar(id: String): Result<Unit> =
+    /** @return en caso de éxito, un aviso para mostrar al usuario (null si no hay nada que avisar). */
+    suspend fun aceptar(id: String): Result<String?> =
         responder(id, EstadoServicio.ACEPTADO, desde = setOf(EstadoServicio.PENDIENTE))
 
-    suspend fun rechazar(id: String): Result<Unit> =
-        responder(id, EstadoServicio.RECHAZADO, desde = setOf(EstadoServicio.PENDIENTE, EstadoServicio.ACEPTADO))
+    /** @return en caso de éxito, un aviso para mostrar al usuario (null si no hay nada que avisar). */
+    suspend fun rechazar(id: String, motivo: MotivoRechazo, observaciones: String): Result<String?> {
+        val texto = observaciones.trim()
+        if (!ReglasRespuesta.motivoValido(motivo, texto)) {
+            return Result.failure(IllegalArgumentException("Indica el motivo del rechazo"))
+        }
+        return responder(
+            id,
+            EstadoServicio.RECHAZADO,
+            desde = setOf(EstadoServicio.PENDIENTE, EstadoServicio.ACEPTADO),
+            motivo = motivo,
+            observaciones = texto
+        )
+    }
 
     private suspend fun responder(
         id: String,
         nuevoEstado: EstadoServicio,
-        desde: Set<EstadoServicio>
-    ): Result<Unit> {
-        delay(300)
+        desde: Set<EstadoServicio>,
+        motivo: MotivoRechazo? = null,
+        observaciones: String = ""
+    ): Result<String?> {
+        val uid = AuthRepository.usuarioActual?.uid
+        val perfil = AuthRepository.perfilActual.value
+        if (uid == null || perfil == null) {
+            return Result.failure(IllegalStateException("Tu sesión no está lista. Intenta nuevamente."))
+        }
+        if (perfil.rol == Rol.ADMINISTRADOR) {
+            return Result.failure(IllegalStateException("El administrador no responde servicios"))
+        }
         val actual = buscarPorId(id)
             ?: return Result.failure(IllegalStateException("Asignación no encontrada"))
         if (actual.estado !in desde) {
             return Result.failure(IllegalStateException("Esta asignación ya fue respondida"))
         }
-        respuestasLocales.update { it + (id to nuevoEstado) }
-        return Result.success(Unit)
+        return try {
+            val confirmada = RespuestaRepository.guardar(uid, perfil.rol, id, nuevoEstado, motivo, observaciones)
+            Result.success(if (confirmada) null else RESPUESTA_EN_COLA)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LinceLogger.e("SERVICIOS", "No se pudo guardar la respuesta", e)
+            Result.failure(IllegalStateException("No se pudo guardar tu respuesta. Intenta nuevamente."))
+        }
     }
 }

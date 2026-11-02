@@ -1,7 +1,6 @@
 package com.example.lince_track.data
 
 import com.example.lince_track.util.LinceLogger
-import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.DocumentSnapshot
@@ -11,9 +10,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 /**
  * Se lanza cuando una cuenta existe en Authentication pero su rol no se puede
@@ -142,11 +138,5 @@ object AuthRepository {
         val id = (valor as? Number)?.toLong()
         if (id == null) LinceLogger.w(TAG, "El campo '$campo' debe ser un número")
         return id
-    }
-
-    private suspend fun <T> Task<T>.await(): T = suspendCancellableCoroutine { continuation ->
-        addOnSuccessListener { continuation.resume(it) }
-        addOnFailureListener { continuation.resumeWithException(it) }
-        addOnCanceledListener { continuation.cancel() }
     }
 }

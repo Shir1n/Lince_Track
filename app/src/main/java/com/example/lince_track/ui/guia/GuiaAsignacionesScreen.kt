@@ -81,13 +81,15 @@ fun GuiaAsignacionesScreen(
     var rechazoPendiente by remember { mutableStateOf<Servicio?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    fun operar(servicio: Servicio, op: suspend (String) -> Result<Unit>) {
+    fun operar(servicio: Servicio, op: suspend (String) -> Result<String?>) {
         if (servicio.id in procesandoIds) return
         scope.launch {
             procesandoIds = procesandoIds + servicio.id
             val resultado = op(servicio.id)
             procesandoIds = procesandoIds - servicio.id
-            resultado.onFailure { e ->
+            resultado.onSuccess { aviso ->
+                if (aviso != null) snackbarHostState.showSnackbar(aviso)
+            }.onFailure { e ->
                 snackbarHostState.showSnackbar(e.message ?: "No se pudo completar la operación")
             }
         }
@@ -169,8 +171,8 @@ fun GuiaAsignacionesScreen(
         RejectServicioDialog(
             servicio = servicio,
             onDismiss = { rechazoPendiente = null },
-            onConfirm = {
-                operar(servicio, ServicioRepository::rechazar)
+            onConfirm = { motivo, observaciones ->
+                operar(servicio) { ServicioRepository.rechazar(it, motivo, observaciones) }
                 rechazoPendiente = null
             }
         )
