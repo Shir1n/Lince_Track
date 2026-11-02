@@ -24,7 +24,9 @@ data class RespuestaServicio(
     val observaciones: String = "",
     val respondidoEn: Long? = null,
     /** Nombre de quien respondió; solo viene en lo publicado en `estadosServicio`. */
-    val nombre: String? = null
+    val nombre: String? = null,
+    /** Quién respondió; solo viene en lo leído de `respuestas`. */
+    val uid: String? = null
 )
 
 object ReglasRespuesta {

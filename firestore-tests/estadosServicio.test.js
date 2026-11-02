@@ -125,10 +125,23 @@ test('un rechazo es definitivo', async () => {
   await assertFails(setDoc(ref(conductor()), estado()));
 });
 
-test('nadie puede borrar un estado', async () => {
+test('solo el administrador puede borrar un estado', async () => {
   await sembrar(estado({ actualizadoEn: new Date() }));
   await assertFails(deleteDoc(ref(conductor())));
-  await assertFails(deleteDoc(ref(admin())));
+  await assertSucceeds(deleteDoc(ref(admin())));
+});
+
+test('si se reasignó, solo responde el reemplazo', async () => {
+  await entorno.withSecurityRulesDisabled((contexto) =>
+    setDoc(doc(contexto.firestore(), 'asignaciones/8941'), { uid: 'conductor2' }),
+  );
+  await assertFails(setDoc(ref(conductor()), estado()));
+  await assertSucceeds(
+    setDoc(
+      ref(entorno.authenticatedContext('conductor2').firestore()),
+      estado({ uid: 'conductor2', nombre: '' }),
+    ),
+  );
 });
 
 test('conductores, guías y administrador leen los estados', async () => {

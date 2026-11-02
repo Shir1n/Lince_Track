@@ -112,6 +112,62 @@ class FakeServiciosDataSource(
                 guia = ANDREA_SOTO,
                 asignacion = AsignacionDto("RQ", "${hoy}T08:05:00")
             ),
+            // Otro tour de hoy, con otras personas: sirve para mostrar un reemplazo.
+            ServicioDto(
+                id = 8970, codigo = "SRV-8970", srv = "EX", tipo = "EXCURSION",
+                fecha = hoy.toString(), horaPickup = "17:30",
+                descripcion = "Excursión Frutillar y Teatro del Lago",
+                estadoServicio = "CF",
+                reserva = ReservaDto("SB-2026-8970", "Weber x6", "CF"),
+                pax = pax(6, 0),
+                pickup = "Hotel Cumbres, Puerto Varas", dropoff = "Teatro del Lago, Frutillar",
+                oficina = PUX, cliente = CLIENTE_US,
+                transportista = MIGUEL_SOTO,
+                vehiculo = VehiculoDto(44, "KJ-RT-21", "MINIBUS", 19),
+                asignacion = AsignacionDto("RQ", "${hoy}T08:10:00")
+            ),
+            ServicioDto(
+                id = 8971, codigo = "SRV-8971", srv = "GS", tipo = "GUIDED_SERVICE",
+                fecha = hoy.toString(), horaPickup = "17:30",
+                descripcion = "Guiado Frutillar y Teatro del Lago",
+                descripcionPadre = "Excursión Frutillar y Teatro del Lago",
+                estadoServicio = "CF",
+                reserva = ReservaDto("SB-2026-8970", "Weber x6", "CF"),
+                pax = pax(6, 0),
+                pickup = "Hotel Cumbres, Puerto Varas", dropoff = "Teatro del Lago, Frutillar",
+                oficina = PUX, cliente = CLIENTE_US,
+                idiomaRequerido = EN,
+                guia = ROBERTO_DIAZ,
+                asignacion = AsignacionDto("RQ", "${hoy}T08:15:00")
+            ),
+            // Un tour de mañana para Carlos y Andrea: un rechazo aquí aparece en "próximos días".
+            ServicioDto(
+                id = 8960, codigo = "SRV-8960", srv = "EX", tipo = "EXCURSION",
+                fecha = hoy.plusDays(1).toString(), horaPickup = "09:00",
+                descripcion = "Excursión Lago Todos los Santos",
+                estadoServicio = "CF",
+                reserva = ReservaDto("SB-2026-8960", "Rossi x4", "CF"),
+                pax = pax(4, 0),
+                pickup = "Hotel Cumbres, Puerto Varas", dropoff = "Petrohué",
+                oficina = PUX, cliente = CLIENTE_US,
+                transportista = CARLOS_MORALES,
+                vehiculo = VehiculoDto(41, "LK-VF-84", "VAN", 12),
+                asignacion = AsignacionDto("RQ", "${hoy}T09:00:00")
+            ),
+            ServicioDto(
+                id = 8961, codigo = "SRV-8961", srv = "GS", tipo = "GUIDED_SERVICE",
+                fecha = hoy.plusDays(1).toString(), horaPickup = "09:00",
+                descripcion = "Guiado Lago Todos los Santos",
+                descripcionPadre = "Excursión Lago Todos los Santos",
+                estadoServicio = "CF",
+                reserva = ReservaDto("SB-2026-8960", "Rossi x4", "CF"),
+                pax = pax(4, 0),
+                pickup = "Hotel Cumbres, Puerto Varas", dropoff = "Petrohué",
+                oficina = PUX, cliente = CLIENTE_US,
+                idiomaRequerido = EN,
+                guia = ANDREA_SOTO,
+                asignacion = AsignacionDto("RQ", "${hoy}T09:05:00")
+            ),
             ServicioDto(
                 id = 9020, codigo = "SRV-9020", srv = "TR", tipo = "TRANSFER",
                 fecha = hoy.plusDays(2).toString(), horaPickup = "15:00",

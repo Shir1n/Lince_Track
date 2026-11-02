@@ -92,11 +92,44 @@ service cloud.firestore {
 
     match /estadosServicio/{servicioId} {
       allow read: if tieneAcceso();
-      allow create: if estadoValido(servicioId);
+      allow create: if estadoValido(servicioId) && leCorresponde(servicioId);
       allow update: if estadoValido(servicioId)
+        && leCorresponde(servicioId)
         && resource.data.uid == request.auth.uid
         && resource.data.estado == 'aceptado'
         && request.resource.data.estado == 'rechazado';
+      // Al reasignar, el administrador borra el estado de la persona anterior.
+      allow delete: if esAdmin();
+    }
+
+    // Si el servicio se reasignó, solo responde el reemplazo.
+    function leCorresponde(servicioId) {
+      let asignacion = /databases/$(database)/documents/asignaciones/$(servicioId);
+      return !exists(asignacion) || get(asignacion).data.uid == request.auth.uid;
+    }
+
+    // asignaciones/{servicioId}: { servicioId, uid, nombre, rol, fecha, asignadoPor, asignadoEn }
+    // Reemplazo elegido por el administrador, porque la API es de solo lectura. Lo leen todos
+    // para saber quién tiene cada servicio; el rol y el nombre deben ser los de esa cuenta.
+    function asignacionValida(servicioId) {
+      let d = request.resource.data;
+      let persona = /databases/$(database)/documents/usuarios/$(d.uid);
+      return esAdmin()
+        && d.servicioId == servicioId
+        && d.uid is string
+        && exists(persona)
+        && d.rol == get(persona).data.rol
+        && d.rol in ['conductor', 'guia']
+        && d.nombre == get(persona).data.get('nombre', '')
+        && d.fecha is string
+        && d.asignadoPor == request.auth.uid
+        && d.asignadoEn == request.time
+        && d.keys().hasOnly(['servicioId', 'uid', 'nombre', 'rol', 'fecha', 'asignadoPor', 'asignadoEn']);
+    }
+
+    match /asignaciones/{servicioId} {
+      allow read: if tieneAcceso();
+      allow create, update: if asignacionValida(servicioId);
       allow delete: if false;
     }
 

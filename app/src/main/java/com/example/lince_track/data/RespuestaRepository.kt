@@ -20,11 +20,11 @@ object RespuestaRepository {
     private val firestore = FirebaseFirestore.getInstance()
 
     /**
-     * Respuestas por servicio: id del servicio → respuesta. Con [uid] trae solo las de esa
-     * persona; con null, todas (solo el administrador tiene permiso). Incluye al instante las
-     * que aún no llegan al servidor (por ejemplo, sin conexión).
+     * Respuestas de la más antigua a la más reciente. Con [uid] trae solo las de esa persona; con
+     * null, todas (solo el administrador tiene permiso). Incluye al instante las que aún no
+     * llegan al servidor (por ejemplo, sin conexión).
      */
-    fun observar(uid: String?): Flow<Map<String, RespuestaServicio>> = callbackFlow {
+    fun observar(uid: String?): Flow<List<RespuestaServicio>> = callbackFlow {
         val coleccion = firestore.collection(COLECCION)
         val consulta = if (uid != null) coleccion.whereEqualTo("uid", uid) else coleccion
         val registro = consulta
@@ -46,14 +46,14 @@ object RespuestaRepository {
                             estado = estado,
                             motivo = MotivoRechazo.desde(documento.getString("motivo")),
                             observaciones = documento.getString("observaciones").orEmpty(),
-                            respondidoEn = documento.getTimestamp("respondidoEn")?.toDate()?.time
+                            respondidoEn = documento.getTimestamp("respondidoEn")?.toDate()?.time,
+                            uid = documento.getString("uid")
                         )
                     } else {
                         null
                     }
                 }
-                // Si un servicio tuviera más de una respuesta, queda la más reciente.
-                trySend(respuestas.sortedBy { it.respondidoEn ?: Long.MAX_VALUE }.associateBy { it.servicioId })
+                trySend(respuestas.sortedBy { it.respondidoEn ?: Long.MAX_VALUE })
             }
         awaitClose { registro.remove() }
     }

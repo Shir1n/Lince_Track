@@ -72,7 +72,9 @@ object ServicioMapper {
             tipo = dto.tipo,
             statusPL = dto.asignacion.statusPL,
             horaFinEstimada = true,
-            vehiculo = dto.vehiculo?.let { VehiculoServicio(it.patente, it.tipo, it.capacidad) }
+            vehiculo = dto.vehiculo?.let { VehiculoServicio(it.patente, it.tipo, it.capacidad) },
+            cancelado = dto.estadoServicio == "XX",
+            responsableId = (dto.guia ?: dto.transportista)?.id
         )
     }
 }

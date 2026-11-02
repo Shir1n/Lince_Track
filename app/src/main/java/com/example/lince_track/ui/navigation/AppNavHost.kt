@@ -136,7 +136,7 @@ private fun bottomNavItems(rol: Rol?): List<BottomNavItem> = when (rol) {
     Rol.GUIA -> listOf(
         BottomNavItem(Routes.GUIA_ASIGNACIONES, "Asignaciones", Icons.Outlined.Home),
         BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth),
-        BottomNavItem(Routes.GUIA_CONEXION, "Conexión", Icons.Outlined.LocationOn),
+        BottomNavItem(Routes.ALERTAS, "Alertas", Icons.Outlined.Notifications),
         BottomNavItem(Routes.GUIA_PERFIL, "Perfil", Icons.Outlined.Person)
     )
     Rol.ADMINISTRADOR -> listOf(

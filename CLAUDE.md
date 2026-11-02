@@ -81,7 +81,12 @@ Responde y escribe la interfaz en **español de Chile**.
   para que Coordinación lo vea. Solo lo leen el dueño y el administrador.
 - `estadosServicio/{servicioId}`: lo que el guía y el conductor de un mismo tour ven del otro (estado y nombre, sin motivo
   ni observaciones). Se escribe junto con `respuestas` en un solo lote y lo leen todos los usuarios con rol. Solo
-  quien lo publicó puede cambiarlo; falta permitir a un reemplazo cuando exista la reasignación.
+  quien lo publicó puede cambiarlo.
+- `asignaciones/{servicioId}`: reemplazo elegido por el administrador (`ReglasAsignacion`), porque la API es de solo
+  lectura. Manda sobre la persona que trae la API, y al crearla se borra el estado publicado. Solo escribe el
+  administrador; las cuentas que aparecen como opción necesitan rol, nombre e ID de la API en `usuarios/{uid}`.
+- Notificaciones locales (`NotificadorLocal`, `CambiosServicios`): solo con la app viva. Con la app cerrada requieren
+  Blaze y un servidor.
 - Tests de reglas en `firestore-tests/` con el emulador y un proyecto demo (`npm install`, `npm test`;
   necesita Java en el PATH). Tras cambiar `firestore.rules`, hay que publicarlas en Firebase.
 - `storage.rules` está en el repo pero **sin uso**: Storage exige plan Blaze. Se activará Blaze
@@ -102,11 +107,11 @@ Responde y escribe la interfaz en **español de Chile**.
 ## Pendientes
 1. Reemplazar los IDs de prueba de `usuarios/{uid}` (`transportistaId: 12`, `guiaId: 7`) por los reales
    cuando llegue la clave de la API: con la clave, un ID de prueba mostraría servicios de otra persona.
-2. El panel del administrador (`ui/admin/AdminPanelScreen`) solo muestra los servicios de hoy y no
-   avisa ni reasigna; falta notificar los rechazos y permitir asignar un reemplazo.
+2. El panel del administrador (`ui/admin/AdminPanelScreen`) muestra hoy y los rechazos de los próximos días, avisa y
+   reasigna. No reasigna lo ya aceptado.
 3. Benjamin: `DarkErrorContainer` gris. Los botones de llamar y WhatsApp quedan visibles a propósito aunque
-   no haya teléfono: se conectarán cuando exista el dato. La pestaña Conexión del guía sigue en construcción.
-   Las alertas se calculan al abrir la pestaña (`GeneradorAlertas`); aún no son notificaciones.
+   no haya teléfono: se conectarán cuando exista el dato. `ConexionConductorScreen` sigue en construcción y fuera de
+   la barra: el guía ve Alertas en su lugar. Las alertas se calculan al abrir la pestaña (`GeneradorAlertas`).
 4. Mapa: la ruta es una línea recta desde el Hotel Cumbres y el destino se deduce del texto (faltan
    coordenadas en la API). "Reportar incidencia" y "Reasignar" se quitaron porque eran simulados: hay que
    reponerlos cuando guarden datos de verdad. Falta validar distancia y hora del check-in.
