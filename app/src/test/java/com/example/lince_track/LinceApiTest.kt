@@ -132,5 +132,10 @@ class LinceApiTest {
             FiltroServicios(hoy, hoy, transportistaId = FakeServiciosDataSource.CARLOS_MORALES.id)
         )
         assertTrue(deCarlos.all { it.transportista?.id == 12L && it.fecha == hoy.toString() })
+
+        // Carlos debe tener un servicio aceptado y uno pendiente para mostrar todo el flujo.
+        val estados = deCarlos.map { it.asignacion.statusPL }
+        assertTrue("CF" in estados)
+        assertTrue("RQ" in estados)
     }
 }
