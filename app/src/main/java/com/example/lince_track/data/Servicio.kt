@@ -56,7 +56,10 @@ private val fechaCortaFormatter = DateTimeFormatter.ofPattern("d 'de' MMMM", LOC
 
 /** Quién atiende el servicio: los guiados llevan solo guía; el resto, solo transportista. */
 val Servicio.responsable: String
-    get() = if (tipo == "GUIDED_SERVICE") guia else conductor
+    get() = if (esGuiado) guia else conductor
+
+val Servicio.esGuiado: Boolean
+    get() = tipo == "GUIDED_SERVICE"
 
 fun formatHora(hora: LocalTime): String = hora.format(horaFormatter)
 

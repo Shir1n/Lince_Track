@@ -22,7 +22,9 @@ data class RespuestaServicio(
     val estado: EstadoServicio,
     val motivo: MotivoRechazo? = null,
     val observaciones: String = "",
-    val respondidoEn: Long? = null
+    val respondidoEn: Long? = null,
+    /** Nombre de quien respondió; solo viene en lo publicado en `estadosServicio`. */
+    val nombre: String? = null
 )
 
 object ReglasRespuesta {

@@ -73,6 +73,33 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // estadosServicio/{servicioId}: { uid, servicioId, rol, nombre, estado, fecha, actualizadoEn }
+    // Lo que el guía y el conductor de un mismo tour necesitan saber del otro. Sin motivo ni
+    // observaciones, que siguen privados en "respuestas". Solo quien lo publicó puede cambiarlo.
+    function estadoValido(servicioId) {
+      let d = request.resource.data;
+      return tieneAcceso()
+        && d.uid == request.auth.uid
+        && d.rol == perfil().rol
+        && d.rol in ['conductor', 'guia']
+        && d.nombre == perfil().get('nombre', '')
+        && d.servicioId == servicioId
+        && d.estado in ['aceptado', 'rechazado']
+        && d.fecha is string
+        && d.actualizadoEn == request.time
+        && d.keys().hasOnly(['uid', 'servicioId', 'rol', 'nombre', 'estado', 'fecha', 'actualizadoEn']);
+    }
+
+    match /estadosServicio/{servicioId} {
+      allow read: if tieneAcceso();
+      allow create: if estadoValido(servicioId);
+      allow update: if estadoValido(servicioId)
+        && resource.data.uid == request.auth.uid
+        && resource.data.estado == 'aceptado'
+        && request.resource.data.estado == 'rechazado';
+      allow delete: if false;
+    }
+
     // checkins/{uid}_{servicioId}: { uid, servicioId, rol, checkInEn, lat, lon, distanciaM, gpsReal,
     //                                checkOutEn, latFin, lonFin (solo tras el check-out) }
     // Es ubicación de personas: solo la leen el dueño y el administrador. El check-out se

@@ -57,7 +57,9 @@ Responde y escribe la interfaz en **español de Chile**.
   guiaId, transportistaId; paginado, `pageSize` máx. 100), `/servicios/{id}`, `/guias`, `/transportistas`,
   `/clientes`, `/catalogos`, `/resumen`. Parámetros desconocidos → 400. Límite → 429 con `Retry-After`.
 - Reglas de negocio: `TRANSFER` y `EXCURSION` llevan **solo transportista**; `GUIDED_SERVICE` **solo guía**.
-  Un tour se relaciona por `reserva.referencia` (por confirmar con Southbound).
+  Un tour se relaciona por `reserva.referencia` (por confirmar con Southbound): `ReglasCompanero` busca el otro
+  servicio con la misma referencia, el mismo día y horario cruzado. Mientras esa persona no acepta se muestra
+  "Sin asignar"; al aceptar, el nombre de su cuenta (`usuarios/{uid}.nombre`), no el de la API.
 - `statusPL` → estado de la app (`ServicioMapper.estadoDesde`): CF→ACEPTADO, DL/CX o servicio XX→RECHAZADO,
   RQ/null→PENDIENTE.
 - La API **no trae**: hora de término (se estima por tipo: 60/180/240 min), tarifa (queda 0),
@@ -77,6 +79,9 @@ Responde y escribe la interfaz en **español de Chile**.
 - `checkins/{uid}_{servicioId}`: check-in y check-out con hora del servidor, coordenadas, distancia al
   punto y si el GPS era real (`CheckinRepository`). No se bloquea por distancia ni por hora: se registra
   para que Coordinación lo vea. Solo lo leen el dueño y el administrador.
+- `estadosServicio/{servicioId}`: lo que el guía y el conductor de un mismo tour ven del otro (estado y nombre, sin motivo
+  ni observaciones). Se escribe junto con `respuestas` en un solo lote y lo leen todos los usuarios con rol. Solo
+  quien lo publicó puede cambiarlo; falta permitir a un reemplazo cuando exista la reasignación.
 - Tests de reglas en `firestore-tests/` con el emulador y un proyecto demo (`npm install`, `npm test`;
   necesita Java en el PATH). Tras cambiar `firestore.rules`, hay que publicarlas en Firebase.
 - `storage.rules` está en el repo pero **sin uso**: Storage exige plan Blaze. Se activará Blaze

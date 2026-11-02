@@ -15,6 +15,7 @@ object RespuestaRepository {
 
     private const val TAG = "RESPUESTAS"
     private const val COLECCION = "respuestas"
+    private const val COLECCION_ESTADOS = "estadosServicio"
 
     private val firestore = FirebaseFirestore.getInstance()
 
@@ -58,28 +59,71 @@ object RespuestaRepository {
     }
 
     /**
-     * Guarda la respuesta.
+     * Estado publicado de cada servicio desde la fecha [desde] (AAAA-MM-DD): id del servicio →
+     * estado y nombre. Es lo que ve la otra persona del tour; no incluye motivo ni observaciones.
+     */
+    fun observarEstados(desde: String): Flow<Map<String, RespuestaServicio>> = callbackFlow {
+        val registro = firestore.collection(COLECCION_ESTADOS)
+            .whereGreaterThanOrEqualTo("fecha", desde)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    LinceLogger.e(TAG, "No se pudieron leer los estados (${error.code})", error)
+                    return@addSnapshotListener
+                }
+                val estados = snapshot?.documents.orEmpty().mapNotNull { documento ->
+                    val estado = when (documento.getString("estado")) {
+                        "aceptado" -> EstadoServicio.ACEPTADO
+                        "rechazado" -> EstadoServicio.RECHAZADO
+                        else -> null
+                    }
+                    estado?.let {
+                        RespuestaServicio(servicioId = documento.id, estado = it, nombre = documento.getString("nombre"))
+                    }
+                }
+                trySend(estados.associateBy { it.servicioId })
+            }
+        awaitClose { registro.remove() }
+    }
+
+    /**
+     * Guarda la respuesta y publica el estado para la otra persona del tour, ambos o ninguno.
      * @return true si el servidor la confirmó; false si sigue en cola por falta de conexión.
      */
     suspend fun guardar(
         uid: String,
         rol: Rol,
+        nombre: String,
         servicioId: String,
+        fecha: String,
         estado: EstadoServicio,
         motivo: MotivoRechazo? = null,
         observaciones: String = ""
     ): Boolean {
+        val codigoEstado = if (estado == EstadoServicio.RECHAZADO) "rechazado" else "aceptado"
         val datos = buildMap<String, Any> {
             put("uid", uid)
             put("servicioId", servicioId)
             put("rol", rol.id)
-            put("estado", if (estado == EstadoServicio.RECHAZADO) "rechazado" else "aceptado")
+            put("estado", codigoEstado)
             put("respondidoEn", FieldValue.serverTimestamp())
             if (motivo != null) {
                 put("motivo", motivo.codigo)
                 put("observaciones", observaciones)
             }
         }
-        return firestore.collection(COLECCION).document("${uid}_$servicioId").set(datos).confirmada()
+        val estadoCompartido = mapOf(
+            "uid" to uid,
+            "servicioId" to servicioId,
+            "rol" to rol.id,
+            "nombre" to nombre,
+            "estado" to codigoEstado,
+            "fecha" to fecha,
+            "actualizadoEn" to FieldValue.serverTimestamp()
+        )
+        return firestore.batch()
+            .set(firestore.collection(COLECCION).document("${uid}_$servicioId"), datos)
+            .set(firestore.collection(COLECCION_ESTADOS).document(servicioId), estadoCompartido)
+            .commit()
+            .confirmada()
     }
 }
