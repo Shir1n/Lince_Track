@@ -18,8 +18,8 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
 
 ## Estado actual (02-11-2026)
 - **Objetivo cercano:** un video para vender la app a los dueños de Southbound, con el flujo lo más completo posible.
-- **Rama en curso:** ninguna. El resumen para los dueños ya está en `master` (PR 30). La ubicación en la incidencia está
-  en `feature/ubicacion-incidencia`, probada y por fusionar.
+- **Rama en curso:** ninguna. El resumen para los dueños (PR 30) y la ubicación en la incidencia (PR 31) ya están en
+  `master`. El panel con selector de fecha está en `feature/panel-fecha`, probado y por fusionar.
 - **Reglas:** revisar que la versión de `firestore.rules` de `master` (`telefono` en `estadosServicio`, `lat` y `lon` en
   `incidencias`) esté publicada antes de probar: si falta, aceptar, rechazar o reportar da error.
 - **Cuentas de prueba** en `usuarios/{uid}`:
@@ -35,9 +35,9 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
   en `estadosServicio` y los de `respuestas`; también `asignaciones` si se reasignó. Lo aceptado antes de agregar
   `telefono` se guardó sin teléfono.
 - **Lo que sigue para el video, en orden:**
-  1. Panel con selector de fecha y terminados.
-  2. Perfil real más completo (revisar lo que ya agregó `feature/perfil-piloto1`).
-  3. Revisión visual con los tres roles y número de soporte real.
+  1. Perfil real más completo (revisar lo que ya agregó `feature/perfil-piloto1`).
+  2. Revisión visual con los tres roles y número de soporte real.
+  3. Antes de grabar: resolver las incidencias de prueba, para que el panel se vea limpio.
 - **Resumen para los dueños** (`ui/admin/AdminResumenScreen`): sin clave de la API, "Últimos 7 días" suma el historial
   inventado de `ResumenDemostracion`, siempre con un aviso visible; "Hoy" y las cifras con clave son solo datos reales.
   Los márgenes (15 minutos de puntualidad, 500 m de distancia) son provisionales: falta confirmarlos con Southbound.
@@ -167,8 +167,10 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
 ## Pendientes
 1. Reemplazar los IDs de prueba de `usuarios/{uid}` (`transportistaId: 12` y `16`, `guiaId: 7`) por los reales
    cuando llegue la clave de la API: con la clave, un ID de prueba mostraría servicios de otra persona.
-2. El panel del administrador (`ui/admin/AdminPanelScreen`) muestra hoy y los rechazos de los próximos días, avisa y
-   reasigna. Lo ya aceptado solo se reasigna con una incidencia abierta.
+2. El panel del administrador (`ui/admin/AdminPanelScreen`) muestra el día elegido (hoy-7 a hoy+30) y, siempre, las
+   incidencias abiertas y los rechazos de los próximos días; avisa y reasigna. Lo ya aceptado solo se reasigna con una
+   incidencia abierta, y los días pasados no se reasignan. Con datos de ejemplo, los días pasados se ven casi vacíos: el
+   historial de demostración solo está en el Resumen.
 3. Benjamin: `DarkErrorContainer` gris. El botón de la otra persona en el detalle abre su WhatsApp (teléfono compartido
    al aceptar). Los del líder del grupo quedan visibles a propósito aunque no haya teléfono: la API no trae el dato. `ConexionConductorScreen` sigue en construcción y fuera de
    la barra: el guía ve Alertas en su lugar. Las alertas se calculan al abrir la pestaña (`GeneradorAlertas`).

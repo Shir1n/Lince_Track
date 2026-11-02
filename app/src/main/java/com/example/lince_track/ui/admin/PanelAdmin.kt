@@ -8,15 +8,19 @@ import com.example.lince_track.data.ReglasCheckin
 import com.example.lince_track.data.RespuestaServicio
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.responsable
+import com.example.lince_track.data.servicios.FiltroServicios
+import java.time.LocalDate
 
-enum class FiltroPanel(val etiqueta: String, val estado: EstadoServicio?) {
-    TODOS("Todos", null),
-    PENDIENTES("Pendientes", EstadoServicio.PENDIENTE),
-    ACEPTADOS("Aceptados", EstadoServicio.ACEPTADO),
-    RECHAZADOS("Rechazados", EstadoServicio.RECHAZADO)
+enum class FiltroPanel(val etiqueta: String) {
+    TODOS("Todos"),
+    PENDIENTES("Pendientes"),
+    ACEPTADOS("Aceptados"),
+    TERMINADOS("Terminados"),
+    RECHAZADOS("Rechazados")
 }
 
-data class TotalesPanel(val pendientes: Int, val aceptados: Int, val rechazados: Int)
+/** Cada servicio cuenta una sola vez: [aceptados] son los que aún no terminan. */
+data class TotalesPanel(val pendientes: Int, val aceptados: Int, val rechazados: Int, val terminados: Int = 0)
 
 /**
  * Un servicio tal como se muestra en el panel.
@@ -42,26 +46,60 @@ object PanelAdmin {
     const val RECHAZADO_EN_API = "Rechazado en Southbound"
     const val MOTIVO_DESCONOCIDO = "Motivo no indicado"
 
-    fun totales(servicios: List<Servicio>) = TotalesPanel(
-        pendientes = servicios.count { it.estado == EstadoServicio.PENDIENTE },
-        aceptados = servicios.count { it.estado == EstadoServicio.ACEPTADO },
-        rechazados = servicios.count { it.estado == EstadoServicio.RECHAZADO }
-    )
+    /** Los días que se pueden elegir: los que la app tiene cargados. */
+    fun rangoFechas(hoy: LocalDate): ClosedRange<LocalDate> =
+        FiltroServicios.porDefecto(hoy).let { it.desde..it.hasta }
 
-    /** Filas del filtro elegido: primero los rechazados y, dentro de cada grupo, por hora. */
+    fun totales(servicios: List<Servicio>, checkins: Map<String, CheckinServicio> = emptyMap()): TotalesPanel {
+        val terminados = servicios.count { ReglasCheckin.estaTerminado(it, checkins[it.id]) }
+        return TotalesPanel(
+            pendientes = servicios.count { it.estado == EstadoServicio.PENDIENTE },
+            aceptados = servicios.count { it.estado == EstadoServicio.ACEPTADO } - terminados,
+            rechazados = servicios.count { it.estado == EstadoServicio.RECHAZADO },
+            terminados = terminados
+        )
+    }
+
+    /**
+     * Filas del filtro elegido: primero los rechazados, al final los terminados y, dentro de cada
+     * grupo, por hora.
+     *
+     * @param hoy con fecha, lo anterior a ella ya no se puede reasignar.
+     */
     fun filas(
         servicios: List<Servicio>,
         respuestas: Map<String, RespuestaServicio>,
         filtro: FiltroPanel,
         checkins: Map<String, CheckinServicio> = emptyMap(),
-        incidencias: List<IncidenciaServicio> = emptyList()
+        incidencias: List<IncidenciaServicio> = emptyList(),
+        hoy: LocalDate? = null
     ): List<FilaPanel> = servicios
-        .filter { filtro.estado == null || it.estado == filtro.estado }
-        .sortedWith(compareBy({ it.estado != EstadoServicio.RECHAZADO }, { it.horaInicio }))
+        .filter { cumple(filtro, it, checkins[it.id]) }
+        .sortedWith(
+            compareBy(
+                { it.estado != EstadoServicio.RECHAZADO },
+                { ReglasCheckin.estaTerminado(it, checkins[it.id]) },
+                { it.horaInicio }
+            )
+        )
         .map { servicio ->
-            aFila(servicio, respuestas[servicio.id], checkins[servicio.id])
-                .copy(incidenciasAbiertas = incidencias.count { it.servicioId == servicio.id && !it.resuelta })
+            val fila = aFila(servicio, respuestas[servicio.id], checkins[servicio.id])
+            fila.copy(
+                incidenciasAbiertas = incidencias.count { it.servicioId == servicio.id && !it.resuelta },
+                puedeReasignar = fila.puedeReasignar && (hoy == null || !servicio.fecha.isBefore(hoy))
+            )
         }
+
+    private fun cumple(filtro: FiltroPanel, servicio: Servicio, checkin: CheckinServicio?): Boolean {
+        val terminado = ReglasCheckin.estaTerminado(servicio, checkin)
+        return when (filtro) {
+            FiltroPanel.TODOS -> true
+            FiltroPanel.PENDIENTES -> servicio.estado == EstadoServicio.PENDIENTE
+            FiltroPanel.ACEPTADOS -> servicio.estado == EstadoServicio.ACEPTADO && !terminado
+            FiltroPanel.TERMINADOS -> terminado
+            FiltroPanel.RECHAZADOS -> servicio.estado == EstadoServicio.RECHAZADO
+        }
+    }
 
     private fun aFila(servicio: Servicio, respuesta: RespuestaServicio?, checkin: CheckinServicio?): FilaPanel {
         // El servicio se muestra rechazado aunque la persona lo haya aceptado si la API lo canceló.
