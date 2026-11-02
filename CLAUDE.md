@@ -99,9 +99,9 @@ Responde y escribe la interfaz en **español de Chile**.
    cuando llegue la clave de la API: con la clave, un ID de prueba mostraría servicios de otra persona.
 2. El panel del administrador (`ui/admin/AdminPanelScreen`) solo muestra los servicios de hoy y no
    avisa ni reasigna; falta notificar los rechazos y permitir asignar un reemplazo.
-3. Benjamin: detalle (volver de inmediato al responder; ocultar llamar/WhatsApp si no hay teléfono;
-   ocultar Confirmar/Rechazar al guía), mes del calendario en español, `DarkErrorContainer` gris,
-   etiquetas de Alertas en inglés ("Reasignement").
+3. Benjamin: `DarkErrorContainer` gris. Los botones de llamar y WhatsApp quedan visibles a propósito aunque
+   no haya teléfono: se conectarán cuando exista el dato. La pestaña Conexión del guía sigue en construcción.
+   Las alertas se calculan al abrir la pestaña (`GeneradorAlertas`); aún no son notificaciones.
 4. Mapa: la ruta es una línea recta desde el Hotel Cumbres y el destino se deduce del texto (faltan
    coordenadas en la API). "Reportar incidencia" y "Reasignar" se quitaron porque eran simulados: hay que
    reponerlos cuando guarden datos de verdad. Falta validar distancia y hora del check-in.

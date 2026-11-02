@@ -81,15 +81,21 @@ fun DetalleServicioScreen(
     var showRejectDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    fun operar(op: suspend (String) -> Result<String?>) {
+    // Al aceptar se queda aquí, con "Ver Ruta" a mano; al rechazar vuelve de inmediato,
+    // salvo que haya que avisar algo primero (por ejemplo, que no hay conexión).
+    fun operar(volverAlTerminar: Boolean, op: suspend (String) -> Result<String?>) {
         if (servicio == null || procesando) return
         scope.launch {
             procesando = true
             val resultado = op(servicio.id)
             procesando = false
             resultado.onSuccess { aviso ->
-                snackbarHostState.showSnackbar(aviso ?: "Operación completada")
-                onBack()
+                if (volverAlTerminar) {
+                    if (aviso != null) snackbarHostState.showSnackbar(aviso)
+                    onBack()
+                } else {
+                    snackbarHostState.showSnackbar(aviso ?: "Asignación confirmada")
+                }
             }.onFailure { e ->
                 snackbarHostState.showSnackbar(e.message ?: "No se pudo completar la operación")
             }
@@ -147,7 +153,7 @@ fun DetalleServicioScreen(
             BottomActions(
                 servicio = servicio,
                 procesando = procesando,
-                onConfirm = { operar(ServicioRepository::aceptar) },
+                onConfirm = { operar(volverAlTerminar = false, ServicioRepository::aceptar) },
                 onReject = { showRejectDialog = true },
                 onOpenRoute = { onOpenRoute(servicio.id) }
             )
@@ -165,7 +171,7 @@ fun DetalleServicioScreen(
             onDismiss = { showRejectDialog = false },
             onConfirm = { motivo, observaciones ->
                 showRejectDialog = false
-                operar { ServicioRepository.rechazar(it, motivo, observaciones) }
+                operar(volverAlTerminar = true) { ServicioRepository.rechazar(it, motivo, observaciones) }
             }
         )
     }
@@ -220,19 +226,22 @@ private fun ServiceHeaderCard(servicio: Servicio) {
             )
             Spacer(modifier = Modifier.height(12.dp))
             EstadoServicioBadge(servicio.estado)
-            Spacer(modifier = Modifier.height(14.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = "Tarifa: ",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "${formatPrecioCLP(servicio.tarifa)} CLP",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+            // La API aún no trae tarifa: sin ella no se muestra.
+            if (servicio.tarifa > 0) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = "Tarifa: ",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "${formatPrecioCLP(servicio.tarifa)} CLP",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
     }

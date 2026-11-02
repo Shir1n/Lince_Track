@@ -2,7 +2,9 @@ package com.example.lince_track.data
 
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.Month
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.util.Locale
 
 enum class EstadoServicio {
@@ -47,9 +49,10 @@ data class VehiculoServicio(
     val capacidad: Int
 )
 
-private val horaFormatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.ENGLISH)
-private val fechaFormatter = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", Locale.forLanguageTag("es-ES"))
-private val fechaCortaFormatter = DateTimeFormatter.ofPattern("d 'de' MMMM", Locale.forLanguageTag("es-ES"))
+private val LOCALE_CHILE = Locale.forLanguageTag("es-CL")
+private val horaFormatter = DateTimeFormatter.ofPattern("HH:mm", LOCALE_CHILE)
+private val fechaFormatter = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", LOCALE_CHILE)
+private val fechaCortaFormatter = DateTimeFormatter.ofPattern("d 'de' MMMM", LOCALE_CHILE)
 
 /** Quién atiende el servicio: los guiados llevan solo guía; el resto, solo transportista. */
 val Servicio.responsable: String
@@ -60,6 +63,10 @@ fun formatHora(hora: LocalTime): String = hora.format(horaFormatter)
 fun formatFecha(fecha: LocalDate): String = fecha.format(fechaFormatter)
 
 fun formatFechaCorta(fecha: LocalDate): String = fecha.format(fechaCortaFormatter)
+
+/** Nombre del mes con mayúscula inicial, por ejemplo "Noviembre". */
+fun formatNombreMes(mes: Month): String =
+    mes.getDisplayName(TextStyle.FULL, LOCALE_CHILE).replaceFirstChar { it.titlecase(LOCALE_CHILE) }
 
 fun formatPrecioCLP(monto: Int): String =
     "$" + monto.toString().reversed().chunked(3).joinToString(".").reversed()

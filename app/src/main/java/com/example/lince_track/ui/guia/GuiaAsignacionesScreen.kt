@@ -341,7 +341,7 @@ private fun ServicioCard(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "${servicio.origen} → ${servicio.destino}",
+                    text = "${servicio.origen} – ${servicio.destino}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface

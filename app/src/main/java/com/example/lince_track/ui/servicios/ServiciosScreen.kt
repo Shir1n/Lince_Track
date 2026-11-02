@@ -240,18 +240,27 @@ private fun SummaryKpiCard(servicios: List<Servicio>) {
             verticalAlignment = Alignment.Top
         ) {
             Column {
-                Text(
-                    text = "Saldo acumulado hoy:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "${formatPrecioCLP(saldo)} CLP",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                if (saldo > 0) {
+                    Text(
+                        text = "Saldo acumulado hoy:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "${formatPrecioCLP(saldo)} CLP",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                } else {
+                    Text(
+                        text = "Resumen de hoy",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
@@ -320,12 +329,17 @@ private fun ServicioCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = formatPrecioCLP(servicio.tarifa),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                // La API aún no trae tarifa: sin ella no se muestra. El espacio mantiene los botones a la derecha.
+                if (servicio.tarifa > 0) {
+                    Text(
+                        text = formatPrecioCLP(servicio.tarifa),
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                } else {
+                    Spacer(modifier = Modifier.width(0.dp))
+                }
 
                 val rol by AuthRepository.rolActual.collectAsState()
                 when (servicio.estado) {

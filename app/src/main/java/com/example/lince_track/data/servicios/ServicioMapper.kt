@@ -47,7 +47,8 @@ object ServicioMapper {
         val horaFin = horaInicio.plusMinutes(duracionEstimadaMin(dto.tipo))
 
         val referencia = dto.reserva.referencia.ifBlank { dto.codigo }
-        val titulo = dto.descripcion.ifBlank { dto.descripcionPadre ?: dto.codigo }
+        // Algunos teléfonos no dibujan bien la flecha con su fuente.
+        val titulo = dto.descripcion.ifBlank { dto.descripcionPadre ?: dto.codigo }.replace("→", "–")
 
         return Servicio(
             id = dto.id.toString(),
