@@ -18,29 +18,30 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
 
 ## Estado actual (02-11-2026)
 - **Objetivo cercano:** un video para vender la app a los dueños de Southbound, con el flujo lo más completo posible.
-- **Rama en curso:** `feature/gestion-incidencias`, con la gestión de incidencias y el botón de WhatsApp. Compila y pasan
-  los tests, pero **falta probarla en celulares** y hacer su PR.
-- **Reglas:** la versión de `firestore.rules` de esa rama (`telefono` en `estadosServicio`) podría no estar publicada.
-  Revisarlo antes de probar: si falta, aceptar o rechazar da error.
+- **Rama en curso:** ninguna. La gestión de incidencias y el botón de WhatsApp ya están en `master` (PR 28).
+- **Reglas:** revisar que la versión de `firestore.rules` de `master` (`telefono` en `estadosServicio`) esté publicada
+  antes de probar: si falta, aceptar o rechazar da error.
 - **Cuentas de prueba** en `usuarios/{uid}`:
   - Carlos Morales: `conductor`, `transportistaId: 12`, sin `perfilNuevo` (se muestra el perfil completo de ejemplo).
   - Patricio Lagos: `conductor`, `transportistaId: 16`, `perfilNuevo: true`. Es el reemplazo en el video.
   - Guía: `guiaId: 7`, administrador sin ID. `telefono` es texto con código de país (`+569...`).
+  - Los correos y la contraseña están en `USUARIOS_TEST.md`, y `LoginScreen` tiene botones que rellenan esas cuentas.
 - **Recorrido del video:** guía y conductor aceptan "Saltos del Petrohué" (8941/8942) → el conductor hace check-in y
   reporta "Falla mecánica" → el administrador responde y envía reemplazo → Patricio acepta y hace check-in y check-out →
-  el administrador la marca resuelta. Tour de mañana para otra prueba: "Lago Todos los Santos" (8960/8961).
+  el administrador la marca resuelta. Tour de mañana para otra prueba: "Lago Todos los Santos" (8960/8961). Otro tour de
+  hoy, con Miguel Soto y Roberto Díaz, sirve para mostrar un reemplazo: "Frutillar y Teatro del Lago" (8970/8971).
 - **Limpiar pruebas:** lo ya aceptado no se puede volver a aceptar. Para repetir hay que borrar en Firebase el documento
   en `estadosServicio` y los de `respuestas`; también `asignaciones` si se reasignó. Lo aceptado antes de agregar
   `telefono` se guardó sin teléfono.
 - **Lo que sigue para el video, en orden:**
-  1. Probar y subir esta rama.
-  2. Guardar la ubicación en la incidencia.
-  3. Resumen para los dueños: puntualidad, terminados, rechazos por motivo y distancia del check-in.
-  4. Panel con selector de fecha y terminados.
-  5. Perfil real más completo (revisar lo que ya agregó `feature/perfil-piloto1`).
-  6. Revisión visual con los tres roles y número de soporte real.
+  1. Guardar la ubicación en la incidencia.
+  2. Resumen para los dueños: puntualidad, terminados, rechazos por motivo y distancia del check-in.
+  3. Panel con selector de fecha y terminados.
+  4. Perfil real más completo (revisar lo que ya agregó `feature/perfil-piloto1`).
+  5. Revisión visual con los tres roles y número de soporte real.
 - **Fuera por ahora:** fotos y ubicación en vivo (mejor con Blaze) y chat (ya está WhatsApp).
-- **No mostrar en el video:** botones del líder del grupo (sin teléfono) y notificaciones con la app cerrada (no llegan).
+- **No mostrar en el video:** botones del líder del grupo (sin teléfono), notificaciones con la app cerrada (no llegan) y
+  botones de cuentas de prueba en el login.
 - **Limitaciones conocidas:**
   - Historial solo alcanza a los últimos 7 días cargados.
   - Quien es reemplazado deja su check-in sin cerrar, ya no puede abrir el servicio, y si se le devuelve aparece aceptado
@@ -62,7 +63,8 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
 .\gradlew.bat installDebug           # instalar en dispositivo/emulador
 ```
 - Se prueba en celulares reales por USB: no crear emuladores de Android. `adb` está en `Android\Sdk\platform-tools`, y si
-  Java no está en el PATH se puede usar `C:\Program Files\Android\Android Studio\jbr`.
+  Java no está en el PATH se puede usar el `jbr` de Android Studio (`C:\Program Files\Android\Android Studio\jbr` o
+  `D:\Android\AndroidStudio\jbr`, según el computador).
 - Cada computador firma con su propia clave: si Android rechaza instalar (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`), hay que
   desinstalar primero. Se pierde la sesión y lo no enviado, y conviene confirmarlo antes con quien usa ese celular.
 - `gh` puede no estar instalado.
@@ -84,10 +86,11 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
   - `data/servicios/` — `ServiciosDataSource` (+ `ApiServiciosDataSource`), `FakeServiciosDataSource`,
     `ServicioMapper` (DTO → `Servicio`), `FiltroServicios`.
   - `data/clima/` — `ClimaService` (Open-Meteo).
-- `ui/` — `navigation/AppNavHost` (rutas por rol), `login`, `servicios` (conductor), `guia` (guía),
+- `ui/` — `navigation/AppNavHost` (rutas por rol) y `PestanasConductor` (pestañas deslizables del conductor; guía y
+  administrador siguen con la barra y `NavHost`), `login`, `servicios` (conductor), `guia` (guía),
   `detalle`, `calendario` (+ `agenda/AgendaViewModel`), `ruta` (mapa, check-in, clima), `alertas`,
   `historial` (servicios con check-out; solo alcanza a los últimos 7 días cargados), `perfil`, `ajustes`,
-  `components`, `theme`.
+  `components` (incluye `Incidencias`), `theme`.
 - `util/` — `LinceLogger` (consola de logs en Ajustes), `WhatsApp.kt` (`abrirWhatsApp`), `NotificadorLocal`.
 
 ## Fuente de datos: API de Southbound (solo lectura)
@@ -108,7 +111,9 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
 - La API **no trae**: hora de término (se estima por tipo: 60/180/240 min), tarifa (queda 0),
   coordenadas (pickup/dropoff son texto), lista de pasajeros ni teléfono del líder.
 - Carga actual: oficina PUX, de hoy-7 a hoy+30, filtrada según `usuarios/{uid}`: conductor por
-  `transportistaId`, guía por `guiaId` (ambos numéricos), administrador sin filtro. Sin ID no se carga nada.
+  `transportistaId`, guía por `guiaId` (ambos numéricos), administrador sin filtro. Sin ID no se carga nada. Conductor y
+  guía también cargan toda la oficina (`serviciosOficina`), para encontrar a la otra persona del tour y lo que se les
+  reasignó.
 
 ## Firebase
 - Auth email/contraseña; cuentas creadas solo por el admin. Rol en `usuarios/{uid}.rol`
@@ -124,7 +129,7 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
   para que Coordinación lo vea. Solo lo leen el dueño y el administrador.
 - `estadosServicio/{servicioId}`: lo que el guía y el conductor de un mismo tour ven del otro (estado, nombre y teléfono, sin motivo
   ni observaciones). Se escribe junto con `respuestas` en un solo lote y lo leen todos los usuarios con rol. Solo
-  quien lo publicó puede cambiarlo.
+  quien lo publicó puede cambiarlo; el administrador lo borra al reasignar.
 - `asignaciones/{servicioId}`: reemplazo elegido por el administrador (`ReglasAsignacion`), porque la API es de solo
   lectura. Manda sobre la persona que trae la API, y al crearla se borra el estado publicado. Solo escribe el
   administrador; las cuentas que aparecen como opción necesitan rol, nombre e ID de la API en `usuarios/{uid}`.
@@ -150,14 +155,14 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
   pruebas en celulares, salvo que lo pida.
 - Tras cambiar `firestore.rules`, avisar a Shir1n que las publique **antes** de instalar: sin eso la app falla al escribir
   y dejan de salir las notificaciones de esa cuenta.
-- Avisar antes de tocar archivos compartidos: `AppNavHost.kt`, `LinceApi.kt`, `LinceDtos.kt`,
-  `ServicioRepository.kt`, `AuthRepository.kt`, `firestore.rules`.
+- Al tocar archivos compartidos, mencionarlo al equipo sin esperar respuesta: `AppNavHost.kt`, `LinceApi.kt`,
+  `LinceDtos.kt`, `ServicioRepository.kt`, `AuthRepository.kt`, `firestore.rules`.
 - No subir `local.properties` (está en `.gitignore`).
 - Los archivos Kotlin usan saltos de línea CRLF.
 - Textos de la UI en español; los códigos de la API se guardan como String (tolerar valores nuevos).
 
 ## Pendientes
-1. Reemplazar los IDs de prueba de `usuarios/{uid}` (`transportistaId: 12`, `guiaId: 7`) por los reales
+1. Reemplazar los IDs de prueba de `usuarios/{uid}` (`transportistaId: 12` y `16`, `guiaId: 7`) por los reales
    cuando llegue la clave de la API: con la clave, un ID de prueba mostraría servicios de otra persona.
 2. El panel del administrador (`ui/admin/AdminPanelScreen`) muestra hoy y los rechazos de los próximos días, avisa y
    reasigna. Lo ya aceptado solo se reasigna con una incidencia abierta.
@@ -173,13 +178,16 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
 7. Número de soporte `+56987654321` es provisional (`SoporteDialog.kt`):
    reemplazar por el real o deshabilitar.
 
-## Problemas conocidos (revisión del 28-10-2026)
+## Problemas conocidos (revisión del 02-11-2026)
+- **Credenciales de prueba públicas:** el repositorio es público, y `USUARIOS_TEST.md` y los botones de `LoginScreen` traen
+  correos y contraseña de cuentas reales de Firebase, incluida la de administrador. Se mantienen a propósito para trabajar
+  más rápido. Antes de usar datos reales o publicar la app: quitar ambos y cambiar las contraseñas (quedan en el historial).
 - `PerfilScreen` tiene datos fijos ("Carlos Morales", "v2.4.1") y su foto no se guarda: se mantiene a propósito
   como placeholder. Conductores con `usuarios/{uid}.perfilNuevo: true` (booleano) y guías usan `PerfilRealScreen`,
-  que solo muestra datos reales. Cuando llegue la clave de la API, decidir si reemplaza al placeholder.
-- Navegación: tras el login se saca `LOGIN` y la barra inferior hace `popUpTo(findStartDestination())`
-  (que es LOGIN) → probablemente se acumulan pestañas en la pila.
-- Insets: algunas pantallas suman `statusBarsPadding()` sobre el padding del `Scaffold` y otras no.
+  que muestra datos reales, salvo el vehículo "JAC S5" y "Año modelo 2015", fijos para "Piloto1" y "Patricio Lagos".
+  Cuando llegue la clave de la API, decidir si reemplaza al placeholder.
+- Navegación de guía y administrador: tras el login se saca `LOGIN` y la barra inferior hace
+  `popUpTo(findStartDestination())` (que es LOGIN) → probablemente se acumulan pestañas en la pila.
 - Textos fijos fuera de `strings.xml`; recursos sin usar (`logo_solo1.png`, `logo.jpg`, `van.png`).
 - R8 desactivado en release; Coil declarado fuera del catálogo de versiones.
 - Calendario fuera del rango cargado (hoy-7..hoy+30) aparece vacío.
