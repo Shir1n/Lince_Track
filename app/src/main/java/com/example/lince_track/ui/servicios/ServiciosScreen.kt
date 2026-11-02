@@ -45,7 +45,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.EstadoServicio
+import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.formatFechaCorta
@@ -74,13 +76,15 @@ fun ServiciosScreen(
     var rechazoPendiente by remember { mutableStateOf<Servicio?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    fun operar(servicio: Servicio, op: suspend (String) -> Result<Unit>) {
+    fun operar(servicio: Servicio, op: suspend (String) -> Result<String?>) {
         if (servicio.id in procesandoIds) return
         scope.launch {
             procesandoIds = procesandoIds + servicio.id
             val resultado = op(servicio.id)
             procesandoIds = procesandoIds - servicio.id
-            resultado.onFailure { e ->
+            resultado.onSuccess { aviso ->
+                if (aviso != null) snackbarHostState.showSnackbar(aviso)
+            }.onFailure { e ->
                 snackbarHostState.showSnackbar(e.message ?: "No se pudo completar la operación")
             }
         }
@@ -162,8 +166,8 @@ fun ServiciosScreen(
         RejectServicioDialog(
             servicio = servicio,
             onDismiss = { rechazoPendiente = null },
-            onConfirm = {
-                operar(servicio, ServicioRepository::rechazar)
+            onConfirm = { motivo, observaciones ->
+                operar(servicio) { ServicioRepository.rechazar(it, motivo, observaciones) }
                 rechazoPendiente = null
             }
         )
@@ -322,6 +326,7 @@ private fun ServicioCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
+                val rol by AuthRepository.rolActual.collectAsState()
                 when (servicio.estado) {
                     EstadoServicio.PENDIENTE -> {
                         if (procesando) {
@@ -329,7 +334,7 @@ private fun ServicioCard(
                                 modifier = Modifier.size(24.dp),
                                 strokeWidth = 2.dp
                             )
-                        } else {
+                        } else if (rol != Rol.ADMINISTRADOR) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(4.dp)

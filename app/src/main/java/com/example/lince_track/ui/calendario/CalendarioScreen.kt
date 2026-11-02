@@ -60,7 +60,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.EstadoServicio
+import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.formatFecha
 import com.example.lince_track.data.formatHora
@@ -153,8 +155,8 @@ fun CalendarioScreen(onServiceClick: (String) -> Unit = {}) {
         RejectServicioDialog(
             servicio = servicio,
             onDismiss = { rechazoPendiente = null },
-            onConfirm = {
-                viewModel.rechazar(servicio)
+            onConfirm = { motivo, observaciones ->
+                viewModel.rechazar(servicio, motivo, observaciones)
                 rechazoPendiente = null
             }
         )
@@ -583,7 +585,8 @@ private fun AgendaCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                if (servicio.estado == EstadoServicio.PENDIENTE) {
+                val rol by AuthRepository.rolActual.collectAsState()
+                if (servicio.estado == EstadoServicio.PENDIENTE && rol != Rol.ADMINISTRADOR) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (procesando) {
                             CircularProgressIndicator(

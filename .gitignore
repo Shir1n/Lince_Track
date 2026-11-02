@@ -16,3 +16,5 @@
 .cxx
 local.properties
 .kotlin/
+/firestore-tests/node_modules
+/firestore-tests/*.log
