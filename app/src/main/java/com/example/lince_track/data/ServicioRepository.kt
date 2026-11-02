@@ -51,12 +51,16 @@ object ServicioRepository {
     /** Servicios tal como llegan de la fuente (ya convertidos al modelo de la app). */
     private val serviciosFuente = MutableStateFlow<List<Servicio>>(emptyList())
 
-    /** Respuestas del usuario guardadas en Firestore: id del servicio → respuesta. */
-    private val respuestas = MutableStateFlow<Map<String, RespuestaServicio>>(emptyMap())
+    private val _respuestas = MutableStateFlow<Map<String, RespuestaServicio>>(emptyMap())
+    /**
+     * Respuestas guardadas en Firestore: id del servicio → respuesta.
+     * Las del usuario o, para el administrador, las de todos.
+     */
+    val respuestas: StateFlow<Map<String, RespuestaServicio>> = _respuestas.asStateFlow()
     private var escuchaRespuestas: Job? = null
 
     val servicios: StateFlow<List<Servicio>> =
-        combine(serviciosFuente, respuestas) { lista, porServicio ->
+        combine(serviciosFuente, _respuestas) { lista, porServicio ->
             lista.map { ReglasRespuesta.aplicar(it, porServicio[it.id]) }
         }.stateIn(scope, SharingStarted.Eagerly, emptyList())
 
@@ -85,13 +89,14 @@ object ServicioRepository {
         cargaEnCurso?.cancelAndJoin()
         escuchaRespuestas?.cancelAndJoin()
         serviciosFuente.value = emptyList()
-        respuestas.value = emptyMap()
+        _respuestas.value = emptyMap()
         errorCarga.value = null
 
         val uid = AuthRepository.usuarioActual?.uid
-        if (perfil != null && perfil.rol != Rol.ADMINISTRADOR && uid != null) {
+        if (perfil != null && uid != null) {
+            val soloDe = if (perfil.rol == Rol.ADMINISTRADOR) null else uid
             escuchaRespuestas = scope.launch {
-                RespuestaRepository.observar(uid).collect { respuestas.value = it }
+                RespuestaRepository.observar(soloDe).collect { _respuestas.value = it }
             }
         }
 

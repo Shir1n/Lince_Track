@@ -94,15 +94,16 @@ Responde y escribe la interfaz en **español de Chile**.
 ## Pendientes
 1. Reemplazar los IDs de prueba de `usuarios/{uid}` (`transportistaId: 14`, `guiaId: 7`) por los reales
    cuando llegue la clave de la API: con la clave, un ID de prueba mostraría servicios de otra persona.
-2. Mostrar las respuestas (`respuestas`, motivo incluido) al administrador: hoy solo se ven en la consola
-   de Firebase y su pantalla muestra el estado de la API.
+2. El panel del administrador (`ui/admin/AdminPanelScreen`) solo muestra los servicios de hoy y no
+   avisa ni reasigna; falta notificar los rechazos y permitir asignar un reemplazo.
 3. Benjamin: detalle (volver de inmediato al responder; ocultar llamar/WhatsApp si no hay teléfono;
    ocultar Confirmar/Rechazar al guía), mes del calendario en español, `DarkErrorContainer` gris,
    etiquetas de Alertas en inglés ("Reasignement").
 4. Raúl: mapa — clima se consulta en cada lectura GPS (limitar), mapa se recentra solo, `onDetach()`,
    quitar `isDebugMapTileDownloader`, no correr diagnóstico al abrir, selector de rol según rol real,
    `ClimaConduccionCard` usa `isSystemInDarkTheme()` en vez del tema elegido.
-5. Luciano: panel del administrador con `GET /api/v1/resumen` (nuevo `ui/admin/`, ruta en `AppNavHost`).
+5. Luciano: sumar datos de `GET /api/v1/resumen` al panel del administrador (los totales de hoy se calculan
+   desde los servicios cargados, porque los datos de ejemplo no traen ese endpoint).
 6. Ignacio: preguntas a Southbound, clave del docente, Trello, README (estructura y roles).
 7. Número de soporte `+56987654321` es provisional (`SoporteDialog.kt` y `RutaMapaScreen.kt`):
    reemplazar por el real o deshabilitar.

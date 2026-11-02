@@ -5,13 +5,24 @@ enum class MotivoRechazo(val codigo: String, val etiqueta: String, val requiereT
     FALLA_MECANICA("falla_mecanica", "Falla mecánica de vehículo", false),
     FUERZA_MAYOR("fuerza_mayor", "Problema de salud / Fuerza mayor", false),
     CRUCE_HORARIO("cruce_horario", "Cruce de horario con otro servicio", false),
-    OTRO("otro", "Otro", true)
+    OTRO("otro", "Otro", true);
+
+    companion object {
+        fun desde(codigo: String?): MotivoRechazo? = entries.firstOrNull { it.codigo == codigo }
+    }
 }
 
-/** Respuesta de una persona a un servicio, guardada en `respuestas/{uid}_{servicioId}`. */
+/**
+ * Respuesta de una persona a un servicio, guardada en `respuestas/{uid}_{servicioId}`.
+ *
+ * @property respondidoEn hora del servidor en milisegundos (null si aún no llega al servidor).
+ */
 data class RespuestaServicio(
     val servicioId: String,
-    val estado: EstadoServicio
+    val estado: EstadoServicio,
+    val motivo: MotivoRechazo? = null,
+    val observaciones: String = "",
+    val respondidoEn: Long? = null
 )
 
 object ReglasRespuesta {

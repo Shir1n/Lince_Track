@@ -100,7 +100,11 @@ fun CalendarioScreen(onServiceClick: (String) -> Unit = {}) {
     }
 
     val serviciosPorFecha = remember(servicios) { servicios.groupBy { it.fecha } }
-    val conflictos = remember(servicios) { detectarConflictos(servicios) }
+    // El administrador ve servicios de varias personas: que coincidan en hora no es un conflicto.
+    val rolActual by AuthRepository.rolActual.collectAsState()
+    val conflictos = remember(servicios, rolActual) {
+        if (rolActual == Rol.ADMINISTRADOR) emptySet() else detectarConflictos(servicios)
+    }
 
     var filtro by remember { mutableStateOf(FiltroAgenda.TODOS) }
     var rechazoPendiente by remember { mutableStateOf<Servicio?>(null) }
