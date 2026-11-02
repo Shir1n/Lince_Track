@@ -59,6 +59,7 @@ import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.IncidenciaCard
 import com.example.lince_track.ui.components.MensajeIncidenciaDialog
+import com.example.lince_track.util.abrirEnMapa
 import com.example.lince_track.util.abrirWhatsApp
 import java.time.LocalDate
 import kotlinx.coroutines.launch
@@ -172,6 +173,13 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
                             FlowRow {
                                 TextButton(onClick = { porResponder = incidencia }) {
                                     Text(if (incidencia.enGestion) "Actualizar respuesta" else "Responder")
+                                }
+                                val ubicacion = incidencia.ubicacion
+                                TextButton(
+                                    onClick = { ubicacion?.let { abrirEnMapa(context, it) } },
+                                    enabled = ubicacion != null
+                                ) {
+                                    Text(if (ubicacion != null) "Ver ubicación" else "Sin ubicación")
                                 }
                                 if (servicio != null && ReglasAsignacion.puedeReemplazar(servicio, checkins[servicio.id])) {
                                     TextButton(onClick = {

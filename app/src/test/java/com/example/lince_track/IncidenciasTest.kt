@@ -11,16 +11,31 @@ import com.example.lince_track.data.ReglasIncidencia
 import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.TipoIncidencia
+import com.example.lince_track.data.Ubicacion
 import com.example.lince_track.data.servicios.FakeServiciosDataSource
 import com.example.lince_track.data.servicios.ServicioMapper
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneOffset
 
 class IncidenciasTest {
+
+    @Test
+    fun `ubicacion necesita las dos coordenadas`() {
+        assertEquals(Ubicacion(-41.3, -72.9), Ubicacion.desde(-41.3, -72.9))
+        assertNull(Ubicacion.desde(-41.3, null))
+        assertNull(Ubicacion.desde(null, -72.9))
+        assertNull(Ubicacion.desde(null, null))
+    }
+
+    @Test
+    fun `enlace del mapa marca el punto`() {
+        assertEquals("geo:-41.3,-72.9?q=-41.3,-72.9", Ubicacion(-41.3, -72.9).enlaceMapa)
+    }
 
     private val servicio: Servicio =
         ServicioMapper.aDominio(FakeServiciosDataSource.servicios(LocalDate.of(2026, 11, 2)).first())!!

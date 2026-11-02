@@ -135,6 +135,7 @@ service cloud.firestore {
     }
 
     // incidencias/{id}: { uid, rol, nombre, servicioId, titulo, tipo, detalle, fecha, creadaEn, resuelta,
+    //                     lat, lon (opcionales, van juntas),
     //                     enGestion, respuesta, atendidaEn, atendidaPor (tras responderla),
     //                     resueltaEn, resueltaPor (tras resolverla) }
     // Las reporta el conductor o guía y solo el administrador las cierra. Igual que en "respuestas",
@@ -156,7 +157,9 @@ service cloud.firestore {
         && d.fecha is string
         && d.creadaEn == request.time
         && d.resuelta == false
-        && d.keys().hasOnly(['uid', 'rol', 'nombre', 'servicioId', 'titulo', 'tipo', 'detalle', 'fecha', 'creadaEn', 'resuelta']);
+        && (('lat' in d) == ('lon' in d))
+        && (!('lat' in d) || (d.lat is number && d.lon is number))
+        && d.keys().hasOnly(['uid', 'rol', 'nombre', 'servicioId', 'titulo', 'tipo', 'detalle', 'fecha', 'creadaEn', 'resuelta', 'lat', 'lon']);
     }
 
     function respuestaIncidenciaValida() {

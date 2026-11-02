@@ -205,3 +205,15 @@ test('las consultas de la app están permitidas solo a quien corresponde', async
   await assertSucceeds(desde(admin()));
   await assertFails(desde(conductor()));
 });
+
+test('la incidencia se guarda con ubicación o sin ella', async () => {
+  await assertSucceeds(setDoc(ref(conductor(), 'i1'), incidencia({ lat: -41.3, lon: -72.9 })));
+  await assertSucceeds(setDoc(ref(conductor(), 'i2'), incidencia()));
+});
+
+test('la ubicación de la incidencia lleva las dos coordenadas y son números', async () => {
+  await assertFails(setDoc(ref(conductor(), 'i1'), incidencia({ lat: -41.3 })));
+  await assertFails(setDoc(ref(conductor(), 'i2'), incidencia({ lon: -72.9 })));
+  await assertFails(setDoc(ref(conductor(), 'i3'), incidencia({ lat: '-41.3', lon: -72.9 })));
+  await assertFails(setDoc(ref(conductor(), 'i4'), incidencia({ lat: -41.3, lon: '-72.9' })));
+});
