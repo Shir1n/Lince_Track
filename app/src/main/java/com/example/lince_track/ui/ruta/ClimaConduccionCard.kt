@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -232,14 +233,17 @@ fun ClimaConduccionCard(
                     .padding(10.dp)
             ) {
                 Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Box(
                             modifier = Modifier
                                 .background(alertBadgeBg, CircleShape)
                                 .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = if (recomendacionVestimenta != null) "GUÍA • RECOMENDACIÓN" else nivelActual.label.uppercase(),
+                                text = if (recomendacionVestimenta != null) "GUÍA" else nivelActual.label.uppercase(),
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -250,11 +254,12 @@ fun ClimaConduccionCard(
                             text = recomendacionVestimenta?.alertaCorta ?: recomendacion?.alertaCorta.orEmpty(),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = contentColor
+                            color = contentColor,
+                            modifier = Modifier.weight(1f)
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
                         text = recomendacionVestimenta?.mensajePersonalizado ?: recomendacion?.mensajePersonalizado.orEmpty(),
@@ -264,29 +269,30 @@ fun ClimaConduccionCard(
                         lineHeight = 16.sp
                     )
 
-                    // Modo Guía: Vestimenta sugerida
+                    // Modo Guía: Vestimenta sugerida con FlowRow adaptable
                     if (recomendacionVestimenta != null && recomendacionVestimenta.vestimentaSugerida.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Recomendación de vestimenta:",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = contentColor
                         )
-                        Spacer(modifier = Modifier.height(3.dp))
-                        Row(
+                        Spacer(modifier = Modifier.height(4.dp))
+                        FlowRow(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            recomendacionVestimenta.vestimentaSugerida.take(3).forEach { prenda ->
+                            recomendacionVestimenta.vestimentaSugerida.forEach { prenda ->
                                 Box(
                                     modifier = Modifier
-                                        .background(contentColor.copy(alpha = 0.12f), RoundedCornerShape(6.dp))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        .background(contentColor.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
                                         text = prenda,
-                                        fontSize = 10.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = contentColor
                                     )
