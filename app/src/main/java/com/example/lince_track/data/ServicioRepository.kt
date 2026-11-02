@@ -259,7 +259,7 @@ object ServicioRepository {
     }
 
     /** @return en caso de éxito, un aviso para mostrar al usuario (null si no hay nada que avisar). */
-    suspend fun reportarIncidencia(id: String, tipo: TipoIncidencia, detalle: String): Result<String?> {
+    suspend fun reportarIncidencia(id: String, tipo: TipoIncidencia, detalle: String, ubicacion: Ubicacion?): Result<String?> {
         val uid = AuthRepository.usuarioActual?.uid
         val perfil = AuthRepository.perfilActual.value
         if (uid == null || perfil == null || perfil.rol == Rol.ADMINISTRADOR) {
@@ -275,7 +275,7 @@ object ServicioRepository {
             return Result.failure(IllegalArgumentException("Describe lo que pasó"))
         }
         return try {
-            val confirmada = IncidenciaRepository.reportar(uid, perfil.rol, perfil.nombre.orEmpty(), servicio, tipo, texto)
+            val confirmada = IncidenciaRepository.reportar(uid, perfil.rol, perfil.nombre.orEmpty(), servicio, tipo, texto, ubicacion)
             Result.success(if (confirmada) null else RESPUESTA_EN_COLA)
         } catch (e: CancellationException) {
             throw e

@@ -18,9 +18,10 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
 
 ## Estado actual (02-11-2026)
 - **Objetivo cercano:** un video para vender la app a los dueños de Southbound, con el flujo lo más completo posible.
-- **Rama en curso:** ninguna. La gestión de incidencias y el botón de WhatsApp ya están en `master` (PR 28).
-- **Reglas:** revisar que la versión de `firestore.rules` de `master` (`telefono` en `estadosServicio`) esté publicada
-  antes de probar: si falta, aceptar o rechazar da error.
+- **Rama en curso:** ninguna. El resumen para los dueños ya está en `master` (PR 30). La ubicación en la incidencia está
+  en `feature/ubicacion-incidencia`, probada y por fusionar.
+- **Reglas:** revisar que la versión de `firestore.rules` de `master` (`telefono` en `estadosServicio`, `lat` y `lon` en
+  `incidencias`) esté publicada antes de probar: si falta, aceptar, rechazar o reportar da error.
 - **Cuentas de prueba** en `usuarios/{uid}`:
   - Carlos Morales: `conductor`, `transportistaId: 12`, sin `perfilNuevo` (se muestra el perfil completo de ejemplo).
   - Patricio Lagos: `conductor`, `transportistaId: 16`, `perfilNuevo: true`. Es el reemplazo en el video.
@@ -34,11 +35,12 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
   en `estadosServicio` y los de `respuestas`; también `asignaciones` si se reasignó. Lo aceptado antes de agregar
   `telefono` se guardó sin teléfono.
 - **Lo que sigue para el video, en orden:**
-  1. Guardar la ubicación en la incidencia.
-  2. Resumen para los dueños: puntualidad, terminados, rechazos por motivo y distancia del check-in.
-  3. Panel con selector de fecha y terminados.
-  4. Perfil real más completo (revisar lo que ya agregó `feature/perfil-piloto1`).
-  5. Revisión visual con los tres roles y número de soporte real.
+  1. Panel con selector de fecha y terminados.
+  2. Perfil real más completo (revisar lo que ya agregó `feature/perfil-piloto1`).
+  3. Revisión visual con los tres roles y número de soporte real.
+- **Resumen para los dueños** (`ui/admin/AdminResumenScreen`): sin clave de la API, "Últimos 7 días" suma el historial
+  inventado de `ResumenDemostracion`, siempre con un aviso visible; "Hoy" y las cifras con clave son solo datos reales.
+  Los márgenes (15 minutos de puntualidad, 500 m de distancia) son provisionales: falta confirmarlos con Southbound.
 - **Fuera por ahora:** fotos y ubicación en vivo (mejor con Blaze) y chat (ya está WhatsApp).
 - **No mostrar en el video:** botones del líder del grupo (sin teléfono), notificaciones con la app cerrada (no llegan) y
   botones de cuentas de prueba en el login.
@@ -134,7 +136,8 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
   lectura. Manda sobre la persona que trae la API, y al crearla se borra el estado publicado. Solo escribe el
   administrador; las cuentas que aparecen como opción necesitan rol, nombre e ID de la API en `usuarios/{uid}`.
 - `incidencias/{id}`: problemas reportados por conductores y guías en servicios aceptados y sin check-out
-  (`IncidenciaRepository`). Las lee quien reportó y el administrador. Solo el administrador responde (queda "En
+  (`IncidenciaRepository`). Guardan `lat` y `lon` si se pudo obtener la posición real en 5 segundos: sin permiso o sin
+  señal se envían igual, y nunca con la posición simulada. Las lee quien reportó y el administrador. Solo el administrador responde (queda "En
   gestión"), las resuelve y, con una abierta, puede enviar reemplazo aunque el servicio esté aceptado o en curso. Los
   botones de llamar y WhatsApp usan `usuarios/{uid}.telefono` (opcional).
 - Notificaciones locales (`NotificadorLocal`, `CambiosServicios`): solo con la app viva. Con la app cerrada requieren

@@ -70,6 +70,7 @@ import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.IncidenciaCard
 import com.example.lince_track.ui.components.RejectServicioDialog
 import com.example.lince_track.ui.components.ReportarIncidenciaDialog
+import com.example.lince_track.ui.components.rememberEnviarIncidencia
 import com.example.lince_track.util.abrirWhatsApp
 import kotlinx.coroutines.launch
 import com.example.lince_track.ui.theme.BarraSuperior
@@ -91,6 +92,7 @@ fun DetalleServicioScreen(
     var procesando by remember { mutableStateOf(false) }
     var showRejectDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val enviarIncidencia = rememberEnviarIncidencia(servicioId, snackbarHostState)
 
     // Al aceptar se queda aquí, con "Ver Ruta" a mano; al rechazar vuelve de inmediato,
     // salvo que haya que avisar algo primero (por ejemplo, que no hay conexión).
@@ -197,11 +199,7 @@ fun DetalleServicioScreen(
             onDismiss = { showIncidenciaDialog = false },
             onConfirm = { tipo, detalle ->
                 showIncidenciaDialog = false
-                scope.launch {
-                    ServicioRepository.reportarIncidencia(servicio.id, tipo, detalle)
-                        .onSuccess { aviso -> snackbarHostState.showSnackbar(aviso ?: "Incidencia enviada a Coordinación") }
-                        .onFailure { e -> snackbarHostState.showSnackbar(e.message ?: "No se pudo enviar la incidencia") }
-                }
+                enviarIncidencia(tipo, detalle)
             }
         )
     }

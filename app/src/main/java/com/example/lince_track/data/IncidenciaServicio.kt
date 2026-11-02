@@ -16,6 +16,17 @@ enum class TipoIncidencia(val codigo: String, val etiqueta: String, val requiere
     }
 }
 
+data class Ubicacion(val lat: Double, val lon: Double) {
+    /** Enlace que abre este punto en la app de mapas. */
+    val enlaceMapa: String get() = "geo:$lat,$lon?q=$lat,$lon"
+
+    companion object {
+        /** Null si falta alguna de las dos coordenadas. */
+        fun desde(lat: Double?, lon: Double?): Ubicacion? =
+            if (lat != null && lon != null) Ubicacion(lat, lon) else null
+    }
+}
+
 /**
  * Problema reportado durante un servicio, guardado en `incidencias/{id}`.
  *
@@ -34,7 +45,9 @@ data class IncidenciaServicio(
     /** true desde que Coordinación respondió, hasta que la marca como resuelta. */
     val enGestion: Boolean = false,
     /** Lo último que Coordinación le dijo a quien reportó (vacío si aún no responde). */
-    val respuesta: String = ""
+    val respuesta: String = "",
+    /** Dónde estaba quien reportó (null si no se pudo obtener). */
+    val ubicacion: Ubicacion? = null
 ) {
     val estadoTexto: String
         get() = when {
