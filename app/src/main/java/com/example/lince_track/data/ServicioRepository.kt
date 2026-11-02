@@ -36,7 +36,7 @@ object ServicioRepository {
     private const val CUENTA_SIN_VINCULAR =
         "Tu cuenta aún no está vinculada. Contacta al administrador."
     private const val RESPUESTA_EN_COLA =
-        "Sin conexión: tu respuesta se enviará al recuperar la señal."
+        "Sin conexión: se enviará al recuperar la señal."
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -58,6 +58,14 @@ object ServicioRepository {
      */
     val respuestas: StateFlow<Map<String, RespuestaServicio>> = _respuestas.asStateFlow()
     private var escuchaRespuestas: Job? = null
+
+    private val _checkins = MutableStateFlow<Map<String, CheckinServicio>>(emptyMap())
+    /**
+     * Check-ins guardados en Firestore: id del servicio → check-in.
+     * Los del usuario o, para el administrador, los de todos.
+     */
+    val checkins: StateFlow<Map<String, CheckinServicio>> = _checkins.asStateFlow()
+    private var escuchaCheckins: Job? = null
 
     val servicios: StateFlow<List<Servicio>> =
         combine(serviciosFuente, _respuestas) { lista, porServicio ->
@@ -88,8 +96,10 @@ object ServicioRepository {
         // Se espera a que termine para que una carga antigua no escriba sobre los datos nuevos.
         cargaEnCurso?.cancelAndJoin()
         escuchaRespuestas?.cancelAndJoin()
+        escuchaCheckins?.cancelAndJoin()
         serviciosFuente.value = emptyList()
         _respuestas.value = emptyMap()
+        _checkins.value = emptyMap()
         errorCarga.value = null
 
         val uid = AuthRepository.usuarioActual?.uid
@@ -97,6 +107,9 @@ object ServicioRepository {
             val soloDe = if (perfil.rol == Rol.ADMINISTRADOR) null else uid
             escuchaRespuestas = scope.launch {
                 RespuestaRepository.observar(soloDe).collect { _respuestas.value = it }
+            }
+            escuchaCheckins = scope.launch {
+                CheckinRepository.observar(soloDe).collect { _checkins.value = it }
             }
         }
 
@@ -156,6 +169,58 @@ object ServicioRepository {
             motivo = motivo,
             observaciones = texto
         )
+    }
+
+    /** @return en caso de éxito, un aviso para mostrar al usuario (null si no hay nada que avisar). */
+    suspend fun registrarCheckIn(
+        id: String,
+        lat: Double,
+        lon: Double,
+        distanciaM: Int,
+        gpsReal: Boolean
+    ): Result<String?> = registrarEtapaRuta(id, esCheckIn = true) { uid, rol ->
+        CheckinRepository.registrarCheckIn(uid, rol, id, lat, lon, distanciaM, gpsReal)
+    }
+
+    /** @return en caso de éxito, un aviso para mostrar al usuario (null si no hay nada que avisar). */
+    suspend fun registrarCheckOut(id: String, lat: Double, lon: Double): Result<String?> =
+        registrarEtapaRuta(id, esCheckIn = false) { uid, _ ->
+            CheckinRepository.registrarCheckOut(uid, id, lat, lon)
+        }
+
+    private suspend fun registrarEtapaRuta(
+        id: String,
+        esCheckIn: Boolean,
+        guardar: suspend (uid: String, rol: Rol) -> Boolean
+    ): Result<String?> {
+        val uid = AuthRepository.usuarioActual?.uid
+        val perfil = AuthRepository.perfilActual.value
+        if (uid == null || perfil == null) {
+            return Result.failure(IllegalStateException("Tu sesión no está lista. Intenta nuevamente."))
+        }
+        if (perfil.rol == Rol.ADMINISTRADOR) {
+            return Result.failure(IllegalStateException("El administrador no registra check-in"))
+        }
+        val servicio = buscarPorId(id)
+            ?: return Result.failure(IllegalStateException("Asignación no encontrada"))
+        if (servicio.estado != EstadoServicio.ACEPTADO) {
+            return Result.failure(IllegalStateException("Solo se registra en servicios aceptados"))
+        }
+        val checkin = _checkins.value[id]
+        if (esCheckIn && checkin != null) {
+            return Result.failure(IllegalStateException("El check-in ya está registrado"))
+        }
+        if (!esCheckIn && (checkin == null || checkin.finalizado)) {
+            return Result.failure(IllegalStateException("No hay un check-in pendiente de cerrar"))
+        }
+        return try {
+            Result.success(if (guardar(uid, perfil.rol)) null else RESPUESTA_EN_COLA)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LinceLogger.e("SERVICIOS", "No se pudo guardar el check-in", e)
+            Result.failure(IllegalStateException("No se pudo guardar el registro. Intenta nuevamente."))
+        }
     }
 
     private suspend fun responder(

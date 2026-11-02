@@ -1,8 +1,11 @@
 package com.example.lince_track.ui.admin
 
+import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.EstadoServicio
+import com.example.lince_track.data.ReglasCheckin
 import com.example.lince_track.data.RespuestaServicio
 import com.example.lince_track.data.Servicio
+import com.example.lince_track.data.responsable
 
 enum class FiltroPanel(val etiqueta: String, val estado: EstadoServicio?) {
     TODOS("Todos", null),
@@ -18,12 +21,14 @@ data class TotalesPanel(val pendientes: Int, val aceptados: Int, val rechazados:
  *
  * @property motivo por qué está rechazado (null si no lo está).
  * @property observaciones lo que escribió la persona al rechazar (vacío si no hay).
+ * @property estadoRuta resumen del check-in o check-out (null si aún no hay check-in).
  */
 data class FilaPanel(
     val servicio: Servicio,
     val responsable: String,
     val motivo: String?,
-    val observaciones: String
+    val observaciones: String,
+    val estadoRuta: String? = null
 )
 
 /** Cálculos del panel del administrador, sin dependencias de Android ni Firebase. */
@@ -42,13 +47,14 @@ object PanelAdmin {
     fun filas(
         servicios: List<Servicio>,
         respuestas: Map<String, RespuestaServicio>,
-        filtro: FiltroPanel
+        filtro: FiltroPanel,
+        checkins: Map<String, CheckinServicio> = emptyMap()
     ): List<FilaPanel> = servicios
         .filter { filtro.estado == null || it.estado == filtro.estado }
         .sortedWith(compareBy({ it.estado != EstadoServicio.RECHAZADO }, { it.horaInicio }))
-        .map { aFila(it, respuestas[it.id]) }
+        .map { aFila(it, respuestas[it.id], checkins[it.id]) }
 
-    private fun aFila(servicio: Servicio, respuesta: RespuestaServicio?): FilaPanel {
+    private fun aFila(servicio: Servicio, respuesta: RespuestaServicio?, checkin: CheckinServicio?): FilaPanel {
         // El servicio se muestra rechazado aunque la persona lo haya aceptado si la API lo canceló.
         val rechazoPropio = respuesta?.takeIf { it.estado == EstadoServicio.RECHAZADO }
         val motivo = when {
@@ -58,9 +64,10 @@ object PanelAdmin {
         }
         return FilaPanel(
             servicio = servicio,
-            responsable = if (servicio.tipo == "GUIDED_SERVICE") servicio.guia else servicio.conductor,
+            responsable = servicio.responsable,
             motivo = motivo,
-            observaciones = if (servicio.estado == EstadoServicio.RECHAZADO) rechazoPropio?.observaciones.orEmpty() else ""
+            observaciones = if (servicio.estado == EstadoServicio.RECHAZADO) rechazoPropio?.observaciones.orEmpty() else "",
+            estadoRuta = checkin?.let { ReglasCheckin.resumen(it) }
         )
     }
 }

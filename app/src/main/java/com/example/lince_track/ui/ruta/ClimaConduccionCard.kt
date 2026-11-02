@@ -6,7 +6,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,9 +49,11 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lince_track.BuildConfig
 import com.example.lince_track.data.clima.ClimaInfo
 import com.example.lince_track.data.clima.NivelRiesgo
 import com.example.lince_track.data.clima.PresetClima
@@ -70,7 +71,8 @@ fun ClimaConduccionCard(
     onRefrescarGps: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = isSystemInDarkTheme()
+    // Sigue el tema elegido en Ajustes, que puede ser distinto al del sistema.
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     var showPresetDialog by remember { mutableStateOf(false) }
 
     // Fondo dinámico según tipo de clima con animación suave
@@ -173,29 +175,31 @@ fun ClimaConduccionCard(
                         }
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                color = contentColor.copy(alpha = 0.14f),
-                                shape = RoundedCornerShape(50)
-                            )
-                            .clickable { showPresetDialog = true }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Filled.Tune,
-                                contentDescription = "Simular",
-                                tint = contentColor,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (presetActual == PresetClima.REAL) "Real" else "Simulado",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = contentColor
-                            )
+                    if (BuildConfig.DEBUG) {
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = contentColor.copy(alpha = 0.14f),
+                                    shape = RoundedCornerShape(50)
+                                )
+                                .clickable { showPresetDialog = true }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Filled.Tune,
+                                    contentDescription = "Simular",
+                                    tint = contentColor,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (presetActual == PresetClima.REAL) "Real" else "Simulado",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = contentColor
+                                )
+                            }
                         }
                     }
                 }
