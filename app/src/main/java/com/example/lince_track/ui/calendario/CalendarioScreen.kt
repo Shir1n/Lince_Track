@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -66,6 +67,7 @@ import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.formatFecha
 import com.example.lince_track.data.formatHora
+import com.example.lince_track.data.formatNombreMes
 import com.example.lince_track.data.formatPrecioCLP
 import com.example.lince_track.ui.agenda.AgendaViewModel
 import com.example.lince_track.ui.components.EstadoServicioBadge
@@ -222,7 +224,7 @@ private fun CalendarioSection(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = capitalizar(month.month.toString()),
+                        text = formatNombreMes(month.month),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -388,7 +390,7 @@ private fun StatusDot(estado: EstadoServicio) {
 @Composable
 private fun FiltroChips(filtro: FiltroAgenda, onFiltro: (FiltroAgenda) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         FiltroAgenda.entries.forEach { opcion ->
@@ -398,13 +400,10 @@ private fun FiltroChips(filtro: FiltroAgenda, onFiltro: (FiltroAgenda) -> Unit) 
                 label = {
                     Text(
                         text = opcion.label,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
                         maxLines = 1,
                         style = MaterialTheme.typography.labelMedium
                     )
                 },
-                modifier = Modifier.weight(1f),
                 colors = FilterChipDefaults.filterChipColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -583,12 +582,17 @@ private fun AgendaCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = formatPrecioCLP(servicio.tarifa),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                // La API aún no trae tarifa: sin ella no se muestra. El espacio mantiene los botones a la derecha.
+                if (servicio.tarifa > 0) {
+                    Text(
+                        text = formatPrecioCLP(servicio.tarifa),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                } else {
+                    Spacer(modifier = Modifier.width(0.dp))
+                }
 
                 val rol by AuthRepository.rolActual.collectAsState()
                 if (servicio.estado == EstadoServicio.PENDIENTE && rol != Rol.ADMINISTRADOR) {
@@ -668,5 +672,3 @@ private fun detectarConflictos(servicios: List<Servicio>): Set<String> {
     return conflictos
 }
 
-private fun capitalizar(texto: String): String =
-    texto.lowercase().replaceFirstChar { it.titlecase() }

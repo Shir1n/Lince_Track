@@ -301,7 +301,11 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 exitTransition = { bottomNavExitTransition() },
                 popEnterTransition = { bottomNavEnterTransition() },
                 popExitTransition = { bottomNavExitTransition() }
-            ) { AlertasScreen() }
+            ) {
+                AlertasScreen(
+                    onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) }
+                )
+            }
             composable(
                 route = Routes.PERFIL,
                 enterTransition = { bottomNavEnterTransition() },
