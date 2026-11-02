@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +40,7 @@ import com.example.lince_track.data.formatHora
 import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.components.EstadoServicioBadge
 import java.time.LocalDate
+import com.example.lince_track.ui.theme.BarraSuperior
 
 /**
  * Panel del administrador: estado de los servicios de hoy y respuestas de conductores
@@ -69,13 +69,12 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.primary)
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .background(BarraSuperior.fondo)
+                .padding(horizontal = 16.dp, vertical = 11.dp)
         ) {
             Text(
                 text = "Panel de Coordinación",
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = BarraSuperior.contenido,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )

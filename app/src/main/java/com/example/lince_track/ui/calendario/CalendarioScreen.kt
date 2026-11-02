@@ -72,6 +72,7 @@ import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.RejectServicioDialog
 import java.time.LocalDate
 import java.time.YearMonth
+import com.example.lince_track.ui.theme.BarraSuperior
 
 private val weekDayLabels = listOf("L", "M", "X", "J", "V", "S", "D")
 
@@ -172,13 +173,13 @@ private fun AgendaTopBar() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp)
-            .background(MaterialTheme.colorScheme.primary),
+            .height(51.dp)
+            .background(BarraSuperior.fondo),
         contentAlignment = Alignment.CenterStart
     ) {
         Text(
             text = "Agenda",
-            color = MaterialTheme.colorScheme.onPrimary,
+            color = BarraSuperior.contenido,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp)

@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import com.example.lince_track.R
 import com.example.lince_track.ui.components.SoporteDialog
+import com.example.lince_track.ui.theme.BarraSuperior
 
 @Composable
 fun PerfilScreen(
@@ -137,9 +138,8 @@ private fun PerfilTopBar() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.primary)
-            .statusBarsPadding()
-            .height(48.dp)
+            .background(BarraSuperior.fondo)
+            .height(43.dp)
             .padding(horizontal = 14.dp),
         contentAlignment = Alignment.CenterStart
     ) {
@@ -166,14 +166,14 @@ private fun PerfilTopBar() {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     "Mi Perfil",
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    color = BarraSuperior.contenido,
                     style = MaterialTheme.typography.titleSmall,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     "Operaciones Southbound",
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                    color = BarraSuperior.contenido.copy(alpha = 0.8f),
                     style = MaterialTheme.typography.labelSmall,
                     fontSize = 10.sp,
                     maxLines = 1

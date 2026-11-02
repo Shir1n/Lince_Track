@@ -8,7 +8,11 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -84,6 +88,26 @@ private val AppShapes = Shapes(
     extraLarge = RoundedCornerShape(28.dp)
 )
 
+/**
+ * Colores de la barra superior de las pantallas y del fondo de la barra de estado. En modo oscuro
+ * `primary` es un azul claro pensado para botones, por eso la barra tiene colores propios.
+ */
+@Immutable
+private data class ColoresBarras(val fondo: Color, val contenido: Color, val estado: Color)
+
+private val LocalColoresBarras = staticCompositionLocalOf {
+    ColoresBarras(fondo = NavyBlue, contenido = SurfaceWhite, estado = NavyBlue)
+}
+
+object BarraSuperior {
+    val fondo: Color
+        @Composable get() = LocalColoresBarras.current.fondo
+    val contenido: Color
+        @Composable get() = LocalColoresBarras.current.contenido
+    val estado: Color
+        @Composable get() = LocalColoresBarras.current.estado
+}
+
 @Composable
 fun Lince_TrackTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
@@ -101,16 +125,26 @@ fun Lince_TrackTheme(
         SideEffect {
             val window = (view.context as? Activity)?.window ?: return@SideEffect
             WindowCompat.getInsetsController(window, view).apply {
-                isAppearanceLightStatusBars = darkTheme
+                isAppearanceLightStatusBars = false
                 isAppearanceLightNavigationBars = !darkTheme
             }
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        shapes = AppShapes,
-        content = content
-    )
+    val coloresBarras = if (darkTheme) {
+        // Se funde con el fondo de la pantalla, sin cambio de color.
+        ColoresBarras(fondo = colorScheme.background, contenido = colorScheme.onBackground, estado = colorScheme.background)
+    } else {
+        // La barra de estado sigue a la superior: una sola franja azul, con íconos blancos legibles.
+        ColoresBarras(fondo = colorScheme.primary, contenido = colorScheme.onPrimary, estado = colorScheme.primary)
+    }
+
+    CompositionLocalProvider(LocalColoresBarras provides coloresBarras) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            shapes = AppShapes,
+            content = content
+        )
+    }
 }

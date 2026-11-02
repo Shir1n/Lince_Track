@@ -65,6 +65,7 @@ import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.RejectServicioDialog
 import com.example.lince_track.util.abrirWhatsApp
 import kotlinx.coroutines.launch
+import com.example.lince_track.ui.theme.BarraSuperior
 
 @Composable
 fun DetalleServicioScreen(
@@ -175,8 +176,8 @@ private fun DetalleTopBar(onBack: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp)
-            .background(MaterialTheme.colorScheme.primary)
+            .height(51.dp)
+            .background(BarraSuperior.fondo)
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -184,12 +185,12 @@ private fun DetalleTopBar(onBack: () -> Unit) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Volver",
-                tint = MaterialTheme.colorScheme.onPrimary
+                tint = BarraSuperior.contenido
             )
         }
         Text(
             text = "Detalle de Servicio",
-            color = MaterialTheme.colorScheme.onPrimary,
+            color = BarraSuperior.contenido,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )

@@ -94,8 +94,8 @@ class FakeServiciosDataSource(
                 pickup = "Hotel Cumbres, Puerto Varas", dropoff = "Parque Nacional Vicente Pérez Rosales",
                 notas = "Llevar comprobantes CONAF. Un pasajero con movilidad reducida.",
                 oficina = PUX, cliente = CLIENTE_US,
-                transportista = MIGUEL_SOTO,
-                vehiculo = VehiculoDto(44, "KJ-RT-21", "MINIBUS", 19),
+                transportista = CARLOS_MORALES,
+                vehiculo = VehiculoDto(41, "LK-VF-84", "VAN", 12),
                 asignacion = AsignacionDto("RQ", "${hoy}T08:00:00")
             ),
             ServicioDto(

@@ -95,7 +95,7 @@ Responde y escribe la interfaz en **español de Chile**.
 - Textos de la UI en español; los códigos de la API se guardan como String (tolerar valores nuevos).
 
 ## Pendientes
-1. Reemplazar los IDs de prueba de `usuarios/{uid}` (`transportistaId: 14`, `guiaId: 7`) por los reales
+1. Reemplazar los IDs de prueba de `usuarios/{uid}` (`transportistaId: 12`, `guiaId: 7`) por los reales
    cuando llegue la clave de la API: con la clave, un ID de prueba mostraría servicios de otra persona.
 2. El panel del administrador (`ui/admin/AdminPanelScreen`) solo muestra los servicios de hoy y no
    avisa ni reasigna; falta notificar los rechazos y permitir asignar un reemplazo.
