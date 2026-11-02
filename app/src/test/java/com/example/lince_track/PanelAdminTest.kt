@@ -9,6 +9,7 @@ import com.example.lince_track.data.RespuestaServicio
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.servicios.FakeServiciosDataSource
 import com.example.lince_track.data.servicios.ServicioMapper
+import com.example.lince_track.ui.admin.FilaPanel
 import com.example.lince_track.ui.admin.FiltroPanel
 import com.example.lince_track.ui.admin.PanelAdmin
 import com.example.lince_track.ui.admin.TotalesPanel
@@ -37,6 +38,73 @@ class PanelAdminTest {
             servicio("4", EstadoServicio.RECHAZADO)
         )
         assertEquals(TotalesPanel(pendientes = 2, aceptados = 1, rechazados = 1), PanelAdmin.totales(servicios))
+    }
+
+    private fun terminado(servicio: Servicio) =
+        servicio.id to CheckinServicio(servicio.id, 0L, distanciaM = 10, gpsReal = true, checkOutEn = 1L)
+
+    @Test
+    fun `totales no cuenta dos veces lo terminado`() {
+        val hecho = servicio("1", EstadoServicio.ACEPTADO)
+        val servicios = listOf(hecho, servicio("2", EstadoServicio.ACEPTADO), servicio("3", EstadoServicio.PENDIENTE))
+        assertEquals(
+            TotalesPanel(pendientes = 1, aceptados = 1, rechazados = 0, terminados = 1),
+            PanelAdmin.totales(servicios, mapOf(terminado(hecho)))
+        )
+    }
+
+    @Test
+    fun `cancelado por la API con check-out no cuenta como terminado`() {
+        val cancelado = servicio("1", EstadoServicio.RECHAZADO)
+        val checkins = mapOf(terminado(cancelado))
+        assertEquals(
+            TotalesPanel(pendientes = 0, aceptados = 0, rechazados = 1, terminados = 0),
+            PanelAdmin.totales(listOf(cancelado), checkins)
+        )
+        assertEquals(emptyList<FilaPanel>(), PanelAdmin.filas(listOf(cancelado), emptyMap(), FiltroPanel.TERMINADOS, checkins))
+    }
+
+    @Test
+    fun `filtros separan aceptados de terminados`() {
+        val hecho = servicio("hecho", EstadoServicio.ACEPTADO)
+        val enCurso = servicio("en-curso", EstadoServicio.ACEPTADO)
+        val checkins = mapOf(terminado(hecho))
+        val ids = { filtro: FiltroPanel ->
+            PanelAdmin.filas(listOf(hecho, enCurso), emptyMap(), filtro, checkins).map { it.servicio.id }
+        }
+        assertEquals(listOf("en-curso"), ids(FiltroPanel.ACEPTADOS))
+        assertEquals(listOf("hecho"), ids(FiltroPanel.TERMINADOS))
+        assertEquals(setOf("hecho", "en-curso"), ids(FiltroPanel.TODOS).toSet())
+    }
+
+    @Test
+    fun `los terminados van al final aunque sean mas temprano`() {
+        val hecho = servicio("hecho", EstadoServicio.ACEPTADO, hora = 7)
+        val servicios = listOf(
+            hecho,
+            servicio("tarde", EstadoServicio.PENDIENTE, hora = 15),
+            servicio("rechazado", EstadoServicio.RECHAZADO, hora = 18)
+        )
+        val filas = PanelAdmin.filas(servicios, emptyMap(), FiltroPanel.TODOS, mapOf(terminado(hecho)))
+        assertEquals(listOf("rechazado", "tarde", "hecho"), filas.map { it.servicio.id })
+    }
+
+    @Test
+    fun `lo pasado ya no se puede reasignar`() {
+        val hoy = LocalDate.of(2026, 11, 2)
+        val ayer = servicio("ayer", EstadoServicio.RECHAZADO).copy(fecha = hoy.minusDays(1))
+        val deHoy = servicio("hoy", EstadoServicio.RECHAZADO).copy(fecha = hoy)
+        val filas = PanelAdmin.filas(listOf(ayer, deHoy), emptyMap(), FiltroPanel.TODOS, hoy = hoy)
+        assertEquals(false, filas.single { it.servicio.id == "ayer" }.puedeReasignar)
+        assertEquals(true, filas.single { it.servicio.id == "hoy" }.puedeReasignar)
+    }
+
+    @Test
+    fun `rango de fechas coincide con lo cargado`() {
+        val hoy = LocalDate.of(2026, 11, 2)
+        val rango = PanelAdmin.rangoFechas(hoy)
+        assertEquals(hoy.minusDays(7), rango.start)
+        assertEquals(hoy.plusDays(30), rango.endInclusive)
     }
 
     @Test

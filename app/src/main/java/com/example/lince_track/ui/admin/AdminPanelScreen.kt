@@ -16,17 +16,29 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.ChevronLeft
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -61,12 +73,14 @@ import com.example.lince_track.ui.components.IncidenciaCard
 import com.example.lince_track.ui.components.MensajeIncidenciaDialog
 import com.example.lince_track.util.abrirEnMapa
 import com.example.lince_track.util.abrirWhatsApp
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlinx.coroutines.launch
 import com.example.lince_track.ui.theme.BarraSuperior
 
 /**
- * Panel del administrador: estado de los servicios de hoy y respuestas de conductores
+ * Panel del administrador: estado de los servicios del día elegido y respuestas de conductores
  * y guías. Se actualiza solo cuando alguien responde.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -89,10 +103,13 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
     val scope = rememberCoroutineScope()
 
     val hoy = LocalDate.now()
-    val serviciosHoy = remember(servicios, hoy) { servicios.filter { it.fecha == hoy } }
-    val totales = remember(serviciosHoy) { PanelAdmin.totales(serviciosHoy) }
-    val filas = remember(serviciosHoy, respuestas, checkins, filtro, incidencias) {
-        PanelAdmin.filas(serviciosHoy, respuestas, filtro, checkins, incidencias)
+    // Sin un día elegido se sigue a hoy, aunque la app quede abierta de un día para otro.
+    var diaElegido by rememberSaveable { mutableStateOf<Long?>(null) }
+    val fecha = diaElegido?.let { LocalDate.ofEpochDay(it) } ?: hoy
+    val serviciosDelDia = remember(servicios, fecha) { servicios.filter { it.fecha == fecha } }
+    val totales = remember(serviciosDelDia, checkins) { PanelAdmin.totales(serviciosDelDia, checkins) }
+    val filas = remember(serviciosDelDia, respuestas, checkins, filtro, incidencias, hoy) {
+        PanelAdmin.filas(serviciosDelDia, respuestas, filtro, checkins, incidencias, hoy)
     }
     val incidenciasAbiertas = remember(incidencias) { ReglasIncidencia.abiertas(incidencias) }
     val incidenciasResueltas = remember(incidencias) { ReglasIncidencia.resueltas(incidencias) }
@@ -138,19 +155,19 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "Servicios de Hoy - ${formatFechaCorta(hoy)}",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+            SelectorFecha(
+                fecha = fecha,
+                hoy = hoy,
+                onElegir = { elegida -> diaElegido = elegida.takeIf { it != hoy }?.toEpochDay() }
             )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 TotalCard("Pendientes", totales.pendientes, MaterialTheme.colorScheme.tertiary, Modifier.weight(1f))
                 TotalCard("Aceptados", totales.aceptados, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
+                TotalCard("Terminados", totales.terminados, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
                 TotalCard("Rechazados", totales.rechazados, MaterialTheme.colorScheme.error, Modifier.weight(1f))
             }
 
@@ -327,6 +344,102 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
                 scope.launch { mostrarResultado(ServicioRepository.resolverIncidencia(incidencia, mensaje), "Incidencia resuelta") }
             }
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SelectorFecha(fecha: LocalDate, hoy: LocalDate, onElegir: (LocalDate) -> Unit) {
+    val rango = PanelAdmin.rangoFechas(hoy)
+    var verCalendario by rememberSaveable { mutableStateOf(false) }
+
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(
+                onClick = { onElegir(fecha.minusDays(1)) },
+                enabled = fecha.minusDays(1) in rango
+            ) {
+                Icon(Icons.Outlined.ChevronLeft, contentDescription = "Día anterior")
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { verCalendario = true }
+                    .padding(vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = when (fecha) {
+                        hoy -> "Servicios de Hoy"
+                        hoy.minusDays(1) -> "Servicios de Ayer"
+                        hoy.plusDays(1) -> "Servicios de Mañana"
+                        else -> "Servicios del día"
+                    },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.CalendarMonth,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = formatFechaCorta(fecha),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            IconButton(
+                onClick = { onElegir(fecha.plusDays(1)) },
+                enabled = fecha.plusDays(1) in rango
+            ) {
+                Icon(Icons.Outlined.ChevronRight, contentDescription = "Día siguiente")
+            }
+        }
+        if (fecha != hoy) {
+            TextButton(
+                onClick = { onElegir(hoy) },
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
+                Text("Volver a hoy")
+            }
+        }
+    }
+
+    if (verCalendario) {
+        // El calendario trabaja con medianoche en UTC, sin importar la zona del teléfono.
+        val estado = rememberDatePickerState(
+            initialSelectedDateMillis = fecha.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                    Instant.ofEpochMilli(utcTimeMillis).atZone(ZoneOffset.UTC).toLocalDate() in rango
+            }
+        )
+        DatePickerDialog(
+            onDismissRequest = { verCalendario = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        estado.selectedDateMillis?.let {
+                            onElegir(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate())
+                        }
+                        verCalendario = false
+                    }
+                ) {
+                    Text("Elegir")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { verCalendario = false }) { Text("Cancelar") }
+            }
+        ) {
+            DatePicker(state = estado)
+        }
     }
 }
 
