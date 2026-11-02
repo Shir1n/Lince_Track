@@ -2,6 +2,7 @@ package com.example.lince_track.data.servicios
 
 import com.example.lince_track.data.EstadoServicio
 import com.example.lince_track.data.Servicio
+import com.example.lince_track.data.VehiculoServicio
 import com.example.lince_track.data.remote.dto.ServicioDto
 import java.time.LocalDate
 import java.time.LocalTime
@@ -69,7 +70,8 @@ object ServicioMapper {
             reserva = "#$referencia",
             tipo = dto.tipo,
             statusPL = dto.asignacion.statusPL,
-            horaFinEstimada = true
+            horaFinEstimada = true,
+            vehiculo = dto.vehiculo?.let { VehiculoServicio(it.patente, it.tipo, it.capacidad) }
         )
     }
 }
