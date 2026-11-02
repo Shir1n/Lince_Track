@@ -14,6 +14,8 @@ import com.example.lince_track.R
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.AvisoLocal
 import com.example.lince_track.data.CambiosServicios
+import com.example.lince_track.data.IncidenciaServicio
+import com.example.lince_track.data.PerfilUsuario
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
 import kotlinx.coroutines.CoroutineScope
@@ -29,6 +31,13 @@ import kotlinx.coroutines.launch
  */
 object NotificadorLocal {
 
+    private data class Estado(
+        val listos: Boolean,
+        val servicios: List<Servicio>,
+        val incidencias: List<IncidenciaServicio>,
+        val perfil: PerfilUsuario?
+    )
+
     private const val CANAL = "servicios"
     private var iniciado = false
 
@@ -39,12 +48,14 @@ object NotificadorLocal {
         crearCanal(app)
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             var anterior: List<Servicio>? = null
+            var incidenciasAnteriores: List<IncidenciaServicio> = emptyList()
             combine(
                 ServicioRepository.datosListos,
                 ServicioRepository.servicios,
+                ServicioRepository.incidencias,
                 AuthRepository.perfilActual
-            ) { listos, servicios, perfil -> Triple(listos, servicios, perfil) }
-                .collect { (listos, servicios, perfil) ->
+            ) { listos, servicios, incidencias, perfil -> Estado(listos, servicios, incidencias, perfil) }
+                .collect { (listos, servicios, incidencias, perfil) ->
                     if (!listos || perfil == null) {
                         anterior = null
                         return@collect
@@ -52,15 +63,18 @@ object NotificadorLocal {
                     // La primera lista completa es la base: lo que ya estaba no es novedad.
                     anterior?.let { previa ->
                         CambiosServicios.detectar(previa, servicios, perfil.rol).forEach { mostrar(app, it) }
+                        CambiosServicios.incidencias(incidenciasAnteriores, incidencias, perfil.rol)
+                            .forEach { mostrar(app, it) }
                     }
                     anterior = servicios
+                    incidenciasAnteriores = incidencias
                 }
         }
     }
 
     private fun crearCanal(context: Context) {
         val canal = NotificationChannel(CANAL, "Servicios", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "Asignaciones, confirmaciones y rechazos de servicios"
+            description = "Asignaciones, confirmaciones, rechazos e incidencias de servicios"
         }
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(canal)
     }

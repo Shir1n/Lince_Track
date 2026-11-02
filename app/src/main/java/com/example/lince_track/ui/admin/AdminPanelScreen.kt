@@ -43,12 +43,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.lince_track.data.PersonaDisponible
+import com.example.lince_track.data.ReglasIncidencia
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.formatFechaCorta
 import com.example.lince_track.data.formatHora
 import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.components.EstadoServicioBadge
+import com.example.lince_track.ui.components.IncidenciaCard
 import java.time.LocalDate
 import kotlinx.coroutines.launch
 import com.example.lince_track.ui.theme.BarraSuperior
@@ -62,6 +64,7 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
     val servicios by ServicioRepository.servicios.collectAsState()
     val respuestas by ServicioRepository.respuestas.collectAsState()
     val checkins by ServicioRepository.checkins.collectAsState()
+    val incidencias by ServicioRepository.incidencias.collectAsState()
     val error by ServicioRepository.error.collectAsState()
     var filtro by rememberSaveable { mutableStateOf(FiltroPanel.TODOS) }
     var porReasignar by remember { mutableStateOf<Servicio?>(null) }
@@ -71,9 +74,10 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
     val hoy = LocalDate.now()
     val serviciosHoy = remember(servicios, hoy) { servicios.filter { it.fecha == hoy } }
     val totales = remember(serviciosHoy) { PanelAdmin.totales(serviciosHoy) }
-    val filas = remember(serviciosHoy, respuestas, checkins, filtro) {
-        PanelAdmin.filas(serviciosHoy, respuestas, filtro, checkins)
+    val filas = remember(serviciosHoy, respuestas, checkins, filtro, incidencias) {
+        PanelAdmin.filas(serviciosHoy, respuestas, filtro, checkins, incidencias)
     }
+    val incidenciasAbiertas = remember(incidencias) { ReglasIncidencia.abiertas(incidencias) }
     // Un rechazo de otro día también hay que resolverlo: no puede quedar escondido hasta esa fecha.
     val rechazadosProximos = remember(servicios, respuestas, checkins, hoy) {
         PanelAdmin.filas(servicios.filter { it.fecha.isAfter(hoy) }, respuestas, FiltroPanel.RECHAZADOS, checkins)
@@ -120,6 +124,29 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
                 TotalCard("Pendientes", totales.pendientes, MaterialTheme.colorScheme.tertiary, Modifier.weight(1f))
                 TotalCard("Aceptados", totales.aceptados, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
                 TotalCard("Rechazados", totales.rechazados, MaterialTheme.colorScheme.error, Modifier.weight(1f))
+            }
+
+            if (incidenciasAbiertas.isNotEmpty()) {
+                Text(
+                    text = "Incidencias abiertas (${incidenciasAbiertas.size})",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                )
+                incidenciasAbiertas.forEach { incidencia ->
+                    IncidenciaCard(
+                        incidencia = incidencia,
+                        mostrarServicio = true,
+                        onClick = { onServiceClick(incidencia.servicioId) },
+                        onResolver = {
+                            scope.launch {
+                                ServicioRepository.resolverIncidencia(incidencia)
+                                    .onSuccess { aviso -> if (aviso != null) snackbarHostState.showSnackbar(aviso) }
+                                    .onFailure { e -> snackbarHostState.showSnackbar(e.message ?: "No se pudo marcar como resuelta") }
+                            }
+                        }
+                    )
+                }
             }
 
             Row(
@@ -319,6 +346,15 @@ private fun FilaCard(
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.secondary
+                )
+            }
+            if (fila.incidenciasAbiertas > 0) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (fila.incidenciasAbiertas == 1) "1 incidencia abierta" else "${fila.incidenciasAbiertas} incidencias abiertas",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.error
                 )
             }
             fila.motivo?.let { motivo ->

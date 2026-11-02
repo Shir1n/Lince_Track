@@ -81,6 +81,8 @@ import com.example.lince_track.BuildConfig
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.ReglasCheckin
+import com.example.lince_track.data.ReglasIncidencia
+import com.example.lince_track.ui.components.ReportarIncidenciaDialog
 import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
@@ -205,6 +207,7 @@ private fun RutaMapaContenido(
 
     var procesando by remember { mutableStateOf(false) }
     var showExternalNavDialog by remember { mutableStateOf(false) }
+    var showIncidenciaDialog by remember { mutableStateOf(false) }
     var recentrarMapa by remember { mutableIntStateOf(0) }
 
     var hasLocationPermission by remember {
@@ -588,6 +591,7 @@ private fun RutaMapaContenido(
                 userPoint = userGeoPoint,
                 isUsingRealGps = isUsingRealGps,
                 procesando = procesando,
+                onReportarIncidencia = { showIncidenciaDialog = true },
                 onPrimaryAction = {
                     val esGuia = activeRole == RolMapa.GUIA
                     if (!isCheckInDone) {
@@ -626,6 +630,20 @@ private fun RutaMapaContenido(
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
+
+    if (showIncidenciaDialog) {
+        ReportarIncidenciaDialog(
+            onDismiss = { showIncidenciaDialog = false },
+            onConfirm = { tipo, detalle ->
+                showIncidenciaDialog = false
+                scope.launch {
+                    ServicioRepository.reportarIncidencia(servicio.id, tipo, detalle)
+                        .onSuccess { aviso -> snackbarHostState.showSnackbar(aviso ?: "Incidencia enviada a Coordinación") }
+                        .onFailure { e -> snackbarHostState.showSnackbar(e.message ?: "No se pudo enviar la incidencia") }
+                }
+            }
         )
     }
 
@@ -980,6 +998,7 @@ private fun RoleBottomActionPanel(
     userPoint: GeoPoint,
     isUsingRealGps: Boolean,
     procesando: Boolean,
+    onReportarIncidencia: () -> Unit,
     onPrimaryAction: () -> Unit
 ) {
     val isCheckInDone = checkin != null
@@ -1079,6 +1098,12 @@ private fun RoleBottomActionPanel(
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
+                }
+
+                if (ReglasIncidencia.puedeReportar(servicio, checkin)) {
+                    TextButton(onClick = onReportarIncidencia) {
+                        Text("Reportar incidencia", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
