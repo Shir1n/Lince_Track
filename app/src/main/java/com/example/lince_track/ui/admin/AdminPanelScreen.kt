@@ -16,16 +16,24 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -34,12 +42,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.lince_track.data.PersonaDisponible
+import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.formatFechaCorta
 import com.example.lince_track.data.formatHora
 import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.components.EstadoServicioBadge
 import java.time.LocalDate
+import kotlinx.coroutines.launch
 import com.example.lince_track.ui.theme.BarraSuperior
 
 /**
@@ -53,6 +64,9 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
     val checkins by ServicioRepository.checkins.collectAsState()
     val error by ServicioRepository.error.collectAsState()
     var filtro by rememberSaveable { mutableStateOf(FiltroPanel.TODOS) }
+    var porReasignar by remember { mutableStateOf<Servicio?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     val hoy = LocalDate.now()
     val serviciosHoy = remember(servicios, hoy) { servicios.filter { it.fecha == hoy } }
@@ -60,7 +74,12 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
     val filas = remember(serviciosHoy, respuestas, checkins, filtro) {
         PanelAdmin.filas(serviciosHoy, respuestas, filtro, checkins)
     }
+    // Un rechazo de otro día también hay que resolverlo: no puede quedar escondido hasta esa fecha.
+    val rechazadosProximos = remember(servicios, respuestas, checkins, hoy) {
+        PanelAdmin.filas(servicios.filter { it.fecha.isAfter(hoy) }, respuestas, FiltroPanel.RECHAZADOS, checkins)
+    }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -131,10 +150,103 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
             }
 
             filas.forEach { fila ->
-                FilaCard(fila = fila, onClick = { onServiceClick(fila.servicio.id) })
+                FilaCard(
+                    fila = fila,
+                    onClick = { onServiceClick(fila.servicio.id) },
+                    onReasignar = { porReasignar = fila.servicio }
+                )
+            }
+
+            if (rechazadosProximos.isNotEmpty()) {
+                Text(
+                    text = "Rechazados en próximos días",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                rechazadosProximos.forEach { fila ->
+                    FilaCard(
+                        fila = fila,
+                        onClick = { onServiceClick(fila.servicio.id) },
+                        onReasignar = { porReasignar = fila.servicio },
+                        fecha = formatFechaCorta(fila.servicio.fecha)
+                    )
+                }
             }
         }
     }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
+
+    porReasignar?.let { servicio ->
+        ReasignarDialog(
+            servicio = servicio,
+            onDismiss = { porReasignar = null },
+            onElegir = { persona ->
+                porReasignar = null
+                scope.launch {
+                    ServicioRepository.reasignar(servicio, persona)
+                        .onSuccess { aviso -> snackbarHostState.showSnackbar(aviso ?: "Asignado a ${persona.nombre}") }
+                        .onFailure { e -> snackbarHostState.showSnackbar(e.message ?: "No se pudo reasignar") }
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ReasignarDialog(
+    servicio: Servicio,
+    onDismiss: () -> Unit,
+    onElegir: (PersonaDisponible) -> Unit
+) {
+    var candidatos by remember { mutableStateOf<List<PersonaDisponible>?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(servicio.id) {
+        ServicioRepository.candidatosPara(servicio)
+            .onSuccess { candidatos = it }
+            .onFailure { error = it.message }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Reasignar servicio") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = servicio.titulo,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                val lista = candidatos
+                when {
+                    error != null -> Text(error.orEmpty(), color = MaterialTheme.colorScheme.error)
+                    lista == null -> CircularProgressIndicator()
+                    lista.isEmpty() -> Text("No hay otra persona disponible para este servicio.")
+                    else -> lista.forEach { persona ->
+                        Text(
+                            text = persona.nombre,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onElegir(persona) }
+                                .padding(vertical = 12.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
 }
 
 @Composable
@@ -167,7 +279,12 @@ private fun TotalCard(etiqueta: String, valor: Int, color: Color, modifier: Modi
 }
 
 @Composable
-private fun FilaCard(fila: FilaPanel, onClick: () -> Unit) {
+private fun FilaCard(
+    fila: FilaPanel,
+    onClick: () -> Unit,
+    onReasignar: () -> Unit,
+    fecha: String? = null
+) {
     val servicio = fila.servicio
     Card(
         modifier = Modifier
@@ -190,7 +307,8 @@ private fun FilaCard(fila: FilaPanel, onClick: () -> Unit) {
             }
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "${formatHora(servicio.horaInicio)} • ${fila.responsable}",
+                text = listOfNotNull(fecha, formatHora(servicio.horaInicio), fila.responsable).joinToString(" • ") +
+                    if (servicio.reasignado) " (reemplazo)" else "",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -219,6 +337,12 @@ private fun FilaCard(fila: FilaPanel, onClick: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+            }
+            if (fila.puedeReasignar) {
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(onClick = onReasignar, shape = RoundedCornerShape(50)) {
+                    Text("Reasignar", fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

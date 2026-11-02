@@ -2,6 +2,7 @@ package com.example.lince_track.ui.admin
 
 import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.EstadoServicio
+import com.example.lince_track.data.ReglasAsignacion
 import com.example.lince_track.data.ReglasCheckin
 import com.example.lince_track.data.RespuestaServicio
 import com.example.lince_track.data.Servicio
@@ -22,13 +23,15 @@ data class TotalesPanel(val pendientes: Int, val aceptados: Int, val rechazados:
  * @property motivo por qué está rechazado (null si no lo está).
  * @property observaciones lo que escribió la persona al rechazar (vacío si no hay).
  * @property estadoRuta resumen del check-in o check-out (null si aún no hay check-in).
+ * @property puedeReasignar true si el administrador puede elegir a otra persona.
  */
 data class FilaPanel(
     val servicio: Servicio,
     val responsable: String,
     val motivo: String?,
     val observaciones: String,
-    val estadoRuta: String? = null
+    val estadoRuta: String? = null,
+    val puedeReasignar: Boolean = false
 )
 
 /** Cálculos del panel del administrador, sin dependencias de Android ni Firebase. */
@@ -67,7 +70,8 @@ object PanelAdmin {
             responsable = servicio.responsable,
             motivo = motivo,
             observaciones = if (servicio.estado == EstadoServicio.RECHAZADO) rechazoPropio?.observaciones.orEmpty() else "",
-            estadoRuta = checkin?.let { ReglasCheckin.resumen(it) }
+            estadoRuta = checkin?.let { ReglasCheckin.resumen(it) },
+            puedeReasignar = ReglasAsignacion.puedeReasignar(servicio, checkin)
         )
     }
 }

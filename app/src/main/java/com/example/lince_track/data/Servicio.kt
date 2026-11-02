@@ -39,7 +39,13 @@ data class Servicio(
     /** true si horaFin fue estimada (la API solo entrega la hora de pickup). */
     val horaFinEstimada: Boolean = false,
     /** Vehículo asignado; la API lo trae solo en TRANSFER y EXCURSION. */
-    val vehiculo: VehiculoServicio? = null
+    val vehiculo: VehiculoServicio? = null,
+    /** true si la API lo marca cancelado (XX): ya no se puede reasignar. */
+    val cancelado: Boolean = false,
+    /** Id en la API de quien trae asignado: transportista o guía según el tipo. */
+    val responsableId: Long? = null,
+    /** true si el administrador eligió a otra persona (ver ReglasAsignacion). */
+    val reasignado: Boolean = false
 )
 
 data class VehiculoServicio(

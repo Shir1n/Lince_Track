@@ -14,12 +14,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -37,6 +41,9 @@ object ServicioRepository {
         "Tu cuenta aún no está vinculada. Contacta al administrador."
     private const val RESPUESTA_EN_COLA =
         "Sin conexión: se enviará al recuperar la señal."
+    private const val SIN_SESION = Int.MAX_VALUE
+    /** Primera carga, respuestas, estados y asignaciones. */
+    private const val FUENTES_INICIALES = 4
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -51,8 +58,18 @@ object ServicioRepository {
     /** Servicios tal como llegan de la fuente (ya convertidos al modelo de la app). */
     private val serviciosFuente = MutableStateFlow<List<Servicio>>(emptyList())
 
-    /** Servicios de la otra persona en los tours del usuario (ver ReglasCompanero). */
-    private val serviciosCompaneros = MutableStateFlow<List<Servicio>>(emptyList())
+    /**
+     * Toda la oficina, para encontrar a la otra persona de cada tour y lo que se le reasignó al
+     * usuario: el filtro por persona no trae esos servicios. Vacía para el administrador.
+     */
+    private val serviciosOficina = MutableStateFlow<List<Servicio>>(emptyList())
+
+    private val _asignaciones = MutableStateFlow<Map<String, AsignacionServicio>>(emptyMap())
+    /** Reemplazos elegidos por el administrador: id del servicio → reemplazo. */
+    val asignaciones: StateFlow<Map<String, AsignacionServicio>> = _asignaciones.asStateFlow()
+    private var escuchaAsignaciones: Job? = null
+
+    private val rechazaron = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
 
     /** Lo que publicó cada persona sobre sus servicios: id del servicio → estado y nombre. */
     private val estadosCompartidos = MutableStateFlow<Map<String, RespuestaServicio>>(emptyMap())
@@ -75,13 +92,23 @@ object ServicioRepository {
     private var escuchaCheckins: Job? = null
 
     val servicios: StateFlow<List<Servicio>> =
-        combine(serviciosFuente, _respuestas, serviciosCompaneros, estadosCompartidos, AuthRepository.perfilActual) { lista, porServicio, companeros, estados, perfil ->
-            val companerosConEstado = companeros.map { ReglasCompanero.aplicarPublicado(it, estados[it.id]) }
-            lista.map { servicio ->
-                val propio = ReglasCompanero.conNombrePropio(ReglasRespuesta.aplicar(servicio, porServicio[servicio.id]), perfil)
-                ReglasCompanero.completar(propio, companerosConEstado)
-            }
+        combine(
+            combine(serviciosFuente, serviciosOficina, ::Pair),
+            _asignaciones,
+            _respuestas,
+            estadosCompartidos,
+            AuthRepository.perfilActual
+        ) { (propios, oficina), asignaciones, respuestas, estados, perfil ->
+            ReglasAsignacion.armar(propios, oficina, asignaciones, respuestas, estados, perfil, AuthRepository.usuarioActual?.uid)
         }.stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    /** Lo que falta por llegar tras iniciar sesión: la primera carga y cada escucha. */
+    private val fuentesPendientes = MutableStateFlow(SIN_SESION)
+    private var cargaInicialHecha = false
+
+    /** true cuando llegó todo lo inicial: desde aquí, un cambio en [servicios] es una novedad. */
+    val datosListos: StateFlow<Boolean> =
+        fuentesPendientes.map { it == 0 }.stateIn(scope, SharingStarted.Eagerly, false)
 
     private val _cargando = MutableStateFlow(false)
     val cargando: StateFlow<Boolean> = _cargando.asStateFlow()
@@ -104,32 +131,45 @@ object ServicioRepository {
 
     /** Descarta los datos del usuario anterior y carga los del nuevo. */
     private suspend fun aplicarPerfil(perfil: PerfilUsuario?) {
+        fuentesPendientes.value = SIN_SESION
         // Se espera a que termine para que una carga antigua no escriba sobre los datos nuevos.
         cargaEnCurso?.cancelAndJoin()
         escuchaRespuestas?.cancelAndJoin()
         escuchaCheckins?.cancelAndJoin()
         escuchaEstados?.cancelAndJoin()
+        escuchaAsignaciones?.cancelAndJoin()
         serviciosFuente.value = emptyList()
-        serviciosCompaneros.value = emptyList()
+        serviciosOficina.value = emptyList()
         _respuestas.value = emptyMap()
+        rechazaron.value = emptyMap()
         _checkins.value = emptyMap()
         estadosCompartidos.value = emptyMap()
+        _asignaciones.value = emptyMap()
         errorCarga.value = null
+        cargaInicialHecha = false
         filtroActual = perfil?.let { FiltroServicios.paraPerfil(it) }
 
         val uid = AuthRepository.usuarioActual?.uid
         if (perfil != null && uid != null) {
             val soloDe = if (perfil.rol == Rol.ADMINISTRADOR) null else uid
+            if (filtroActual != null) fuentesPendientes.value = FUENTES_INICIALES
             escuchaRespuestas = scope.launch {
-                RespuestaRepository.observar(soloDe).collect { _respuestas.value = it }
+                RespuestaRepository.observar(soloDe).marcandoPrimera().collect { lista ->
+                    // Si un servicio tiene más de una respuesta, queda la más reciente.
+                    _respuestas.value = lista.associateBy { it.servicioId }
+                    rechazaron.value = ReglasAsignacion.rechazos(lista)
+                }
             }
             escuchaCheckins = scope.launch {
                 CheckinRepository.observar(soloDe).collect { _checkins.value = it }
             }
-            val filtro = filtroActual
-            if (filtro != null && soloDe != null) {
+            filtroActual?.let { filtro ->
+                val desde = filtro.desde.toString()
                 escuchaEstados = scope.launch {
-                    RespuestaRepository.observarEstados(filtro.desde.toString()).collect { estadosCompartidos.value = it }
+                    RespuestaRepository.observarEstados(desde).marcandoPrimera().collect { estadosCompartidos.value = it }
+                }
+                escuchaAsignaciones = scope.launch {
+                    AsignacionRepository.observar(desde).marcandoPrimera().collect { _asignaciones.value = it }
                 }
             }
         }
@@ -151,8 +191,12 @@ object ServicioRepository {
                 val dtos = fuente.obtener(filtro)
                 val convertidos = dtos.mapNotNull { ServicioMapper.aDominio(it) }
                 serviciosFuente.value = convertidos
-                serviciosCompaneros.value = cargarCompaneros(filtro, convertidos)
+                serviciosOficina.value = cargarOficina(filtro)
                 errorCarga.value = null
+                if (!cargaInicialHecha) {
+                    cargaInicialHecha = true
+                    fuentesPendientes.update { it - 1 }
+                }
                 LinceLogger.i(
                     tag = "SERVICIOS",
                     message = "${convertidos.size} servicios cargados desde ${fuente.nombre}",
@@ -171,23 +215,64 @@ object ServicioRepository {
         }.also { cargaEnCurso = it }
     }
 
-    /**
-     * Servicios de otras personas en las mismas reservas que [propios]: el filtro por persona no
-     * los trae. Si fallan, la lista propia sigue sirviendo, así que solo se registra el error.
-     */
-    private suspend fun cargarCompaneros(filtro: FiltroServicios, propios: List<Servicio>): List<Servicio> {
-        if (propios.isEmpty() || (filtro.guiaId == null && filtro.transportistaId == null)) return emptyList()
+    /** Si falla, la lista propia sigue sirviendo, así que solo se registra el error. */
+    private suspend fun cargarOficina(filtro: FiltroServicios): List<Servicio> {
+        if (filtro.guiaId == null && filtro.transportistaId == null) return emptyList()
         return try {
-            val reservas = propios.map { it.reserva }.toSet()
-            val idsPropios = propios.map { it.id }.toSet()
             fuente.obtener(filtro.copy(guiaId = null, transportistaId = null))
                 .mapNotNull { ServicioMapper.aDominio(it) }
-                .filter { it.reserva in reservas && it.id !in idsPropios }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
-            LinceLogger.e("SERVICIOS", "No se pudieron cargar los servicios relacionados", e.aLinceApiException())
-            serviciosCompaneros.value
+            LinceLogger.e("SERVICIOS", "No se pudieron cargar los servicios de la oficina", e.aLinceApiException())
+            serviciosOficina.value
+        }
+    }
+
+    /** Descuenta esta escucha de [fuentesPendientes] cuando llega su primer resultado. */
+    private fun <T> Flow<T>.marcandoPrimera(): Flow<T> {
+        var primera = true
+        return onEach {
+            if (primera) {
+                primera = false
+                fuentesPendientes.update { it - 1 }
+            }
+        }
+    }
+
+    /** Cuentas a las que se les puede reasignar el servicio. */
+    suspend fun candidatosPara(servicio: Servicio): Result<List<PersonaDisponible>> = try {
+        Result.success(
+            ReglasAsignacion.candidatos(
+                servicio,
+                AsignacionRepository.personal(),
+                _asignaciones.value[servicio.id],
+                rechazaron.value[servicio.id].orEmpty()
+            )
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        LinceLogger.e("SERVICIOS", "No se pudo leer el personal", e)
+        Result.failure(IllegalStateException("No se pudo cargar el personal. Intenta nuevamente."))
+    }
+
+    /** @return en caso de éxito, un aviso para mostrar al usuario (null si no hay nada que avisar). */
+    suspend fun reasignar(servicio: Servicio, persona: PersonaDisponible): Result<String?> {
+        val uid = AuthRepository.usuarioActual?.uid
+        if (uid == null || AuthRepository.perfilActual.value?.rol != Rol.ADMINISTRADOR) {
+            return Result.failure(IllegalStateException("Solo el administrador puede reasignar"))
+        }
+        if (!ReglasAsignacion.puedeReasignar(servicio, _checkins.value[servicio.id])) {
+            return Result.failure(IllegalStateException("Este servicio ya no se puede reasignar"))
+        }
+        return try {
+            Result.success(if (AsignacionRepository.reasignar(servicio, persona, uid)) null else RESPUESTA_EN_COLA)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LinceLogger.e("SERVICIOS", "No se pudo reasignar el servicio", e)
+            Result.failure(IllegalStateException("No se pudo reasignar. Intenta nuevamente."))
         }
     }
 

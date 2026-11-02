@@ -1,11 +1,14 @@
 package com.example.lince_track
 
+import android.Manifest
 import android.content.Context
 import android.content.ContextWrapper
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.example.lince_track.ui.navigation.AppNavHost
@@ -13,6 +16,7 @@ import com.example.lince_track.ui.theme.Lince_TrackTheme
 import com.example.lince_track.ui.theme.ThemeMode
 import com.example.lince_track.ui.theme.themeModeFlow
 import com.example.lince_track.util.LinceLogger
+import com.example.lince_track.util.NotificadorLocal
 import com.google.firebase.FirebaseApp
 import org.osmdroid.config.Configuration
 
@@ -33,6 +37,12 @@ class MainActivity : ComponentActivity() {
             message = "MainActivity iniciada y osmdroid configurado",
             details = "userAgent='${Configuration.getInstance().userAgentValue}', normalizedUA='${Configuration.getInstance().normalizedUserAgent}'"
         )
+
+        NotificadorLocal.iniciar(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+                .launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
 
         enableEdgeToEdge()
         setContent {
