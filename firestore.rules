@@ -133,6 +133,47 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // incidencias/{id}: { uid, rol, nombre, servicioId, titulo, tipo, detalle, fecha, creadaEn, resuelta,
+    //                     resueltaEn, resueltaPor (solo tras resolverla) }
+    // Las reporta el conductor o guía y solo el administrador las cierra. Igual que en "respuestas",
+    // que el servicio sea de esa persona lo revisa la app.
+    function incidenciaValida() {
+      let d = request.resource.data;
+      return tieneAcceso()
+        && d.uid == request.auth.uid
+        && d.rol == perfil().rol
+        && d.rol in ['conductor', 'guia']
+        && d.nombre == perfil().get('nombre', '')
+        && d.servicioId is string
+        && d.titulo is string
+        && d.titulo.size() <= 200
+        && d.tipo in ['atraso', 'falla_mecanica', 'pasajeros', 'camino', 'otro']
+        && d.detalle is string
+        && d.detalle.size() <= 500
+        && (d.tipo != 'otro' || d.detalle.trim().size() > 0)
+        && d.fecha is string
+        && d.creadaEn == request.time
+        && d.resuelta == false
+        && d.keys().hasOnly(['uid', 'rol', 'nombre', 'servicioId', 'titulo', 'tipo', 'detalle', 'fecha', 'creadaEn', 'resuelta']);
+    }
+
+    function resolucionValida() {
+      let d = request.resource.data;
+      return esAdmin()
+        && resource.data.resuelta == false
+        && d.diff(resource.data).affectedKeys().hasOnly(['resuelta', 'resueltaEn', 'resueltaPor'])
+        && d.resuelta == true
+        && d.resueltaEn == request.time
+        && d.resueltaPor == request.auth.uid;
+    }
+
+    match /incidencias/{id} {
+      allow read: if signedIn() && (resource.data.uid == request.auth.uid || esAdmin());
+      allow create: if incidenciaValida();
+      allow update: if resolucionValida();
+      allow delete: if false;
+    }
+
     // checkins/{uid}_{servicioId}: { uid, servicioId, rol, checkInEn, lat, lon, distanciaM, gpsReal,
     //                                checkOutEn, latFin, lonFin (solo tras el check-out) }
     // Es ubicación de personas: solo la leen el dueño y el administrador. El check-out se

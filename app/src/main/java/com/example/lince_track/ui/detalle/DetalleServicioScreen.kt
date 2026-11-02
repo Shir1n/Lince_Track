@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Translate
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -57,14 +58,18 @@ import androidx.compose.ui.unit.sp
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.EstadoServicio
+import com.example.lince_track.data.IncidenciaServicio
 import com.example.lince_track.data.ReglasCheckin
+import com.example.lince_track.data.ReglasIncidencia
 import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.formatHora
 import com.example.lince_track.data.formatPrecioCLP
 import com.example.lince_track.ui.components.EstadoServicioBadge
+import com.example.lince_track.ui.components.IncidenciaCard
 import com.example.lince_track.ui.components.RejectServicioDialog
+import com.example.lince_track.ui.components.ReportarIncidenciaDialog
 import com.example.lince_track.util.abrirWhatsApp
 import kotlinx.coroutines.launch
 import com.example.lince_track.ui.theme.BarraSuperior
@@ -78,6 +83,9 @@ fun DetalleServicioScreen(
     val servicios by ServicioRepository.servicios.collectAsState()
     val servicio = remember(servicios, servicioId) { servicios.find { it.id == servicioId } }
     val checkins by ServicioRepository.checkins.collectAsState()
+    val incidencias by ServicioRepository.incidencias.collectAsState()
+    val rolActual by AuthRepository.rolActual.collectAsState()
+    var showIncidenciaDialog by remember { mutableStateOf(false) }
  
     val scope = rememberCoroutineScope()
     var procesando by remember { mutableStateOf(false) }
@@ -151,6 +159,21 @@ fun DetalleServicioScreen(
                 RouteScheduleCard(servicio)
                 PassengersCard(servicio)
                 GuideCard(servicio)
+                IncidenciasSeccion(
+                    servicio = servicio,
+                    incidencias = ReglasIncidencia.deServicio(incidencias, servicio.id),
+                    puedeReportar = rolActual != Rol.ADMINISTRADOR &&
+                        ReglasIncidencia.puedeReportar(servicio, checkins[servicio.id]),
+                    onReportar = { showIncidenciaDialog = true },
+                    onResolver = { incidencia: IncidenciaServicio ->
+                        scope.launch {
+                            ServicioRepository.resolverIncidencia(incidencia)
+                                .onSuccess { aviso -> if (aviso != null) snackbarHostState.showSnackbar(aviso) }
+                                .onFailure { e -> snackbarHostState.showSnackbar(e.message ?: "No se pudo marcar como resuelta") }
+                        }
+                        Unit
+                    }.takeIf { rolActual == Rol.ADMINISTRADOR }
+                )
             }
 
             BottomActions(
@@ -166,6 +189,20 @@ fun DetalleServicioScreen(
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
+
+    if (showIncidenciaDialog) {
+        ReportarIncidenciaDialog(
+            onDismiss = { showIncidenciaDialog = false },
+            onConfirm = { tipo, detalle ->
+                showIncidenciaDialog = false
+                scope.launch {
+                    ServicioRepository.reportarIncidencia(servicio.id, tipo, detalle)
+                        .onSuccess { aviso -> snackbarHostState.showSnackbar(aviso ?: "Incidencia enviada a Coordinación") }
+                        .onFailure { e -> snackbarHostState.showSnackbar(e.message ?: "No se pudo enviar la incidencia") }
+                }
+            }
         )
     }
 
@@ -461,6 +498,49 @@ private fun PassengersCard(servicio: Servicio) {
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun IncidenciasSeccion(
+    servicio: Servicio,
+    incidencias: List<IncidenciaServicio>,
+    puedeReportar: Boolean,
+    onReportar: () -> Unit,
+    onResolver: ((IncidenciaServicio) -> Unit)?
+) {
+    if (incidencias.isEmpty() && !puedeReportar) return
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (incidencias.isNotEmpty()) {
+            Text(
+                text = "Incidencias de ${servicio.reserva}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        incidencias.forEach { incidencia ->
+            IncidenciaCard(
+                incidencia = incidencia,
+                onResolver = onResolver?.let { resolver -> { resolver(incidencia) } }
+            )
+        }
+        if (puedeReportar) {
+            OutlinedButton(
+                onClick = onReportar,
+                shape = RoundedCornerShape(50),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Warning,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Reportar incidencia", fontWeight = FontWeight.Bold)
             }
         }
     }

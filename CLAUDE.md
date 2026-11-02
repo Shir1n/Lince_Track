@@ -86,6 +86,8 @@ Responde y escribe la interfaz en **español de Chile**.
 - `asignaciones/{servicioId}`: reemplazo elegido por el administrador (`ReglasAsignacion`), porque la API es de solo
   lectura. Manda sobre la persona que trae la API, y al crearla se borra el estado publicado. Solo escribe el
   administrador; las cuentas que aparecen como opción necesitan rol, nombre e ID de la API en `usuarios/{uid}`.
+- `incidencias/{id}`: problemas reportados por conductores y guías en servicios aceptados y sin check-out
+  (`IncidenciaRepository`). Las lee quien reportó y el administrador; solo el administrador las marca como resueltas.
 - Notificaciones locales (`NotificadorLocal`, `CambiosServicios`): solo con la app viva. Con la app cerrada requieren
   Blaze y un servidor.
 - Tests de reglas en `firestore-tests/` con el emulador y un proyecto demo (`npm install`, `npm test`;
@@ -114,8 +116,8 @@ Responde y escribe la interfaz en **español de Chile**.
    no haya teléfono: se conectarán cuando exista el dato. `ConexionConductorScreen` sigue en construcción y fuera de
    la barra: el guía ve Alertas en su lugar. Las alertas se calculan al abrir la pestaña (`GeneradorAlertas`).
 4. Mapa: la ruta es una línea recta desde el Hotel Cumbres y el destino se deduce del texto (faltan
-   coordenadas en la API). "Reportar incidencia" y "Reasignar" se quitaron porque eran simulados: hay que
-   reponerlos cuando guarden datos de verdad. Falta validar distancia y hora del check-in.
+   coordenadas en la API). Falta validar distancia y hora del check-in. Las incidencias aún no llevan fotos:
+   requieren Storage, y por lo tanto Blaze.
 5. Luciano: sumar datos de `GET /api/v1/resumen` al panel del administrador (los totales de hoy se calculan
    desde los servicios cargados, porque los datos de ejemplo no traen ese endpoint).
 6. Ignacio: preguntas a Southbound, clave del docente, Trello, README (estructura y roles).

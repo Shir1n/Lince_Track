@@ -42,8 +42,8 @@ object ServicioRepository {
     private const val RESPUESTA_EN_COLA =
         "Sin conexión: se enviará al recuperar la señal."
     private const val SIN_SESION = Int.MAX_VALUE
-    /** Primera carga, respuestas, estados y asignaciones. */
-    private const val FUENTES_INICIALES = 4
+    /** Primera carga, respuestas, estados, asignaciones e incidencias. */
+    private const val FUENTES_INICIALES = 5
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -68,6 +68,11 @@ object ServicioRepository {
     /** Reemplazos elegidos por el administrador: id del servicio → reemplazo. */
     val asignaciones: StateFlow<Map<String, AsignacionServicio>> = _asignaciones.asStateFlow()
     private var escuchaAsignaciones: Job? = null
+
+    private val _incidencias = MutableStateFlow<List<IncidenciaServicio>>(emptyList())
+    /** Incidencias del usuario o, para el administrador, las de todos. */
+    val incidencias: StateFlow<List<IncidenciaServicio>> = _incidencias.asStateFlow()
+    private var escuchaIncidencias: Job? = null
 
     private val rechazaron = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
 
@@ -138,6 +143,7 @@ object ServicioRepository {
         escuchaCheckins?.cancelAndJoin()
         escuchaEstados?.cancelAndJoin()
         escuchaAsignaciones?.cancelAndJoin()
+        escuchaIncidencias?.cancelAndJoin()
         serviciosFuente.value = emptyList()
         serviciosOficina.value = emptyList()
         _respuestas.value = emptyMap()
@@ -145,6 +151,7 @@ object ServicioRepository {
         _checkins.value = emptyMap()
         estadosCompartidos.value = emptyMap()
         _asignaciones.value = emptyMap()
+        _incidencias.value = emptyList()
         errorCarga.value = null
         cargaInicialHecha = false
         filtroActual = perfil?.let { FiltroServicios.paraPerfil(it) }
@@ -170,6 +177,9 @@ object ServicioRepository {
                 }
                 escuchaAsignaciones = scope.launch {
                     AsignacionRepository.observar(desde).marcandoPrimera().collect { _asignaciones.value = it }
+                }
+                escuchaIncidencias = scope.launch {
+                    IncidenciaRepository.observar(soloDe, desde).marcandoPrimera().collect { _incidencias.value = it }
                 }
             }
         }
@@ -237,6 +247,49 @@ object ServicioRepository {
                 primera = false
                 fuentesPendientes.update { it - 1 }
             }
+        }
+    }
+
+    /** @return en caso de éxito, un aviso para mostrar al usuario (null si no hay nada que avisar). */
+    suspend fun reportarIncidencia(id: String, tipo: TipoIncidencia, detalle: String): Result<String?> {
+        val uid = AuthRepository.usuarioActual?.uid
+        val perfil = AuthRepository.perfilActual.value
+        if (uid == null || perfil == null || perfil.rol == Rol.ADMINISTRADOR) {
+            return Result.failure(IllegalStateException("Tu sesión no está lista. Intenta nuevamente."))
+        }
+        val servicio = buscarPorId(id)
+            ?: return Result.failure(IllegalStateException("Asignación no encontrada"))
+        if (!ReglasIncidencia.puedeReportar(servicio, _checkins.value[id])) {
+            return Result.failure(IllegalStateException("Este servicio ya no admite incidencias"))
+        }
+        val texto = detalle.trim()
+        if (!ReglasIncidencia.detalleValido(tipo, texto)) {
+            return Result.failure(IllegalArgumentException("Describe lo que pasó"))
+        }
+        return try {
+            val confirmada = IncidenciaRepository.reportar(uid, perfil.rol, perfil.nombre.orEmpty(), servicio, tipo, texto)
+            Result.success(if (confirmada) null else RESPUESTA_EN_COLA)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LinceLogger.e("SERVICIOS", "No se pudo guardar la incidencia", e)
+            Result.failure(IllegalStateException("No se pudo enviar la incidencia. Intenta nuevamente."))
+        }
+    }
+
+    /** @return en caso de éxito, un aviso para mostrar al usuario (null si no hay nada que avisar). */
+    suspend fun resolverIncidencia(incidencia: IncidenciaServicio): Result<String?> {
+        val uid = AuthRepository.usuarioActual?.uid
+        if (uid == null || AuthRepository.perfilActual.value?.rol != Rol.ADMINISTRADOR) {
+            return Result.failure(IllegalStateException("Solo el administrador puede resolver incidencias"))
+        }
+        return try {
+            Result.success(if (IncidenciaRepository.resolver(incidencia.id, uid)) null else RESPUESTA_EN_COLA)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LinceLogger.e("SERVICIOS", "No se pudo resolver la incidencia", e)
+            Result.failure(IllegalStateException("No se pudo marcar como resuelta. Intenta nuevamente."))
         }
     }
 

@@ -2,6 +2,7 @@ package com.example.lince_track.ui.admin
 
 import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.EstadoServicio
+import com.example.lince_track.data.IncidenciaServicio
 import com.example.lince_track.data.ReglasAsignacion
 import com.example.lince_track.data.ReglasCheckin
 import com.example.lince_track.data.RespuestaServicio
@@ -31,7 +32,8 @@ data class FilaPanel(
     val motivo: String?,
     val observaciones: String,
     val estadoRuta: String? = null,
-    val puedeReasignar: Boolean = false
+    val puedeReasignar: Boolean = false,
+    val incidenciasAbiertas: Int = 0
 )
 
 /** Cálculos del panel del administrador, sin dependencias de Android ni Firebase. */
@@ -51,11 +53,15 @@ object PanelAdmin {
         servicios: List<Servicio>,
         respuestas: Map<String, RespuestaServicio>,
         filtro: FiltroPanel,
-        checkins: Map<String, CheckinServicio> = emptyMap()
+        checkins: Map<String, CheckinServicio> = emptyMap(),
+        incidencias: List<IncidenciaServicio> = emptyList()
     ): List<FilaPanel> = servicios
         .filter { filtro.estado == null || it.estado == filtro.estado }
         .sortedWith(compareBy({ it.estado != EstadoServicio.RECHAZADO }, { it.horaInicio }))
-        .map { aFila(it, respuestas[it.id], checkins[it.id]) }
+        .map { servicio ->
+            aFila(servicio, respuestas[servicio.id], checkins[servicio.id])
+                .copy(incidenciasAbiertas = incidencias.count { it.servicioId == servicio.id && !it.resuelta })
+        }
 
     private fun aFila(servicio: Servicio, respuesta: RespuestaServicio?, checkin: CheckinServicio?): FilaPanel {
         // El servicio se muestra rechazado aunque la persona lo haya aceptado si la API lo canceló.
