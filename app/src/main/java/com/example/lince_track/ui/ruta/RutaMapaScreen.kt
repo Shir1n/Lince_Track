@@ -373,9 +373,11 @@ private fun RutaMapaContenido(
 
     val zonaActual = remember(userGeoPoint) { zonaClima(userGeoPoint.latitude, userGeoPoint.longitude) }
 
-    // La tarjeta de clima solo se muestra al transportista.
+    // La tarjeta de clima se muestra a transportistas (conducción) y guías (vestimenta de grupo).
+    val mostrarClima = activeRole == RolMapa.TRANSPORTISTA || activeRole == RolMapa.GUIA
+
     LaunchedEffect(zonaActual, presetClima, activeRole) {
-        if (activeRole != RolMapa.TRANSPORTISTA) return@LaunchedEffect
+        if (!mostrarClima) return@LaunchedEffect
         if (presetClima == PresetClima.REAL) {
             refrescarClima(userGeoPoint.latitude, userGeoPoint.longitude, forzar = true)
         } else {
@@ -384,7 +386,7 @@ private fun RutaMapaContenido(
     }
 
     LaunchedEffect(userGeoPoint) {
-        if (activeRole == RolMapa.TRANSPORTISTA && presetClima == PresetClima.REAL) {
+        if (mostrarClima && presetClima == PresetClima.REAL) {
             refrescarClima(userGeoPoint.latitude, userGeoPoint.longitude, forzar = false)
         }
     }
@@ -393,6 +395,14 @@ private fun RutaMapaContenido(
         ClimaService.generarRecomendacion(
             clima = climaInfo,
             nombreConductor = if (servicio.esGuiado) "" else servicio.conductor,
+            destino = servicio.destino
+        )
+    }
+
+    val recomendacionVestimenta = remember(climaInfo, servicio) {
+        ClimaService.generarRecomendacionVestimenta(
+            clima = climaInfo,
+            nombreGuia = if (servicio.esGuiado) servicio.guia else "",
             destino = servicio.destino
         )
     }
@@ -547,12 +557,13 @@ private fun RutaMapaContenido(
                     }
                 }
 
-                if (activeRole == RolMapa.TRANSPORTISTA) {
+                if (mostrarClima) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                         ClimaConduccionCard(
                             clima = climaInfo,
-                            recomendacion = recomendacionConduccion,
+                            recomendacion = if (activeRole == RolMapa.TRANSPORTISTA) recomendacionConduccion else null,
+                            recomendacionVestimenta = if (activeRole == RolMapa.GUIA) recomendacionVestimenta else null,
                             presetActual = presetClima,
                             cargando = cargandoClima,
                             onPresetSelected = { presetClima = it },

@@ -47,6 +47,14 @@ data class RecomendacionConduccion(
     val consejos: List<String>
 )
 
+data class RecomendacionVestimenta(
+    val nivel: NivelRiesgo,
+    val alertaCorta: String,
+    val mensajePersonalizado: String,
+    val vestimentaSugerida: List<String>,
+    val consejosGrupo: List<String>
+)
+
 enum class PresetClima(val label: String, val clima: ClimaInfo) {
     REAL(
         "Tiempo Real (GPS)",
@@ -277,6 +285,130 @@ object ClimaService {
                     "Respete las velocidades reglamentarias de la vía",
                     "Utilice parasol o gafas ante reflejos solares",
                     "Mantenga hidratación adecuada en trayectos largos"
+                )
+            )
+        }
+    }
+
+    fun generarRecomendacionVestimenta(
+        clima: ClimaInfo,
+        nombreGuia: String,
+        destino: String
+    ): RecomendacionVestimenta {
+        val guia = nombreGuia.ifBlank { "Guía" }
+
+        return when (clima.tipo) {
+            TipoClima.LLUVIA_FUERTE, TipoClima.TORMENTA -> RecomendacionVestimenta(
+                nivel = NivelRiesgo.PELIGRO,
+                alertaCorta = "Lluvia intensa en destino",
+                mensajePersonalizado = "Atención $guia: precipitaciones fuertes en $destino. Recordar al grupo no separarse de las pasarelas techadas.",
+                vestimentaSugerida = listOf(
+                    "Chaqueta impermeable",
+                    "Calzado antideslizante",
+                    "Capa de lluvia / Poncho",
+                    "Cubre-mochila impermeable"
+                ),
+                consejosGrupo = listOf(
+                    "Caminar con precaución sobre maderas o piedras húmedas",
+                    "Proteger celulares y cámaras en bolsas impermeables",
+                    "Mantener al grupo compacto en senderos señalizados"
+                )
+            )
+
+            TipoClima.LLUVIA_MODERADA, TipoClima.LLUVIA_LIGERA -> RecomendacionVestimenta(
+                nivel = NivelRiesgo.PRECAUCION,
+                alertaCorta = "Llovizna y senderos húmedos",
+                mensajePersonalizado = "Aviso $guia: llovizna activa rumbo a $destino. Sugerir abrigo impermeable antes de descender del vehículo.",
+                vestimentaSugerida = listOf(
+                    "Cortaviento impermeable",
+                    "Calzado cerrado de trekking",
+                    "Paraguas resistente o gorro impermeable"
+                ),
+                consejosGrupo = listOf(
+                    "Evitar orillas resbalosas en miradores",
+                    "Tener toalla pequeña a mano para secar lentes o cámaras",
+                    "Asegurar calzado bien atado antes de iniciar la caminata"
+                )
+            )
+
+            TipoClima.NIEVE -> RecomendacionVestimenta(
+                nivel = NivelRiesgo.PELIGRO,
+                alertaCorta = "Baja sensación térmica y nieve",
+                mensajePersonalizado = "Alerta $guia: condiciones de frío extremo en $destino. Exigir vestimenta por capas a los pasajeros.",
+                vestimentaSugerida = listOf(
+                    "Primera capa térmica",
+                    "Parka o polar grueso",
+                    "Gorro térmico y guantes",
+                    "Calzado de caña alta térmico"
+                ),
+                consejosGrupo = listOf(
+                    "Monitorear a niños y adultos mayores ante el frío",
+                    "Caminar a paso firme sobre nieve para no resbalar",
+                    "Consumir bebidas tibias o agua durante el recorrido"
+                )
+            )
+
+            TipoClima.NIEBLA -> RecomendacionVestimenta(
+                nivel = NivelRiesgo.PRECAUCION,
+                alertaCorta = "Baja visibilidad en miradores",
+                mensajePersonalizado = "Aviso $guia: bancos de neblina en $destino. Miradores con visibilidad limitada.",
+                vestimentaSugerida = listOf(
+                    "Ropa de colores visibles",
+                    "Cortaviento liviano",
+                    "Calzado cómodo cerrado"
+                ),
+                consejosGrupo = listOf(
+                    "Indicar al grupo permanecer siempre a la vista del guía",
+                    "Cuidado en senderos con desniveles o raíces húmedas",
+                    "Respetar las barandas de seguridad en miradores"
+                )
+            )
+
+            TipoClima.VIENTO_FUERTE -> RecomendacionVestimenta(
+                nivel = NivelRiesgo.PRECAUCION,
+                alertaCorta = "Ráfagas fuertes (${clima.windSpeedKmH.roundToInt()} km/h)",
+                mensajePersonalizado = "Aviso $guia: ráfagas intensas en $destino. Cuidado con objetos sueltos en zonas abiertas o lagos.",
+                vestimentaSugerida = listOf(
+                    "Chaqueta cortaviento ajustada",
+                    "Sujetador para lentes o gorros",
+                    "Cuello polar o bandana"
+                ),
+                consejosGrupo = listOf(
+                    "Sujetar firmemente sombreros, jockeys y teléfonos al tomar fotos",
+                    "Cuidado especial en muelles, barcos o zonas expuestas",
+                    "Evitar acercarse al borde de acantilados o miradores altos"
+                )
+            )
+
+            TipoClima.DESPEJADO, TipoClima.PARCIALMENTE_NUBLADO -> RecomendacionVestimenta(
+                nivel = NivelRiesgo.OPTIMO,
+                alertaCorta = "Día despejado con alta radiación solar",
+                mensajePersonalizado = "Excelente jornada, $guia: cielo despejado en $destino. Recordar protección solar e hidratación.",
+                vestimentaSugerida = listOf(
+                    "Protector solar FPS 50+",
+                    "Lentes de sol con filtro UV",
+                    "Jockey o sombrero para el sol",
+                    "Ropa ligera y transpirable"
+                ),
+                consejosGrupo = listOf(
+                    "Reaplicar bloqueador solar a mitad del tour",
+                    "Llevar botella de agua individual para el trayecto",
+                    "Buscar pausas bajo sombra en senderos largos"
+                )
+            )
+
+            TipoClima.NUBLADO -> RecomendacionVestimenta(
+                nivel = NivelRiesgo.OPTIMO,
+                alertaCorta = "Nublado templado sin precipitaciones",
+                mensajePersonalizado = "Buen tiempo para caminata en $destino. Temperatura agradable para el grupo.",
+                vestimentaSugerida = listOf(
+                    "Polerón o chaqueta liviana",
+                    "Calzado cómodo para caminar",
+                    "Botella de agua"
+                ),
+                consejosGrupo = listOf(
+                    "Caminar a ritmo constante disfrutando el entorno",
+                    "Llevar un abrigo liviano en la mochila por si baja la temperatura"
                 )
             )
         }
