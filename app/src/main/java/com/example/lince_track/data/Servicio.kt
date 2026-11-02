@@ -35,7 +35,16 @@ data class Servicio(
     /** StatusPL de la API: CF, RQ, DL, CX o null si no hay staff asignado. */
     val statusPL: String? = null,
     /** true si horaFin fue estimada (la API solo entrega la hora de pickup). */
-    val horaFinEstimada: Boolean = false
+    val horaFinEstimada: Boolean = false,
+    /** Vehículo asignado; la API lo trae solo en TRANSFER y EXCURSION. */
+    val vehiculo: VehiculoServicio? = null
+)
+
+data class VehiculoServicio(
+    val patente: String,
+    /** SEDAN, VAN, MINIBUS o BUS. */
+    val tipo: String,
+    val capacidad: Int
 )
 
 private val horaFormatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.ENGLISH)

@@ -50,8 +50,8 @@ import com.example.lince_track.ui.calendario.CalendarioScreen
 import com.example.lince_track.ui.detalle.DetalleServicioScreen
 import com.example.lince_track.ui.guia.ConexionConductorScreen
 import com.example.lince_track.ui.guia.GuiaAsignacionesScreen
-import com.example.lince_track.ui.guia.GuiaPerfilScreen
 import com.example.lince_track.ui.login.LoginScreen
+import com.example.lince_track.ui.perfil.PerfilRealScreen
 import com.example.lince_track.ui.perfil.PerfilScreen
 import com.example.lince_track.ui.ruta.RutaMapaScreen
 import com.example.lince_track.ui.servicios.ServiciosScreen
@@ -295,15 +295,20 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 popEnterTransition = { bottomNavEnterTransition() },
                 popExitTransition = { bottomNavExitTransition() }
             ) {
-                PerfilScreen(
-                    onLogout = {
-                        AuthRepository.cerrarSesion()
-                        navController.navigate(Routes.LOGIN) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    },
-                    onOpenSettings = { navController.navigate(Routes.AJUSTES) }
-                )
+                val onLogout = {
+                    AuthRepository.cerrarSesion()
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+                val onOpenSettings = { navController.navigate(Routes.AJUSTES) }
+                // PerfilScreen queda como placeholder; las cuentas marcadas usan el perfil con datos reales.
+                val perfil by AuthRepository.perfilActual.collectAsState()
+                if (perfil?.perfilNuevo == true) {
+                    PerfilRealScreen(onLogout = onLogout, onOpenSettings = onOpenSettings)
+                } else {
+                    PerfilScreen(onLogout = onLogout, onOpenSettings = onOpenSettings)
+                }
             }
             composable(Routes.AJUSTES) {
                 AjustesScreen(onBack = { navController.popBackStack() })
@@ -336,13 +341,14 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 popEnterTransition = { bottomNavEnterTransition() },
                 popExitTransition = { bottomNavExitTransition() }
             ) {
-                GuiaPerfilScreen(
+                PerfilRealScreen(
                     onLogout = {
                         AuthRepository.cerrarSesion()
                         navController.navigate(Routes.LOGIN) {
                             popUpTo(0) { inclusive = true }
                         }
-                    }
+                    },
+                    onOpenSettings = { navController.navigate(Routes.AJUSTES) }
                 )
             }
 

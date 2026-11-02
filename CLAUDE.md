@@ -112,7 +112,9 @@ Responde y escribe la interfaz en **español de Chile**.
    reemplazar por el real o deshabilitar.
 
 ## Problemas conocidos (revisión del 28-10-2026)
-- Perfil del conductor con datos fijos ("Carlos Morales"); foto no se guarda; versión "v2.4.1" fija.
+- `PerfilScreen` tiene datos fijos ("Carlos Morales", "v2.4.1") y su foto no se guarda: se mantiene a propósito
+  como placeholder. Conductores con `usuarios/{uid}.perfilNuevo: true` (booleano) y guías usan `PerfilRealScreen`,
+  que solo muestra datos reales. Cuando llegue la clave de la API, decidir si reemplaza al placeholder.
 - Navegación: tras el login se saca `LOGIN` y la barra inferior hace `popUpTo(findStartDestination())`
   (que es LOGIN) → probablemente se acumulan pestañas en la pila.
 - Insets: algunas pantallas suman `statusBarsPadding()` sobre el padding del `Scaffold` y otras no.
