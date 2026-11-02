@@ -21,12 +21,14 @@ object RespuestaRepository {
     private val firestore = FirebaseFirestore.getInstance()
 
     /**
-     * Respuestas del usuario: id del servicio → respuesta. Incluye al instante las que
-     * aún no llegan al servidor (por ejemplo, sin conexión).
+     * Respuestas por servicio: id del servicio → respuesta. Con [uid] trae solo las de esa
+     * persona; con null, todas (solo el administrador tiene permiso). Incluye al instante las
+     * que aún no llegan al servidor (por ejemplo, sin conexión).
      */
-    fun observar(uid: String): Flow<Map<String, RespuestaServicio>> = callbackFlow {
-        val registro = firestore.collection(COLECCION)
-            .whereEqualTo("uid", uid)
+    fun observar(uid: String?): Flow<Map<String, RespuestaServicio>> = callbackFlow {
+        val coleccion = firestore.collection(COLECCION)
+        val consulta = if (uid != null) coleccion.whereEqualTo("uid", uid) else coleccion
+        val registro = consulta
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     LinceLogger.e(TAG, "No se pudieron leer las respuestas (${error.code})", error)
@@ -39,9 +41,20 @@ object RespuestaRepository {
                         "rechazado" -> EstadoServicio.RECHAZADO
                         else -> null
                     }
-                    if (servicioId != null && estado != null) RespuestaServicio(servicioId, estado) else null
+                    if (servicioId != null && estado != null) {
+                        RespuestaServicio(
+                            servicioId = servicioId,
+                            estado = estado,
+                            motivo = MotivoRechazo.desde(documento.getString("motivo")),
+                            observaciones = documento.getString("observaciones").orEmpty(),
+                            respondidoEn = documento.getTimestamp("respondidoEn")?.toDate()?.time
+                        )
+                    } else {
+                        null
+                    }
                 }
-                trySend(respuestas.associateBy { it.servicioId })
+                // Si un servicio tuviera más de una respuesta, queda la más reciente.
+                trySend(respuestas.sortedBy { it.respondidoEn ?: Long.MAX_VALUE }.associateBy { it.servicioId })
             }
         awaitClose { registro.remove() }
     }

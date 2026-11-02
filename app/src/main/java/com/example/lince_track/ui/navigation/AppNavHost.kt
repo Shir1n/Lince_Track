@@ -2,6 +2,7 @@ package com.example.lince_track.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
@@ -41,6 +42,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.Rol
+import com.example.lince_track.ui.admin.AdminPanelScreen
 import com.example.lince_track.ui.admin.AdminPerfilScreen
 import com.example.lince_track.ui.ajustes.AjustesScreen
 import com.example.lince_track.ui.alertas.AlertasScreen
@@ -56,7 +58,7 @@ import com.example.lince_track.ui.servicios.ServiciosScreen
 
 private fun getBottomNavIndex(route: String?): Int {
     return when (route) {
-        Routes.SERVICIOS, Routes.GUIA_ASIGNACIONES -> 0
+        Routes.SERVICIOS, Routes.GUIA_ASIGNACIONES, Routes.ADMIN_PANEL -> 0
         Routes.CALENDARIO -> 1
         Routes.ALERTAS, Routes.GUIA_CONEXION -> 2
         Routes.PERFIL, Routes.GUIA_PERFIL, Routes.ADMIN_PERFIL -> 3
@@ -110,6 +112,7 @@ object Routes {
     const val GUIA_PERFIL = "guia_perfil"
 
     // Rutas del administrador
+    const val ADMIN_PANEL = "admin_panel"
     const val ADMIN_PERFIL = "admin_perfil"
 
     fun detalleServicio(id: String) = "detalle_servicio/$id"
@@ -129,11 +132,9 @@ private fun bottomNavItems(rol: Rol?): List<BottomNavItem> = when (rol) {
         BottomNavItem(Routes.GUIA_CONEXION, "Conexión", Icons.Outlined.LocationOn),
         BottomNavItem(Routes.GUIA_PERFIL, "Perfil", Icons.Outlined.Person)
     )
-    // Por ahora el administrador usa las pantallas del conductor, salvo el perfil
     Rol.ADMINISTRADOR -> listOf(
-        BottomNavItem(Routes.SERVICIOS, "Servicios", Icons.Outlined.Home),
+        BottomNavItem(Routes.ADMIN_PANEL, "Panel", Icons.Outlined.Dashboard),
         BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth),
-        BottomNavItem(Routes.ALERTAS, "Alertas", Icons.Outlined.Notifications),
         BottomNavItem(Routes.ADMIN_PERFIL, "Perfil", Icons.Outlined.Person)
     )
     // Conductor
@@ -217,7 +218,11 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             composable(Routes.LOGIN) {
                 LoginScreen(
                     onLoginSuccess = { rol ->
-                        val destino = if (rol == Rol.GUIA) Routes.GUIA_ASIGNACIONES else Routes.SERVICIOS
+                        val destino = when (rol) {
+                            Rol.GUIA -> Routes.GUIA_ASIGNACIONES
+                            Rol.ADMINISTRADOR -> Routes.ADMIN_PANEL
+                            else -> Routes.SERVICIOS
+                        }
                         navController.navigate(destino) {
                             popUpTo(Routes.LOGIN) { inclusive = true }
                         }
@@ -342,6 +347,17 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             }
 
             // Pantallas del administrador
+            composable(
+                route = Routes.ADMIN_PANEL,
+                enterTransition = { bottomNavEnterTransition() },
+                exitTransition = { bottomNavExitTransition() },
+                popEnterTransition = { bottomNavEnterTransition() },
+                popExitTransition = { bottomNavExitTransition() }
+            ) {
+                AdminPanelScreen(
+                    onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) }
+                )
+            }
             composable(
                 route = Routes.ADMIN_PERFIL,
                 enterTransition = { bottomNavEnterTransition() },

@@ -147,6 +147,12 @@ test('la consulta de la app por uid está permitida solo para el propio uid', as
   await assertFails(getDocs(collection(conductor(), 'respuestas')));
 });
 
+test('el administrador puede listar todas las respuestas', async () => {
+  await sembrar({ ...aceptada(), respondidoEn: new Date() });
+  await assertSucceeds(getDocs(collection(admin(), 'respuestas')));
+  await assertFails(getDocs(collection(guia(), 'respuestas')));
+});
+
 test('usuarios y colecciones no declaradas siguen protegidos', async () => {
   await assertFails(setDoc(doc(conductor(), 'usuarios/conductor1'), { rol: 'administrador' }));
   await assertFails(getDoc(doc(conductor(), 'usuarios/guia1')));
