@@ -91,6 +91,7 @@ import com.example.lince_track.data.clima.RecomendacionConduccion
 import com.example.lince_track.data.clima.zonaClima
 import com.example.lince_track.data.formatHora
 import com.example.lince_track.data.clima.TipoClima
+import com.example.lince_track.data.esGuiado
 import com.example.lince_track.data.responsable
 import com.example.lince_track.data.servicios.ServicioMapper
 import com.example.lince_track.util.LinceLogger
@@ -359,7 +360,7 @@ private fun RutaMapaContenido(
     val recomendacionConduccion = remember(climaInfo, servicio) {
         ClimaService.generarRecomendacion(
             clima = climaInfo,
-            nombreConductor = servicio.conductor,
+            nombreConductor = if (servicio.esGuiado) "" else servicio.conductor,
             destino = servicio.destino
         )
     }

@@ -51,6 +51,13 @@ object ServicioRepository {
     /** Servicios tal como llegan de la fuente (ya convertidos al modelo de la app). */
     private val serviciosFuente = MutableStateFlow<List<Servicio>>(emptyList())
 
+    /** Servicios de la otra persona en los tours del usuario (ver ReglasCompanero). */
+    private val serviciosCompaneros = MutableStateFlow<List<Servicio>>(emptyList())
+
+    /** Lo que publicó cada persona sobre sus servicios: id del servicio → estado y nombre. */
+    private val estadosCompartidos = MutableStateFlow<Map<String, RespuestaServicio>>(emptyMap())
+    private var escuchaEstados: Job? = null
+
     private val _respuestas = MutableStateFlow<Map<String, RespuestaServicio>>(emptyMap())
     /**
      * Respuestas guardadas en Firestore: id del servicio → respuesta.
@@ -68,8 +75,12 @@ object ServicioRepository {
     private var escuchaCheckins: Job? = null
 
     val servicios: StateFlow<List<Servicio>> =
-        combine(serviciosFuente, _respuestas) { lista, porServicio ->
-            lista.map { ReglasRespuesta.aplicar(it, porServicio[it.id]) }
+        combine(serviciosFuente, _respuestas, serviciosCompaneros, estadosCompartidos, AuthRepository.perfilActual) { lista, porServicio, companeros, estados, perfil ->
+            val companerosConEstado = companeros.map { ReglasCompanero.aplicarPublicado(it, estados[it.id]) }
+            lista.map { servicio ->
+                val propio = ReglasCompanero.conNombrePropio(ReglasRespuesta.aplicar(servicio, porServicio[servicio.id]), perfil)
+                ReglasCompanero.completar(propio, companerosConEstado)
+            }
         }.stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     private val _cargando = MutableStateFlow(false)
@@ -97,10 +108,14 @@ object ServicioRepository {
         cargaEnCurso?.cancelAndJoin()
         escuchaRespuestas?.cancelAndJoin()
         escuchaCheckins?.cancelAndJoin()
+        escuchaEstados?.cancelAndJoin()
         serviciosFuente.value = emptyList()
+        serviciosCompaneros.value = emptyList()
         _respuestas.value = emptyMap()
         _checkins.value = emptyMap()
+        estadosCompartidos.value = emptyMap()
         errorCarga.value = null
+        filtroActual = perfil?.let { FiltroServicios.paraPerfil(it) }
 
         val uid = AuthRepository.usuarioActual?.uid
         if (perfil != null && uid != null) {
@@ -111,9 +126,14 @@ object ServicioRepository {
             escuchaCheckins = scope.launch {
                 CheckinRepository.observar(soloDe).collect { _checkins.value = it }
             }
+            val filtro = filtroActual
+            if (filtro != null && soloDe != null) {
+                escuchaEstados = scope.launch {
+                    RespuestaRepository.observarEstados(filtro.desde.toString()).collect { estadosCompartidos.value = it }
+                }
+            }
         }
 
-        filtroActual = perfil?.let { FiltroServicios.paraPerfil(it) }
         if (perfil != null && filtroActual == null) {
             errorCarga.value = CUENTA_SIN_VINCULAR
             LinceLogger.w("SERVICIOS", "Cuenta de ${perfil.rol.etiqueta} sin id de la API")
@@ -131,6 +151,7 @@ object ServicioRepository {
                 val dtos = fuente.obtener(filtro)
                 val convertidos = dtos.mapNotNull { ServicioMapper.aDominio(it) }
                 serviciosFuente.value = convertidos
+                serviciosCompaneros.value = cargarCompaneros(filtro, convertidos)
                 errorCarga.value = null
                 LinceLogger.i(
                     tag = "SERVICIOS",
@@ -148,6 +169,26 @@ object ServicioRepository {
                 _cargando.value = false
             }
         }.also { cargaEnCurso = it }
+    }
+
+    /**
+     * Servicios de otras personas en las mismas reservas que [propios]: el filtro por persona no
+     * los trae. Si fallan, la lista propia sigue sirviendo, así que solo se registra el error.
+     */
+    private suspend fun cargarCompaneros(filtro: FiltroServicios, propios: List<Servicio>): List<Servicio> {
+        if (propios.isEmpty() || (filtro.guiaId == null && filtro.transportistaId == null)) return emptyList()
+        return try {
+            val reservas = propios.map { it.reserva }.toSet()
+            val idsPropios = propios.map { it.id }.toSet()
+            fuente.obtener(filtro.copy(guiaId = null, transportistaId = null))
+                .mapNotNull { ServicioMapper.aDominio(it) }
+                .filter { it.reserva in reservas && it.id !in idsPropios }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            LinceLogger.e("SERVICIOS", "No se pudieron cargar los servicios relacionados", e.aLinceApiException())
+            serviciosCompaneros.value
+        }
     }
 
     fun buscarPorId(id: String): Servicio? = servicios.value.find { it.id == id }
@@ -244,7 +285,7 @@ object ServicioRepository {
             return Result.failure(IllegalStateException("Esta asignación ya fue respondida"))
         }
         return try {
-            val confirmada = RespuestaRepository.guardar(uid, perfil.rol, id, nuevoEstado, motivo, observaciones)
+            val confirmada = RespuestaRepository.guardar(uid, perfil.rol, perfil.nombre.orEmpty(), id, actual.fecha.toString(), nuevoEstado, motivo, observaciones)
             Result.success(if (confirmada) null else RESPUESTA_EN_COLA)
         } catch (e: CancellationException) {
             throw e
