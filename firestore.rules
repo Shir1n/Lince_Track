@@ -73,6 +73,45 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // checkins/{uid}_{servicioId}: { uid, servicioId, rol, checkInEn, lat, lon, distanciaM, gpsReal,
+    //                                checkOutEn, latFin, lonFin (solo tras el check-out) }
+    // Es ubicación de personas: solo la leen el dueño y el administrador. El check-out se
+    // registra una sola vez y nada más se puede cambiar. Igual que en "respuestas", que el
+    // servicio sea de esa persona y esté aceptado lo revisa la app.
+    function checkinValido(checkinId) {
+      let d = request.resource.data;
+      return tieneAcceso()
+        && d.uid == request.auth.uid
+        && d.rol == perfil().rol
+        && d.rol in ['conductor', 'guia']
+        && d.servicioId is string
+        && checkinId == request.auth.uid + '_' + d.servicioId
+        && d.checkInEn == request.time
+        && d.lat is number
+        && d.lon is number
+        && d.distanciaM is int
+        && d.gpsReal is bool
+        && d.keys().hasOnly(['uid', 'servicioId', 'rol', 'checkInEn', 'lat', 'lon', 'distanciaM', 'gpsReal']);
+    }
+
+    function checkoutValido() {
+      let d = request.resource.data;
+      return signedIn()
+        && resource.data.uid == request.auth.uid
+        && !('checkOutEn' in resource.data)
+        && d.diff(resource.data).affectedKeys().hasOnly(['checkOutEn', 'latFin', 'lonFin'])
+        && d.checkOutEn == request.time
+        && d.latFin is number
+        && d.lonFin is number;
+    }
+
+    match /checkins/{checkinId} {
+      allow read: if signedIn() && (resource.data.uid == request.auth.uid || esAdmin());
+      allow create: if checkinValido(checkinId);
+      allow update: if checkoutValido();
+      allow delete: if false;
+    }
+
     // Todo lo demás queda DENEGADO por defecto.
     // Cada colección nueva (respuestas, checkins, incidencias, alertas...) se agrega
     // aquí con su propio bloque "match" y sus reglas. No usar comodines {document=**}.

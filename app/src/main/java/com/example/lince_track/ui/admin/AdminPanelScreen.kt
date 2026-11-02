@@ -50,14 +50,15 @@ import java.time.LocalDate
 fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
     val servicios by ServicioRepository.servicios.collectAsState()
     val respuestas by ServicioRepository.respuestas.collectAsState()
+    val checkins by ServicioRepository.checkins.collectAsState()
     val error by ServicioRepository.error.collectAsState()
     var filtro by rememberSaveable { mutableStateOf(FiltroPanel.TODOS) }
 
     val hoy = LocalDate.now()
     val serviciosHoy = remember(servicios, hoy) { servicios.filter { it.fecha == hoy } }
     val totales = remember(serviciosHoy) { PanelAdmin.totales(serviciosHoy) }
-    val filas = remember(serviciosHoy, respuestas, filtro) {
-        PanelAdmin.filas(serviciosHoy, respuestas, filtro)
+    val filas = remember(serviciosHoy, respuestas, checkins, filtro) {
+        PanelAdmin.filas(serviciosHoy, respuestas, filtro, checkins)
     }
 
     Column(
@@ -194,6 +195,15 @@ private fun FilaCard(fila: FilaPanel, onClick: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            fila.estadoRuta?.let { estadoRuta ->
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = estadoRuta,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
             fila.motivo?.let { motivo ->
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(

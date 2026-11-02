@@ -6,7 +6,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Respuestas a los servicios (aceptar/rechazar), guardadas en Firestore porque la API
@@ -16,7 +15,6 @@ object RespuestaRepository {
 
     private const val TAG = "RESPUESTAS"
     private const val COLECCION = "respuestas"
-    private const val ESPERA_CONFIRMACION_MS = 5_000L
 
     private val firestore = FirebaseFirestore.getInstance()
 
@@ -60,8 +58,8 @@ object RespuestaRepository {
     }
 
     /**
-     * Guarda la respuesta. Devuelve true si el servidor la confirmó y false si sigue en cola:
-     * sin conexión, Firestore la envía al recuperarla, pero la tarea no termina hasta entonces.
+     * Guarda la respuesta.
+     * @return true si el servidor la confirmó; false si sigue en cola por falta de conexión.
      */
     suspend fun guardar(
         uid: String,
@@ -82,10 +80,6 @@ object RespuestaRepository {
                 put("observaciones", observaciones)
             }
         }
-        val tarea = firestore.collection(COLECCION).document("${uid}_$servicioId").set(datos)
-        return withTimeoutOrNull(ESPERA_CONFIRMACION_MS) {
-            tarea.await()
-            true
-        } ?: false
+        return firestore.collection(COLECCION).document("${uid}_$servicioId").set(datos).confirmada()
     }
 }

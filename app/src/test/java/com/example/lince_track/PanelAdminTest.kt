@@ -1,7 +1,9 @@
 package com.example.lince_track
 
+import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.EstadoServicio
 import com.example.lince_track.data.MotivoRechazo
+import com.example.lince_track.data.ReglasCheckin
 import com.example.lince_track.data.ReglasRespuesta
 import com.example.lince_track.data.RespuestaServicio
 import com.example.lince_track.data.Servicio
@@ -89,6 +91,17 @@ class PanelAdminTest {
     fun `servicio no rechazado no lleva motivo`() {
         val fila = PanelAdmin.filas(listOf(servicio("1", EstadoServicio.ACEPTADO)), emptyMap(), FiltroPanel.TODOS).single()
         assertNull(fila.motivo)
+    }
+
+    @Test
+    fun `fila muestra el check-in solo si existe`() {
+        val checkin = CheckinServicio("1", 0L, distanciaM = 120, gpsReal = true)
+        val servicios = listOf(servicio("1", EstadoServicio.ACEPTADO), servicio("2", EstadoServicio.ACEPTADO))
+
+        val filas = PanelAdmin.filas(servicios, emptyMap(), FiltroPanel.TODOS, mapOf("1" to checkin))
+
+        assertEquals(ReglasCheckin.resumen(checkin), filas.single { it.servicio.id == "1" }.estadoRuta)
+        assertNull(filas.single { it.servicio.id == "2" }.estadoRuta)
     }
 
     @Test

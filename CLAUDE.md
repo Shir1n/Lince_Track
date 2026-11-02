@@ -74,6 +74,9 @@ Responde y escribe la interfaz en **español de Chile**.
   Aceptado → rechazado se permite; un rechazo es definitivo. Si la API marca el servicio como
   rechazado o cancelado (DL, CX, XX), eso manda sobre la respuesta. Las reglas no pueden comprobar que
   el servicio sea de esa persona (vive en la API); lo revisa la app.
+- `checkins/{uid}_{servicioId}`: check-in y check-out con hora del servidor, coordenadas, distancia al
+  punto y si el GPS era real (`CheckinRepository`). No se bloquea por distancia ni por hora: se registra
+  para que Coordinación lo vea. Solo lo leen el dueño y el administrador.
 - Tests de reglas en `firestore-tests/` con el emulador y un proyecto demo (`npm install`, `npm test`;
   necesita Java en el PATH). Tras cambiar `firestore.rules`, hay que publicarlas en Firebase.
 - `storage.rules` está en el repo pero **sin uso**: Storage exige plan Blaze. Se activará Blaze
@@ -99,13 +102,13 @@ Responde y escribe la interfaz en **español de Chile**.
 3. Benjamin: detalle (volver de inmediato al responder; ocultar llamar/WhatsApp si no hay teléfono;
    ocultar Confirmar/Rechazar al guía), mes del calendario en español, `DarkErrorContainer` gris,
    etiquetas de Alertas en inglés ("Reasignement").
-4. Raúl: mapa — clima se consulta en cada lectura GPS (limitar), mapa se recentra solo, `onDetach()`,
-   quitar `isDebugMapTileDownloader`, no correr diagnóstico al abrir, selector de rol según rol real,
-   `ClimaConduccionCard` usa `isSystemInDarkTheme()` en vez del tema elegido.
+4. Mapa: la ruta es una línea recta desde el Hotel Cumbres y el destino se deduce del texto (faltan
+   coordenadas en la API). "Reportar incidencia" y "Reasignar" se quitaron porque eran simulados: hay que
+   reponerlos cuando guarden datos de verdad. Falta validar distancia y hora del check-in.
 5. Luciano: sumar datos de `GET /api/v1/resumen` al panel del administrador (los totales de hoy se calculan
    desde los servicios cargados, porque los datos de ejemplo no traen ese endpoint).
 6. Ignacio: preguntas a Southbound, clave del docente, Trello, README (estructura y roles).
-7. Número de soporte `+56987654321` es provisional (`SoporteDialog.kt` y `RutaMapaScreen.kt`):
+7. Número de soporte `+56987654321` es provisional (`SoporteDialog.kt`):
    reemplazar por el real o deshabilitar.
 
 ## Problemas conocidos (revisión del 28-10-2026)
