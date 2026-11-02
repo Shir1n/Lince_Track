@@ -88,6 +88,10 @@ object ServicioRepository {
     val respuestas: StateFlow<Map<String, RespuestaServicio>> = _respuestas.asStateFlow()
     private var escuchaRespuestas: Job? = null
 
+    private val _historialRespuestas = MutableStateFlow<List<RespuestaServicio>>(emptyList())
+    /** Todas las respuestas, también las de quien ya fue reemplazado. */
+    val historialRespuestas: StateFlow<List<RespuestaServicio>> = _historialRespuestas.asStateFlow()
+
     private val _checkins = MutableStateFlow<Map<String, CheckinServicio>>(emptyMap())
     /**
      * Check-ins guardados en Firestore: id del servicio → check-in.
@@ -149,6 +153,7 @@ object ServicioRepository {
         serviciosFuente.value = emptyList()
         serviciosOficina.value = emptyList()
         _respuestas.value = emptyMap()
+        _historialRespuestas.value = emptyList()
         rechazaron.value = emptyMap()
         _checkins.value = emptyMap()
         estadosCompartidos.value = emptyMap()
@@ -166,6 +171,7 @@ object ServicioRepository {
                 RespuestaRepository.observar(soloDe).marcandoPrimera().collect { lista ->
                     // Si un servicio tiene más de una respuesta, queda la más reciente.
                     _respuestas.value = lista.associateBy { it.servicioId }
+                    _historialRespuestas.value = lista
                     rechazaron.value = ReglasAsignacion.rechazos(lista)
                 }
             }
