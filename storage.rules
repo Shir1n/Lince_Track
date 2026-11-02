@@ -1,0 +1,39 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Lee el rol desde Firestore (regla entre servicios; la consola pide autorizarla al publicar).
+    function rol() {
+      return firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.rol;
+    }
+
+    function esAdmin() {
+      return signedIn() && rol() == 'administrador';
+    }
+
+    // Solo imágenes JPEG/PNG/WebP de hasta 2 MB.
+    function imagenValida() {
+      return request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+
+    // Foto de perfil: cualquier usuario con rol la ve; solo el dueño la sube.
+    match /perfil/{uid}/{archivo} {
+      allow read: if signedIn() && rol() in ['administrador', 'conductor', 'guia'];
+      allow write: if signedIn() && request.auth.uid == uid && imagenValida();
+    }
+
+    // Foto de check-in: la ve el dueño o el admin; solo el dueño la crea; no se modifica ni se borra.
+    match /checkin/{uid}/{archivo} {
+      allow read: if signedIn() && (request.auth.uid == uid || esAdmin());
+      allow create: if signedIn() && request.auth.uid == uid && imagenValida();
+      allow update, delete: if false;
+    }
+
+    // Todo lo demás queda denegado.
+  }
+}

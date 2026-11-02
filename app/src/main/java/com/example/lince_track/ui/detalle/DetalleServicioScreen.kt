@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Call
+import androidx.compose.material.icons.outlined.Chat
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationOn
@@ -62,7 +63,9 @@ import com.example.lince_track.data.formatHora
 import com.example.lince_track.data.formatPrecioCLP
 import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.RejectServicioDialog
+import com.example.lince_track.util.abrirWhatsApp
 import kotlinx.coroutines.launch
+import com.example.lince_track.ui.theme.BarraSuperior
 
 @Composable
 fun DetalleServicioScreen(
@@ -78,15 +81,21 @@ fun DetalleServicioScreen(
     var showRejectDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    fun operar(op: suspend (String) -> Result<Unit>) {
+    // Al aceptar se queda aquí, con "Ver Ruta" a mano; al rechazar vuelve de inmediato,
+    // salvo que haya que avisar algo primero (por ejemplo, que no hay conexión).
+    fun operar(volverAlTerminar: Boolean, op: suspend (String) -> Result<String?>) {
         if (servicio == null || procesando) return
-        scope.launch { 
+        scope.launch {
             procesando = true
             val resultado = op(servicio.id)
             procesando = false
-            resultado.onSuccess {
-                snackbarHostState.showSnackbar("Operación completada")
-                onBack()
+            resultado.onSuccess { aviso ->
+                if (volverAlTerminar) {
+                    if (aviso != null) snackbarHostState.showSnackbar(aviso)
+                    onBack()
+                } else {
+                    snackbarHostState.showSnackbar(aviso ?: "Asignación confirmada")
+                }
             }.onFailure { e ->
                 snackbarHostState.showSnackbar(e.message ?: "No se pudo completar la operación")
             }
@@ -144,7 +153,7 @@ fun DetalleServicioScreen(
             BottomActions(
                 servicio = servicio,
                 procesando = procesando,
-                onConfirm = { operar(ServicioRepository::aceptar) },
+                onConfirm = { operar(volverAlTerminar = false, ServicioRepository::aceptar) },
                 onReject = { showRejectDialog = true },
                 onOpenRoute = { onOpenRoute(servicio.id) }
             )
@@ -160,9 +169,9 @@ fun DetalleServicioScreen(
         RejectServicioDialog(
             servicio = servicio,
             onDismiss = { showRejectDialog = false },
-            onConfirm = {
+            onConfirm = { motivo, observaciones ->
                 showRejectDialog = false
-                operar(ServicioRepository::rechazar)
+                operar(volverAlTerminar = true) { ServicioRepository.rechazar(it, motivo, observaciones) }
             }
         )
     }
@@ -173,8 +182,8 @@ private fun DetalleTopBar(onBack: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp)
-            .background(MaterialTheme.colorScheme.primary)
+            .height(51.dp)
+            .background(BarraSuperior.fondo)
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -182,12 +191,12 @@ private fun DetalleTopBar(onBack: () -> Unit) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Volver",
-                tint = MaterialTheme.colorScheme.onPrimary
+                tint = BarraSuperior.contenido
             )
         }
         Text(
             text = "Detalle de Servicio",
-            color = MaterialTheme.colorScheme.onPrimary,
+            color = BarraSuperior.contenido,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -217,19 +226,22 @@ private fun ServiceHeaderCard(servicio: Servicio) {
             )
             Spacer(modifier = Modifier.height(12.dp))
             EstadoServicioBadge(servicio.estado)
-            Spacer(modifier = Modifier.height(14.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = "Tarifa: ",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "${formatPrecioCLP(servicio.tarifa)} CLP",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+            // La API aún no trae tarifa: sin ella no se muestra.
+            if (servicio.tarifa > 0) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = "Tarifa: ",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "${formatPrecioCLP(servicio.tarifa)} CLP",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
     }
@@ -403,6 +415,22 @@ private fun PassengersCard(servicio: Servicio) {
                         )
                     }
                 }
+                IconButton(onClick = {
+                    abrirWhatsApp(context, servicio.fonoLider)
+                }) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(MaterialTheme.colorScheme.surface, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Chat,
+                            contentDescription = "Abrir WhatsApp del líder del grupo",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
             }
 
             if (servicio.notasGrupo.isNotBlank()) {
@@ -487,6 +515,9 @@ private fun BottomActions(
     onReject: () -> Unit,
     onOpenRoute: () -> Unit
 ) {
+    val rol by AuthRepository.rolActual.collectAsState()
+    val puedeResponder = rol != Rol.ADMINISTRADOR
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -506,7 +537,7 @@ private fun BottomActions(
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
                     }
-                } else {
+                } else if (puedeResponder) {
                     Button(
                         onClick = onConfirm,
                         shape = RoundedCornerShape(50),
@@ -540,7 +571,7 @@ private fun BottomActions(
                         containerColor = MaterialTheme.colorScheme.primary
                     ),
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .weight(1f)
                         .height(50.dp)
                 ) {
                     Icon(
@@ -549,7 +580,25 @@ private fun BottomActions(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("VER RUTA Y CHECK-IN EN MAPA", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (puedeResponder) "VER RUTA Y CHECK-IN" else "VER RUTA Y CHECK-IN EN MAPA",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                if (puedeResponder) {
+                    OutlinedButton(
+                        onClick = onReject,
+                        enabled = !procesando,
+                        shape = RoundedCornerShape(50),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        modifier = Modifier.height(50.dp)
+                    ) {
+                        Text("Rechazar", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
             EstadoServicio.RECHAZADO -> {

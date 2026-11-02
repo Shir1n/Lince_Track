@@ -45,16 +45,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.EstadoServicio
+import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.formatFechaCorta
 import com.example.lince_track.data.formatHora
 import com.example.lince_track.data.formatPrecioCLP
+import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.RejectServicioDialog
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import com.example.lince_track.ui.theme.BarraSuperior
 
 @Composable
 fun ServiciosScreen(
@@ -62,6 +66,7 @@ fun ServiciosScreen(
     onRouteClick: (String) -> Unit = {}
 ) {
     val servicios by ServicioRepository.servicios.collectAsState()
+    val error by ServicioRepository.error.collectAsState()
     val hoy = LocalDate.now()
     val serviciosHoy = remember(servicios, hoy) {
         servicios.filter { it.fecha == hoy }.sortedBy { it.horaInicio }
@@ -72,13 +77,15 @@ fun ServiciosScreen(
     var rechazoPendiente by remember { mutableStateOf<Servicio?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    fun operar(servicio: Servicio, op: suspend (String) -> Result<Unit>) {
+    fun operar(servicio: Servicio, op: suspend (String) -> Result<String?>) {
         if (servicio.id in procesandoIds) return
         scope.launch {
             procesandoIds = procesandoIds + servicio.id
             val resultado = op(servicio.id)
             procesandoIds = procesandoIds - servicio.id
-            resultado.onFailure { e ->
+            resultado.onSuccess { aviso ->
+                if (aviso != null) snackbarHostState.showSnackbar(aviso)
+            }.onFailure { e ->
                 snackbarHostState.showSnackbar(e.message ?: "No se pudo completar la operación")
             }
         }
@@ -108,7 +115,9 @@ fun ServiciosScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                if (serviciosHoy.isEmpty()) {
+                error?.let { AvisoServiciosCard(it) }
+
+                if (serviciosHoy.isEmpty() && error == null) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
@@ -158,8 +167,8 @@ fun ServiciosScreen(
         RejectServicioDialog(
             servicio = servicio,
             onDismiss = { rechazoPendiente = null },
-            onConfirm = {
-                operar(servicio, ServicioRepository::rechazar)
+            onConfirm = { motivo, observaciones ->
+                operar(servicio) { ServicioRepository.rechazar(it, motivo, observaciones) }
                 rechazoPendiente = null
             }
         )
@@ -171,8 +180,8 @@ private fun TopBar() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp)
-            .background(MaterialTheme.colorScheme.primary)
+            .height(72.dp)
+            .background(BarraSuperior.fondo)
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.CenterStart
     ) {
@@ -183,7 +192,7 @@ private fun TopBar() {
         ) {
             Text(
                 text = "Lince Track",
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = BarraSuperior.contenido,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -231,18 +240,27 @@ private fun SummaryKpiCard(servicios: List<Servicio>) {
             verticalAlignment = Alignment.Top
         ) {
             Column {
-                Text(
-                    text = "Saldo acumulado hoy:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "${formatPrecioCLP(saldo)} CLP",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                if (saldo > 0) {
+                    Text(
+                        text = "Saldo acumulado hoy:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "${formatPrecioCLP(saldo)} CLP",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                } else {
+                    Text(
+                        text = "Resumen de hoy",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
@@ -311,13 +329,19 @@ private fun ServicioCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = formatPrecioCLP(servicio.tarifa),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                // La API aún no trae tarifa: sin ella no se muestra. El espacio mantiene los botones a la derecha.
+                if (servicio.tarifa > 0) {
+                    Text(
+                        text = formatPrecioCLP(servicio.tarifa),
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                } else {
+                    Spacer(modifier = Modifier.width(0.dp))
+                }
 
+                val rol by AuthRepository.rolActual.collectAsState()
                 when (servicio.estado) {
                     EstadoServicio.PENDIENTE -> {
                         if (procesando) {
@@ -325,7 +349,7 @@ private fun ServicioCard(
                                 modifier = Modifier.size(24.dp),
                                 strokeWidth = 2.dp
                             )
-                        } else {
+                        } else if (rol != Rol.ADMINISTRADOR) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(4.dp)

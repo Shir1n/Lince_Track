@@ -1,0 +1,608 @@
+=====================================================================
+LINCE TRACK - PLAN DETALLADO DE BASE DE DATOS (FIREBASE) — v2
+Actualizado el 26-10-2026
+=====================================================================
+
+DECISIONES TOMADAS (incorporadas en esta versión)
+  1. SIN PLAN BLAZE: se usa el plan Spark (gratis). NO se usan
+     Cloud Functions. Todo lo que antes se resolvía "en el servidor"
+     pasa al cliente o a escrituras batch desde la app del admin.
+  2. FOTOS: se pueden subir fotos de perfil y de check-in. Se guardan
+     en Cloud Storage (incluido en el plan Spark).
+  3. UBICACIÓN EN TIEMPO REAL: el conductor comparte su ubicación y el
+     guía la ve en tiempo real (Firestore realtime, sin funciones).
+  4. CHECK-IN CON FOTO: para hacer check-in es obligatorio tomar una
+     foto (se sube a Storage y se referencia en el check-in).
+
+Objetivo: reemplazar los datos fijos y el repositorio en memoria por
+Firebase (Authentication + Firestore + Storage), sin Cloud Functions.
+
+Este plan parte de lo que se vio en el código:
+  - Hoy Authentication y la colección "usuarios" (rol) usan Firebase.
+  - Servicios, alertas, vehículos, lugares y teléfonos están escritos
+    en el código (ServicioRepository, AlertasScreen, RutaMapaScreen).
+  - Roles de la app: conductor, guia, administrador.
+
+Los números de costos, cuotas y límites deben verificarse en la página
+de precios vigente. Aquí van como supuestos, no como datos.
+
+
+---------------------------------------------------------------------
+1. PRINCIPIOS DE DISEÑO
+---------------------------------------------------------------------
+1.1 Una asignación por persona. Conductor y guía responden por
+    separado (hoy comparten un solo "estado").
+1.2 Personas e ids: se identifican por uid de Authentication, nunca
+    por nombre.
+1.3 Datos sensibles aparte: nombres de pasajeros, teléfonos y notas de
+    salud van en una subcolección con reglas propias. La tarifa vive en
+    la asignación de cada persona (el guía no ve la del conductor).
+1.4 Firestore no tiene joins: se copian a la asignación los datos
+    básicos del servicio para listar sin lecturas extra. Sin funciones,
+    estas copias se mantienen con escrituras batch desde la app del
+    administrador (una sola operación atómica).
+1.5 Lo que puede decidir el servidor sin funciones se limita a:
+    serverTimestamp, y la validación estructural de las reglas. La
+    validación de negocio (distancia, horario) se hace en el cliente y
+    se guarda como dato (self-report, ver 7.3).
+1.6 Cada consulta acotada por persona y por fecha. Nunca escuchar una
+    colección completa.
+1.7 Estados y roles como códigos estables en minúscula ("pendiente",
+    "conductor"), nunca el texto en español de la UI.
+1.8 Sin registro libre: las cuentas las crea el administrador (consola
+    o script local). Sin rol en usuarios/{uid} no hay acceso a nada.
+1.9 Dos proyectos Firebase (dev y prod) y emulador local.
+
+
+---------------------------------------------------------------------
+2. QUÉ DEJA DE ESTAR EN EL CÓDIGO Y DÓNDE VA
+---------------------------------------------------------------------
+Dato actual (dónde está)                     Nuevo lugar
+-------------------------------------------  -------------------------
+Servicios de ejemplo (ServicioRepository)    servicios + asignaciones
+Nombre del guía fijo "Andrea Soto"           usuarios/{uid}.nombre
+Conductor/vehículo "Carlos Morales (...)"    usuarios + vehiculos
+Foto de perfil (drawable)                    Storage + usuarios.fotoUrl
+Foto de check-in (no existe)                 Storage + checkins.fotoUrl
+Hotel Cumbres, punto de guías, aeropuerto    lugares
+Destino por texto (RutaMapa)                 servicios.origen/destino
+                                              con lat/lon
+Ubicación del conductor (no existe)          servicios/{id}/ubicacion
+Teléfono de Coordinación                     config/app
+Margen de 15 min, radio de check-in          config/app
+Motivos de rechazo / incidencia              config/app (con códigos)
+Alertas fijas (AlertasScreen)                alertas (realtime, in-app)
+Lista de conductores de reemplazo            usuarios (rol conductor,
+                                              activo)
+Estado check-in/check-out (remember)         asignaciones/{id}/checkins
+Rol en memoria (AuthRepository)              usuarios/{uid}.rol (reglas
+                                              lo leen con get())
+Textos de la interfaz                        strings.xml (no Firestore)
+Enums de estado, tema, constantes técnicas   Se quedan en el código
+
+
+---------------------------------------------------------------------
+3. AUTENTICACIÓN Y ROLES
+---------------------------------------------------------------------
+3.1 Cuentas
+  - Método: correo y contraseña (como hoy).
+  - Creación: el administrador usa la consola de Firebase o un script
+    local con el Admin SDK (gratis, corre en su PC) para crear cuenta +
+    documento usuarios/{uid} + rol. No hay función callable.
+  - Verificar en consola si se puede desactivar el registro desde el
+    cliente. Aunque no se pueda, las reglas protegen: sin rol no hay
+    acceso a nada.
+
+3.2 Rol en Firestore (sin custom claims)
+  - El rol queda en usuarios/{uid}.rol (fuente única de verdad), igual
+    que hoy.
+  - Las reglas lo leen con get(): cada get() se factura como lectura,
+    pero con el plan Spark (50k lecturas/día) alcanza para esta escala.
+  - La app lo lee una vez al iniciar sesión (y lo cachea en memoria).
+    Al reabrir la app, se recupera de AuthRepository (ya implementado).
+  - Si en el futuro se pasa a Blaze, se puede migrar a custom claims
+    sin tocar el modelo de datos (misma fuente: usuarios/{uid}.rol).
+
+3.3 Ciclo de vida de cuentas (usuarios de un solo viaje)
+  - Campos: activo (bool) y vigenteHasta (Timestamp).
+  - Sin funciones programadas, la desactivación de cuentas vencidas la
+    hace el administrador manualmente o con un script local. La app
+    bloquea el acceso si activo == false (además de las reglas).
+  - Si la persona vuelve, se reactiva la misma cuenta (clave: correo).
+  - Pasado un plazo, eliminar la cuenta de Auth y anonimizar
+    usuarios/{uid} (nombre y teléfono en blanco), conservando ids y
+    datos contables.
+
+3.4 App Check
+  - Activar Play Integrity y exigirlo en Firestore y Storage (primero
+    en modo de monitoreo). No requiere Blaze.
+
+
+---------------------------------------------------------------------
+4. MODELO DE DATOS
+---------------------------------------------------------------------
+Convenciones:
+  - Timestamp = tipo Timestamp de Firestore (instante UTC).
+  - fechaDia = texto "YYYY-MM-DD" en hora de Chile (America/Santiago).
+  - Dinero: entero en CLP (Int/Long). Nunca decimales.
+  - Documentos < 1 MiB.
+
+4.1 usuarios/{uid}
+    nombre, email, rol, activo, vigenteHasta, telefono, fotoUrl,
+    vehiculoId (solo conductores), creadoEn
+  Subcolección usuarios/{uid}/dispositivos/{tokenFcm}
+    plataforma, actualizadoEn
+
+4.2 vehiculos/{id}
+    patente, modelo, anio, capacidad, odometro, activo,
+    revisionTecnica: { fecha, homologacion }   (vence, es operativo)
+
+4.3 lugares/{id}
+    nombre, tipo ("hotel"|"aeropuerto"|"punto_encuentro"|"atractivo"),
+    lat, lon, direccion
+
+4.4 servicios/{reserva}      (id = código de reserva, garantiza unicidad)
+    titulo, reserva, fechaDia, inicio, fin,
+    origen:  { nombre, lat, lon, lugarId? },
+    destino: { nombre, lat, lon, lugarId? },
+    idiomaTour, nPasajeros, participantes: array<uid>,
+    estadoServicio: "programado"|"en_curso"|"finalizado"|"cancelado",
+    creadoEn, actualizadoEn
+  Subcolección servicios/{reserva}/ubicacion   (documento único,
+                                                se sobrescribe)
+    conductorId, lat, lon, accuracy, mock, ts, actualizadoEn
+  Subcolección servicios/{reserva}/privado/grupo   (datos personales)
+    nombresPasajeros, liderGrupo, fonoLider, notasGrupo, expiraEn
+
+4.5 asignaciones/{servicioId}_{personaId}   (id determinista)
+    servicioId, personaId, rol ("conductor"|"guia"),
+    estado ("pendiente"|"aceptado"|"rechazado"|"reasignado"),
+    motivoRechazo, observaciones, respondidoEn,
+    progreso ("sin_iniciar"|"en_curso"|"finalizado"),
+    tarifa (visible solo para esta persona y el admin),
+    -- copias del servicio para listar sin joins --
+    reserva, titulo, fechaDia, inicio, fin, origen{...}, destino{...},
+    nPasajeros, idiomaTour
+  Subcolección asignaciones/{id}/checkins/{autoId}   (solo creación)
+    tipo ("checkin"|"checkout"),
+    lat, lon, accuracy, mock,
+    fotoUrl: string          (OBLIGATORIA en check-in; ver 4.7)
+    ts: Timestamp            (serverTimestamp)
+    -- campos calculados en cliente (self-report, ver 7.3) --
+    distanciaM, enRango, enVentana, valido
+
+4.6 incidencias/{autoId}
+    personaId, servicioId, asignacionId, motivo, observaciones,
+    lat, lon (opcionales), creadaEn, estado ("abierta"|"atendida")
+
+4.7 Fotos (Cloud Storage)
+    Rutas:
+      perfil/{uid}/foto.jpg                 foto de perfil
+      checkin/{uid}/{autoId}.jpg            foto de check-in
+    El check-in sube la foto a Storage y guarda la URL de descarga en
+    checkins.fotoUrl. Sin foto no se permite escribir el check-in
+    (regla en Firestore: fotoUrl no vacío).
+
+4.8 alertas/{autoId}        (las crea la app; se leen en tiempo real)
+    destinatarioId, tipo ("atraso"|"asignacion"|"cambio_horario"|
+    "reasignacion"), titulo, descripcion, servicioId, creadaEn,
+    leida, expiraEn
+
+4.9 config/app
+    telefonoCoordinacion, margenCheckInMin, radioCheckInM,
+    precisionMaxM, motivosRechazo: [{codigo, etiqueta, requiereTexto}],
+    versionMinimaApp
+
+
+---------------------------------------------------------------------
+5. CONSULTAS POR PANTALLA E ÍNDICES
+---------------------------------------------------------------------
+Pantalla               Consulta
+---------------------  ---------------------------------------------
+Servicios / Asignac.   asignaciones: personaId == uid, fechaDia == hoy,
+(inicio del día)       orderBy inicio
+Calendario (mes)       asignaciones: personaId == uid, fechaDia en
+                       [inicio, fin del mes], orderBy fechaDia, inicio
+Detalle                get servicios/{id} + get servicios/{id}/privado/
+                       grupo
+Ruta / Mapa            get servicios/{id} (coordenadas) + escribir
+                       checkins (con foto)
+Conexión conductor     listener sobre servicios/{id}/ubicacion
+Alertas                alertas: destinatarioId == uid, orderBy
+                       creadaEn desc, limit 50
+Administrador (día)    asignaciones: fechaDia == hoy (y por estado)
+
+Índices compuestos (crear por logcat o firestore.indexes.json):
+  - asignaciones: personaId ASC, fechaDia ASC, inicio ASC
+  - asignaciones: personaId ASC, estado ASC, fechaDia ASC
+  - alertas: destinatarioId ASC, creadaEn DESC
+
+Cálculos en el cliente: saldo del día (suma de tarifas aceptadas),
+conflictos de horario (solo entre asignaciones de esa persona).
+
+Ubicación en tiempo real:
+  - El conductor escribe servicios/{id}/ubicacion cada N segundos (o al
+    moverse más de X metros), solo si "compartir GPS" está activo.
+  - El guía la escucha en tiempo real (snapshot listener).
+  - Cuidar el volumen de escrituras: cada documento escrito cuenta en
+    la cuota gratuita (20k escrituras/día). Con 10 s de intervalo y 8 h
+    de turno son ~2.880 escrituras por conductor/día. Evaluar 10-15 s.
+
+
+---------------------------------------------------------------------
+6. REGLAS DE SEGURIDAD (BORRADOR)
+---------------------------------------------------------------------
+Lo no listado queda denegado. Sin custom claims, el rol se lee con
+get() (una lectura por evaluación; aceptable en Spark).
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function rol() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol;
+    }
+    function esAdmin() { return signedIn() && rol() == 'administrador'; }
+    function soloCambia(campos) {
+      return request.resource.data.diff(resource.data)
+               .affectedKeys().hasOnly(campos);
+    }
+
+    match /usuarios/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || esAdmin());
+      // El usuario puede editar SOLO su foto y teléfono (perfil).
+      allow update: if signedIn() && request.auth.uid == uid
+        && soloCambia(['fotoUrl', 'telefono']);
+      allow create, delete: if false;
+      match /dispositivos/{token} {
+        allow read, write: if signedIn() && request.auth.uid == uid;
+      }
+    }
+
+    match /vehiculos/{id} { allow read: if signedIn(); allow write: if esAdmin(); }
+    match /lugares/{id}   { allow read: if signedIn(); allow write: if esAdmin(); }
+    match /config/{doc}   { allow read: if signedIn(); allow write: if esAdmin(); }
+
+    match /servicios/{sid} {
+      allow read: if signedIn() &&
+        (esAdmin() || request.auth.uid in resource.data.participantes);
+      allow write: if esAdmin();   // el admin crea/edita en batch
+
+      match /ubicacion/{doc} {
+        allow read: if signedIn() && (esAdmin() ||
+          request.auth.uid in get(/databases/$(database)/documents/servicios/$(sid)).data.participantes);
+        // solo el conductor del servicio escribe su ubicación
+        allow write: if signedIn()
+          && request.resource.data.conductorId == request.auth.uid;
+      }
+
+      match /privado/{doc} {
+        allow read: if signedIn() && (esAdmin() ||
+          request.auth.uid in get(/databases/$(database)/documents/servicios/$(sid)).data.participantes);
+        allow write: if esAdmin();
+      }
+    }
+
+    match /asignaciones/{aid} {
+      allow read: if signedIn() &&
+        (resource.data.personaId == request.auth.uid || esAdmin());
+
+      allow update: if esAdmin() ||
+        (signedIn()
+         && resource.data.personaId == request.auth.uid
+         && resource.data.estado == 'pendiente'
+         && request.resource.data.estado in ['aceptado', 'rechazado']
+         && soloCambia(['estado','motivoRechazo','observaciones','respondidoEn'])
+         && request.resource.data.respondidoEn == request.time
+         && (request.resource.data.estado == 'aceptado' ||
+             (request.resource.data.motivoRechazo in
+                ['falla_mecanica','fuerza_mayor','cruce_horario','otro'] &&
+              (request.resource.data.motivoRechazo != 'otro' ||
+               request.resource.data.observaciones.size() > 0))));
+
+      allow create, delete: if esAdmin();
+
+      match /checkins/{cid} {
+        allow read: if signedIn() && (esAdmin() ||
+          get(/databases/$(database)/documents/asignaciones/$(aid)).data.personaId == request.auth.uid);
+        allow create: if signedIn()
+          && get(/databases/$(database)/documents/asignaciones/$(aid)).data.personaId == request.auth.uid
+          && get(/databases/$(database)/documents/asignaciones/$(aid)).data.estado == 'aceptado'
+          && request.resource.data.keys().hasOnly(['tipo','lat','lon','accuracy','mock','fotoUrl','ts','distanciaM','enRango','enVentana','valido'])
+          && request.resource.data.tipo in ['checkin','checkout']
+          && request.resource.data.lat is number
+          && request.resource.data.lon is number
+          && request.resource.data.fotoUrl is string
+          && request.resource.data.fotoUrl.size() > 0
+          && request.resource.data.ts == request.time;
+        allow update, delete: if false;
+      }
+    }
+
+    match /incidencias/{iid} {
+      allow create: if signedIn()
+        && request.resource.data.personaId == request.auth.uid
+        && request.resource.data.creadaEn == request.time;
+      allow read: if signedIn() &&
+        (resource.data.personaId == request.auth.uid || esAdmin());
+      allow update: if esAdmin();
+      allow delete: if false;
+    }
+
+    match /alertas/{id} {
+      allow read: if signedIn() && resource.data.destinatarioId == request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.destinatarioId == request.auth.uid
+        && soloCambia(['leida']);
+      // Crear alertas desde la app: solo dirigidas a otros participantes
+      // o a sí mismo; se revisa en la decisión abierta de la sección 13.
+      allow create: if signedIn();
+      allow delete: if false;
+    }
+  }
+}
+
+Reglas de Storage (archivo aparte, storage.rules):
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /perfil/{uid}/{archivo} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /checkin/{uid}/{archivo} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
+
+Pruebas de reglas obligatorias (emulador + @firebase/rules-unit-testing):
+  1. Usuario sin rol: no lee ni escribe nada.
+  2. Conductor no lee asignaciones de otro.
+  3. Conductor no cambia tarifa, personaId ni rol.
+  4. Conductor no acepta una asignación que no está pendiente.
+  5. Rechazo sin motivo o "otro" sin observaciones: denegado.
+  6. Check-in sin fotoUrl o con fotoUrl vacío: denegado.
+  7. Check-in con ts del cliente (no serverTimestamp): denegado.
+  8. Check-in sobre asignación rechazada: denegado.
+  9. Guía no lee la tarifa del conductor ni su asignación.
+ 10. Persona ajena no lee servicios/privado ni servicios/ubicacion.
+ 11. Un participante que no es el conductor no escribe ubicacion.
+
+
+---------------------------------------------------------------------
+7. LÓGICA SIN CLOUD FUNCTIONS (cómo se resuelve cada cosa)
+---------------------------------------------------------------------
+7.1 Creación de cuentas y roles
+  - Consola de Firebase o script local con Admin SDK (corre en la PC
+    del admin, no requiere Blaze). El script puede además setear
+    custom claims si algún día se decide migrar.
+
+7.2 Denormalización (copias en asignaciones)
+  - La app del administrador escribe servicio + asignaciones +
+    participantes en una SOLA escritura batch (Firestore la ejecuta
+    atómica). Al editar un servicio, el admin actualiza también las
+    copias en el mismo batch.
+
+7.3 Validación de check-in (distancia y horario)
+  - La app calcula en el cliente: distancia al origen (fórmula
+    Haversine), si está dentro del radio, y si la hora está dentro de
+    la ventana. Guarda esos valores como campos (distanciaM, enRango,
+    enVentana, valido).
+  - Estos campos son SELF-REPORT (no a prueba de trampas). Lo que sí es
+    confiable: ts (serverTimestamp), lat/lon crudos, accuracy, mock
+    (Location.isMock) y la foto. Con eso queda registro para auditar.
+  - Reglas solo imponen estructura y ownership, no pueden calcular
+    distancia (no hay trigonometría en el lenguaje de reglas).
+  - Futuro: si se pasa a Blaze, una función puede recalcular y validar.
+
+7.4 Alertas y notificaciones
+  - Sin FCM automático. Las alertas son documentos que la app crea y
+    que el destinatario recibe por listener en tiempo real (in-app).
+  - El FCM manual desde la consola sigue disponible si hace falta, pero
+    no es la vía principal.
+
+7.5 Ubicación en tiempo real
+  - Firestore realtime (gratis). El conductor escribe y el guía escucha
+    con snapshot listener. No requiere funciones.
+  - Si "compartir GPS" está apagado, el conductor deja de escribir (o
+    escribe un campo compartiendo=false).
+
+7.6 Ciclo de vida de cuentas
+  - Manual o script local. La app bloquea activo == false.
+
+
+---------------------------------------------------------------------
+8. ESTRUCTURA EN LA APP ANDROID
+---------------------------------------------------------------------
+8.1 Capas
+  data/remote/dto        DTOs (valores por defecto para toObject)
+  data/remote            FirestoreDataSource + StorageDataSource
+  data/mapper            Dto -> modelo de dominio (parseo tolerante)
+  data/repository        interfaces + implementaciones
+  domain/model           Servicio, Asignacion, Rol, EstadoAsignacion,
+                         Ubicacion, CheckIn, ...
+  ui/...                 ViewModel + UiState por pantalla
+
+8.2 Reglas de implementación
+  - Enums como texto (parseo con default, como Rol.desde).
+  - Fechas: LocalDate.parse(fechaDia) y Timestamp.toDate() con zona
+    America/Santiago.
+  - Flujos: callbackFlow con addSnapshotListener; cerrar en awaitClose
+    y al cerrar sesión.
+  - Aceptar/rechazar: update() con respondidoEn = serverTimestamp.
+  - Check-in: tomar foto -> subir a Storage -> addDoc con fotoUrl +
+    ts = serverTimestamp().
+  - Ubicación: escribir en servicios/{id}/ubicacion con throttling
+    (intervalo mínimo o distancia mínima).
+  - Fotos: Coil (ya agregado) para mostrar; StorageReference para
+    subir. Comprimir/redimensionar antes de subir.
+  - Estado de UI: Cargando / Error / Listo + indicador de caché
+    (metadata.isFromCache) y escrituras pendientes.
+  - Persistencia sin conexión activa; definir tamaño de caché acorde
+    (las fotos NO se cachean en Firestore, viven en Storage).
+  - Emulador solo en debug; datos de prueba por script; el seed sale
+    del código.
+
+8.3 Entornos
+  - Proyectos lince-dev y lince-prod.
+  - google-services.json por tipo de build o por flavor.
+  - Antes de registrar las apps, cambiar applicationId (com.example.*
+    no sirve en Google Play).
+
+
+---------------------------------------------------------------------
+9. OFFLINE Y SINCRONIZACIÓN
+---------------------------------------------------------------------
+  - Lecturas salen de caché; escrituras quedan en cola.
+  - Aceptar/rechazar sin señal se envía al volver la conexión.
+  - Check-in sin señal: la foto y los datos se guardan pendientes y se
+    suben al recuperar conexión (la hora real se guarda en tsCliente
+    informativo; ts del servidor será la hora de llegada).
+  - Ubicación: solo se comparte con conexión; sin señal se marca
+    "sin señal" en la UI del guía.
+  - Probar: modo avión, GPS apagado, reconexión, y cambios de estado
+    mientras el teléfono estuvo sin conexión.
+
+
+---------------------------------------------------------------------
+10. RETENCIÓN Y CICLO DE VIDA DE DATOS
+---------------------------------------------------------------------
+Dato                         Retención sugerida       Mecanismo
+---------------------------  ------------------------  ----------
+ubicacion (realtime)         solo el último dato      se sobrescribe;
+                                                        historial fuera
+                                                        de alcance
+fotos de check-in            según auditoría/reclamos Storage + limpieza
+                                                        por script
+alertas                      30 a 90 días             expiraEn + script
+servicios/privado/grupo      fin del servicio + N días script (sin TTL
+                                                        automático, se
+                                                        borra por script)
+checkins, incidencias,       según política interna   exportación por
+servicios, asignaciones      y obligaciones contables script
+
+Notas:
+  - Sin Cloud Functions, las purgas TTL se hacen con un script local
+    (Admin SDK) que corre periódicamente en la PC del admin, o se deja
+    el borrado manual. Firestore TTL nativo requiere marcar expiraEn;
+    verificar si está disponible en Spark.
+  - Datos personales de pasajeros (menores, salud): Ley 21.719 de
+    Chile, vigencia prevista 1-12-2026 (proyecto reportado para
+    postergarla a 2027). Verificar estado y consultar. No es asesoría
+    legal.
+  - Región de Firestore y Storage: se elige al crear y no se cambia.
+
+
+---------------------------------------------------------------------
+11. COSTOS Y LÍMITES (SPARK, A VERIFICAR)
+---------------------------------------------------------------------
+  - Plan Spark gratis: Firestore (50k lecturas, 20k escrituras,
+    20k borrados/día, 1 GiB), Storage (5 GB, cuota de descarga),
+    Authentication (ilimitado en Spark), Firestore realtime.
+  - Lo que más pesa: lecturas por listeners (la carga inicial y cada
+    cambio cuenta) y escrituras de ubicación (ver 5).
+  - Sin Cloud Functions no hay costo de funciones ni de scheduler.
+  - FCM manual (consola) es gratis, pero no es la vía principal.
+  - Alertas de presupuesto en Google Cloud desde el día 1.
+  - Evitar: listeners sobre colecciones completas, consultas sin limit,
+    escrituras de ubicación sin throttling, reintentos en bucle.
+
+
+---------------------------------------------------------------------
+12. PLAN DE IMPLEMENTACIÓN POR FASES
+---------------------------------------------------------------------
+Fase 0 - Preparación
+  - Cambiar applicationId; crear proyectos dev y prod; elegir región;
+    configurar emulador; reglas "denegar todo" por defecto.
+  - Activar presupuesto; versionar firestore.rules, storage.rules y
+    firestore.indexes.json.
+
+Fase 1 - Autenticación y roles (en gran parte YA HECHO)
+  - AuthRepository lee usuarios/{uid}.rol (ya implementado).
+  - Reglas de usuarios con get() para rol; pruebas de reglas.
+  - Script local opcional para crear cuentas en lote.
+
+Fase 2 - Catálogos y lectura de servicios
+  - Colecciones lugares, vehiculos, config, servicios, privado,
+    asignaciones; script de datos de prueba para el emulador.
+  - AsignacionRepository con Flow; ViewModels y UiState; quitar el
+    seed del código.
+
+Fase 3 - Respuestas a asignaciones
+  - Aceptar/rechazar con motivo y observaciones; reglas de transición;
+    indicador de pendiente de sincronizar.
+
+Fase 4 - Check-in con foto y mapa
+  - Servicios con coordenadas; check-in que exige foto (Storage ->
+    fotoUrl -> checkins); serverTimestamp; mapa con coordenadas.
+  - Ubicación en tiempo real conductor -> guía (escribir/escuchar
+    servicios/{id}/ubicacion) con throttling.
+
+Fase 5 - Alertas e incidencias (in-app)
+  - Colecciones alertas e incidencias; alertas por listener en tiempo
+    real (sin FCM). FCM manual opcional.
+
+Fase 6 - Retención y operación
+  - Script local de purga/desactivación de cuentas; exportación; App
+    Check en modo exigido; monitoreo.
+
+Fase 7 - Administración
+  - Pantallas para crear servicios y asignar (batch: servicio +
+    asignaciones + participantes); gestión de usuarios, vehículos y
+    lugares; reasignar.
+
+Criterio para pasar de fase: pruebas de reglas en verde y prueba manual
+sin conexión.
+
+
+---------------------------------------------------------------------
+13. DECISIONES ABIERTAS (resolver antes de implementar)
+---------------------------------------------------------------------
+  [RESUELTO] Sin Blaze -> plan Spark, sin Cloud Functions.
+  [RESUELTO] Fotos -> Storage (perfil y check-in).
+  [RESUELTO] Ubicación en tiempo real conductor -> guía, vía Firestore.
+  [RESUELTO] Check-in exige foto.
+   1. ¿Existe el rol "coordinador" distinto de "administrador"?
+   2. ¿Se puede rechazar un servicio ya aceptado? (falla mecánica).
+   3. ¿El guía puede ver nombres de pasajeros y notas de salud?
+      ¿Y el conductor?
+   4. ¿Tiene el guía su propia tarifa? ¿Se muestra?
+   5. ¿Quién crea servicios y asignaciones: app (rol administrador),
+      panel web o consola?
+   6. ¿Reasignar crea una asignación nueva y marca la anterior
+      "reasignado"? (Recomendado.)
+   7. Radio, precisión y margen horario del check-in; ¿se bloquea el
+      check-in inválido o se registra y se alerta? (Sin funciones,
+      validar en cliente y guardar como self-report.)
+   8. Plazos de retención de cada dato.
+   9. Región de Firestore, Storage y de la ubicación realtime.
+  10. Intervalo/umbral de envío de ubicación (cada cuánto y al moverse
+      cuánto) para no gastar la cuota de escrituras.
+  11. ¿Qué pasa si el mismo servicio tiene más de un conductor o guía?
+      (El modelo lo soporta.)
+  12. Idiomas de la app y de las alertas.
+  13. ¿Quién puede crear alertas desde la app? (hoy allow create:
+      signedIn). Definir si solo admin o también entre participantes.
+
+
+---------------------------------------------------------------------
+14. LISTA DE VERIFICACIÓN FINAL
+---------------------------------------------------------------------
+  [ ] applicationId definitivo y apps registradas en dev y prod.
+  [ ] Reglas de Firestore y Storage sin comodín, probadas en emulador.
+  [ ] Rol en usuarios/{uid} funcionando y leído por la app.
+  [ ] Índices en firestore.indexes.json.
+  [ ] Ninguna consulta sin filtro de persona y fecha.
+  [ ] Estados de UI: cargando, error, vacío real, sin conexión.
+  [ ] Check-in exige foto; foto se sube a Storage y queda referenciada.
+  [ ] Ubicación en tiempo real con throttling y regla de ownership.
+  [ ] Cuentas y datos personales con plazo de retención aplicado.
+  [ ] App Check exigido; alertas de presupuesto activas.
+  [ ] APK release probado con R8 (modelos protegidos).
+  [ ] Sin datos reales ni teléfonos en el repositorio público.
+=====================================================================
+FIN
+=====================================================================

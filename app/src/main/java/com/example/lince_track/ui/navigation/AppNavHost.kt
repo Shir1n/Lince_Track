@@ -2,6 +2,7 @@ package com.example.lince_track.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
@@ -24,9 +25,16 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -40,24 +48,27 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.Rol
+import com.example.lince_track.ui.admin.AdminPanelScreen
+import com.example.lince_track.ui.admin.AdminPerfilScreen
 import com.example.lince_track.ui.ajustes.AjustesScreen
 import com.example.lince_track.ui.alertas.AlertasScreen
 import com.example.lince_track.ui.calendario.CalendarioScreen
 import com.example.lince_track.ui.detalle.DetalleServicioScreen
 import com.example.lince_track.ui.guia.ConexionConductorScreen
 import com.example.lince_track.ui.guia.GuiaAsignacionesScreen
-import com.example.lince_track.ui.guia.GuiaPerfilScreen
 import com.example.lince_track.ui.login.LoginScreen
+import com.example.lince_track.ui.perfil.PerfilRealScreen
 import com.example.lince_track.ui.perfil.PerfilScreen
 import com.example.lince_track.ui.ruta.RutaMapaScreen
 import com.example.lince_track.ui.servicios.ServiciosScreen
+import com.example.lince_track.ui.theme.BarraSuperior
 
 private fun getBottomNavIndex(route: String?): Int {
     return when (route) {
-        Routes.SERVICIOS, Routes.GUIA_ASIGNACIONES -> 0
+        Routes.SERVICIOS, Routes.GUIA_ASIGNACIONES, Routes.ADMIN_PANEL -> 0
         Routes.CALENDARIO -> 1
         Routes.ALERTAS, Routes.GUIA_CONEXION -> 2
-        Routes.PERFIL, Routes.GUIA_PERFIL -> 3
+        Routes.PERFIL, Routes.GUIA_PERFIL, Routes.ADMIN_PERFIL -> 3
         else -> -1
     }
 }
@@ -107,6 +118,10 @@ object Routes {
     const val GUIA_CONEXION = "guia_conexion"
     const val GUIA_PERFIL = "guia_perfil"
 
+    // Rutas del administrador
+    const val ADMIN_PANEL = "admin_panel"
+    const val ADMIN_PERFIL = "admin_perfil"
+
     fun detalleServicio(id: String) = "detalle_servicio/$id"
     fun rutaMapa(id: String) = "ruta_mapa/$id"
 }
@@ -121,10 +136,15 @@ private fun bottomNavItems(rol: Rol?): List<BottomNavItem> = when (rol) {
     Rol.GUIA -> listOf(
         BottomNavItem(Routes.GUIA_ASIGNACIONES, "Asignaciones", Icons.Outlined.Home),
         BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth),
-        BottomNavItem(Routes.GUIA_CONEXION, "Conexión", Icons.Outlined.LocationOn),
+        BottomNavItem(Routes.ALERTAS, "Alertas", Icons.Outlined.Notifications),
         BottomNavItem(Routes.GUIA_PERFIL, "Perfil", Icons.Outlined.Person)
     )
-    // Conductor (y por ahora administrador, hasta tener pantallas propias)
+    Rol.ADMINISTRADOR -> listOf(
+        BottomNavItem(Routes.ADMIN_PANEL, "Panel", Icons.Outlined.Dashboard),
+        BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth),
+        BottomNavItem(Routes.ADMIN_PERFIL, "Perfil", Icons.Outlined.Person)
+    )
+    // Conductor
     else -> listOf(
         BottomNavItem(Routes.SERVICIOS, "Servicios", Icons.Outlined.Home),
         BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth),
@@ -138,6 +158,17 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val rol by AuthRepository.rolActual.collectAsState()
+
+    // Si Android mató el proceso, la navegación se restaura sin pasar por el login:
+    // hay que recuperar aquí el perfil de la sesión.
+    LaunchedEffect(currentRoute) {
+        val usuario = AuthRepository.usuarioActual
+        if (currentRoute != null && currentRoute != Routes.LOGIN &&
+            usuario != null && AuthRepository.rolActual.value == null
+        ) {
+            AuthRepository.cargarRolActual(usuario.uid)
+        }
+    }
 
     val items = bottomNavItems(rol)
     val showBottomBar = items.any { it.route == currentRoute }
@@ -186,6 +217,13 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             }
         }
     ) { innerPadding ->
+        // El contenido parte bajo la barra de estado: esta franja le da su color de fondo.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsTopHeight(WindowInsets.statusBars)
+                .background(BarraSuperior.estado)
+        )
         NavHost(
             navController = navController,
             startDestination = Routes.LOGIN,
@@ -194,7 +232,11 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             composable(Routes.LOGIN) {
                 LoginScreen(
                     onLoginSuccess = { rol ->
-                        val destino = if (rol == Rol.GUIA) Routes.GUIA_ASIGNACIONES else Routes.SERVICIOS
+                        val destino = when (rol) {
+                            Rol.GUIA -> Routes.GUIA_ASIGNACIONES
+                            Rol.ADMINISTRADOR -> Routes.ADMIN_PANEL
+                            else -> Routes.SERVICIOS
+                        }
                         navController.navigate(destino) {
                             popUpTo(Routes.LOGIN) { inclusive = true }
                         }
@@ -259,7 +301,11 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 exitTransition = { bottomNavExitTransition() },
                 popEnterTransition = { bottomNavEnterTransition() },
                 popExitTransition = { bottomNavExitTransition() }
-            ) { AlertasScreen() }
+            ) {
+                AlertasScreen(
+                    onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) }
+                )
+            }
             composable(
                 route = Routes.PERFIL,
                 enterTransition = { bottomNavEnterTransition() },
@@ -267,15 +313,20 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 popEnterTransition = { bottomNavEnterTransition() },
                 popExitTransition = { bottomNavExitTransition() }
             ) {
-                PerfilScreen(
-                    onLogout = {
-                        AuthRepository.cerrarSesion()
-                        navController.navigate(Routes.LOGIN) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    },
-                    onOpenSettings = { navController.navigate(Routes.AJUSTES) }
-                )
+                val onLogout = {
+                    AuthRepository.cerrarSesion()
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+                val onOpenSettings = { navController.navigate(Routes.AJUSTES) }
+                // PerfilScreen queda como placeholder; las cuentas marcadas usan el perfil con datos reales.
+                val perfil by AuthRepository.perfilActual.collectAsState()
+                if (perfil?.perfilNuevo == true) {
+                    PerfilRealScreen(onLogout = onLogout, onOpenSettings = onOpenSettings)
+                } else {
+                    PerfilScreen(onLogout = onLogout, onOpenSettings = onOpenSettings)
+                }
             }
             composable(Routes.AJUSTES) {
                 AjustesScreen(onBack = { navController.popBackStack() })
@@ -308,13 +359,44 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 popEnterTransition = { bottomNavEnterTransition() },
                 popExitTransition = { bottomNavExitTransition() }
             ) {
-                GuiaPerfilScreen(
+                PerfilRealScreen(
                     onLogout = {
                         AuthRepository.cerrarSesion()
                         navController.navigate(Routes.LOGIN) {
                             popUpTo(0) { inclusive = true }
                         }
-                    }
+                    },
+                    onOpenSettings = { navController.navigate(Routes.AJUSTES) }
+                )
+            }
+
+            // Pantallas del administrador
+            composable(
+                route = Routes.ADMIN_PANEL,
+                enterTransition = { bottomNavEnterTransition() },
+                exitTransition = { bottomNavExitTransition() },
+                popEnterTransition = { bottomNavEnterTransition() },
+                popExitTransition = { bottomNavExitTransition() }
+            ) {
+                AdminPanelScreen(
+                    onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) }
+                )
+            }
+            composable(
+                route = Routes.ADMIN_PERFIL,
+                enterTransition = { bottomNavEnterTransition() },
+                exitTransition = { bottomNavExitTransition() },
+                popEnterTransition = { bottomNavEnterTransition() },
+                popExitTransition = { bottomNavExitTransition() }
+            ) {
+                AdminPerfilScreen(
+                    onLogout = {
+                        AuthRepository.cerrarSesion()
+                        navController.navigate(Routes.LOGIN) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    },
+                    onOpenSettings = { navController.navigate(Routes.AJUSTES) }
                 )
             }
         }

@@ -2,7 +2,9 @@ package com.example.lince_track.data
 
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.Month
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.util.Locale
 
 enum class EstadoServicio {
@@ -29,18 +31,51 @@ data class Servicio(
     val conductor: String,
     val tarifa: Int,
     val estado: EstadoServicio,
-    val reserva: String
+    val reserva: String,
+    /** TRANSFER, GUIDED_SERVICE o EXCURSION (vacío en datos antiguos). */
+    val tipo: String = "",
+    /** StatusPL de la API: CF, RQ, DL, CX o null si no hay staff asignado. */
+    val statusPL: String? = null,
+    /** true si horaFin fue estimada (la API solo entrega la hora de pickup). */
+    val horaFinEstimada: Boolean = false,
+    /** Vehículo asignado; la API lo trae solo en TRANSFER y EXCURSION. */
+    val vehiculo: VehiculoServicio? = null,
+    /** true si la API lo marca cancelado (XX): ya no se puede reasignar. */
+    val cancelado: Boolean = false,
+    /** Id en la API de quien trae asignado: transportista o guía según el tipo. */
+    val responsableId: Long? = null,
+    /** true si el administrador eligió a otra persona (ver ReglasAsignacion). */
+    val reasignado: Boolean = false
 )
 
-private val horaFormatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.ENGLISH)
-private val fechaFormatter = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", Locale.forLanguageTag("es-ES"))
-private val fechaCortaFormatter = DateTimeFormatter.ofPattern("d 'de' MMMM", Locale.forLanguageTag("es-ES"))
+data class VehiculoServicio(
+    val patente: String,
+    /** SEDAN, VAN, MINIBUS o BUS. */
+    val tipo: String,
+    val capacidad: Int
+)
+
+private val LOCALE_CHILE = Locale.forLanguageTag("es-CL")
+private val horaFormatter = DateTimeFormatter.ofPattern("HH:mm", LOCALE_CHILE)
+private val fechaFormatter = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", LOCALE_CHILE)
+private val fechaCortaFormatter = DateTimeFormatter.ofPattern("d 'de' MMMM", LOCALE_CHILE)
+
+/** Quién atiende el servicio: los guiados llevan solo guía; el resto, solo transportista. */
+val Servicio.responsable: String
+    get() = if (esGuiado) guia else conductor
+
+val Servicio.esGuiado: Boolean
+    get() = tipo == "GUIDED_SERVICE"
 
 fun formatHora(hora: LocalTime): String = hora.format(horaFormatter)
 
 fun formatFecha(fecha: LocalDate): String = fecha.format(fechaFormatter)
 
 fun formatFechaCorta(fecha: LocalDate): String = fecha.format(fechaCortaFormatter)
+
+/** Nombre del mes con mayúscula inicial, por ejemplo "Noviembre". */
+fun formatNombreMes(mes: Month): String =
+    mes.getDisplayName(TextStyle.FULL, LOCALE_CHILE).replaceFirstChar { it.titlecase(LOCALE_CHILE) }
 
 fun formatPrecioCLP(monto: Int): String =
     "$" + monto.toString().reversed().chunked(3).joinToString(".").reversed()

@@ -2,18 +2,178 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Colección de usuarios: uid -> { email, nombre, rol }
-    // Solo el administrador crea/edita estos documentos desde la consola.
+    // ---------- Funciones auxiliares ----------
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function perfil() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    // Usuario autenticado, con documento en "usuarios" y rol válido.
+    // (Cuando agreguen el campo "activo", sumar: && perfil().get('activo', true) == true)
+    function tieneAcceso() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && perfil().rol in ['administrador', 'conductor', 'guia'];
+    }
+
+    function esAdmin() {
+      return tieneAcceso() && perfil().rol == 'administrador';
+    }
+
+    // ---------- Colecciones ----------
+
+    // usuarios/{uid}: { email, nombre, rol }
+    // Cada usuario lee solo su documento (para obtener su rol); el admin lee todos.
+    // Nadie modifica roles desde la app: solo desde la consola o un script con Admin SDK.
     match /usuarios/{uid} {
-      // Un usuario autenticado puede leer su propio documento (para obtener su rol).
-      allow read: if request.auth != null && request.auth.uid == uid;
-      // Nadie desde la app puede modificar roles: solo el admin desde la consola.
+      allow read: if signedIn() && (request.auth.uid == uid || esAdmin());
       allow write: if false;
     }
 
-    // El resto de las colecciones de la app requieren estar autenticado.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // respuestas/{uid}_{servicioId}: { uid, servicioId, rol, estado, respondidoEn,
+    //                                  motivo y observaciones (solo si está rechazado) }
+    // Cada conductor o guía responde solo con su uid. Los servicios viven en la API, así que
+    // estas reglas no pueden comprobar que el servicio sea suyo: eso lo revisa la app.
+    // Un servicio aceptado se puede rechazar después; un rechazo es definitivo.
+    function respuestaValida(respuestaId) {
+      let d = request.resource.data;
+      return tieneAcceso()
+        && d.uid == request.auth.uid
+        && d.rol == perfil().rol
+        && d.rol in ['conductor', 'guia']
+        && d.servicioId is string
+        && respuestaId == request.auth.uid + '_' + d.servicioId
+        && d.respondidoEn == request.time
+        && (respuestaAceptada(d) || respuestaRechazada(d));
     }
+
+    function respuestaAceptada(d) {
+      return d.estado == 'aceptado'
+        && d.keys().hasOnly(['uid', 'servicioId', 'rol', 'estado', 'respondidoEn']);
+    }
+
+    function respuestaRechazada(d) {
+      return d.estado == 'rechazado'
+        && d.keys().hasOnly(['uid', 'servicioId', 'rol', 'estado', 'respondidoEn', 'motivo', 'observaciones'])
+        && d.motivo in ['falla_mecanica', 'fuerza_mayor', 'cruce_horario', 'otro']
+        && d.observaciones is string
+        && d.observaciones.size() <= 500
+        && (d.motivo != 'otro' || d.observaciones.trim().size() > 0);
+    }
+
+    match /respuestas/{respuestaId} {
+      allow read: if signedIn() && (resource.data.uid == request.auth.uid || esAdmin());
+      allow create: if respuestaValida(respuestaId);
+      allow update: if respuestaValida(respuestaId)
+        && resource.data.estado == 'aceptado'
+        && request.resource.data.estado == 'rechazado';
+      allow delete: if false;
+    }
+
+    // estadosServicio/{servicioId}: { uid, servicioId, rol, nombre, estado, fecha, actualizadoEn }
+    // Lo que el guía y el conductor de un mismo tour necesitan saber del otro. Sin motivo ni
+    // observaciones, que siguen privados en "respuestas". Solo quien lo publicó puede cambiarlo.
+    function estadoValido(servicioId) {
+      let d = request.resource.data;
+      return tieneAcceso()
+        && d.uid == request.auth.uid
+        && d.rol == perfil().rol
+        && d.rol in ['conductor', 'guia']
+        && d.nombre == perfil().get('nombre', '')
+        && d.servicioId == servicioId
+        && d.estado in ['aceptado', 'rechazado']
+        && d.fecha is string
+        && d.actualizadoEn == request.time
+        && d.keys().hasOnly(['uid', 'servicioId', 'rol', 'nombre', 'estado', 'fecha', 'actualizadoEn']);
+    }
+
+    match /estadosServicio/{servicioId} {
+      allow read: if tieneAcceso();
+      allow create: if estadoValido(servicioId) && leCorresponde(servicioId);
+      allow update: if estadoValido(servicioId)
+        && leCorresponde(servicioId)
+        && resource.data.uid == request.auth.uid
+        && resource.data.estado == 'aceptado'
+        && request.resource.data.estado == 'rechazado';
+      // Al reasignar, el administrador borra el estado de la persona anterior.
+      allow delete: if esAdmin();
+    }
+
+    // Si el servicio se reasignó, solo responde el reemplazo.
+    function leCorresponde(servicioId) {
+      let asignacion = /databases/$(database)/documents/asignaciones/$(servicioId);
+      return !exists(asignacion) || get(asignacion).data.uid == request.auth.uid;
+    }
+
+    // asignaciones/{servicioId}: { servicioId, uid, nombre, rol, fecha, asignadoPor, asignadoEn }
+    // Reemplazo elegido por el administrador, porque la API es de solo lectura. Lo leen todos
+    // para saber quién tiene cada servicio; el rol y el nombre deben ser los de esa cuenta.
+    function asignacionValida(servicioId) {
+      let d = request.resource.data;
+      let persona = /databases/$(database)/documents/usuarios/$(d.uid);
+      return esAdmin()
+        && d.servicioId == servicioId
+        && d.uid is string
+        && exists(persona)
+        && d.rol == get(persona).data.rol
+        && d.rol in ['conductor', 'guia']
+        && d.nombre == get(persona).data.get('nombre', '')
+        && d.fecha is string
+        && d.asignadoPor == request.auth.uid
+        && d.asignadoEn == request.time
+        && d.keys().hasOnly(['servicioId', 'uid', 'nombre', 'rol', 'fecha', 'asignadoPor', 'asignadoEn']);
+    }
+
+    match /asignaciones/{servicioId} {
+      allow read: if tieneAcceso();
+      allow create, update: if asignacionValida(servicioId);
+      allow delete: if false;
+    }
+
+    // checkins/{uid}_{servicioId}: { uid, servicioId, rol, checkInEn, lat, lon, distanciaM, gpsReal,
+    //                                checkOutEn, latFin, lonFin (solo tras el check-out) }
+    // Es ubicación de personas: solo la leen el dueño y el administrador. El check-out se
+    // registra una sola vez y nada más se puede cambiar. Igual que en "respuestas", que el
+    // servicio sea de esa persona y esté aceptado lo revisa la app.
+    function checkinValido(checkinId) {
+      let d = request.resource.data;
+      return tieneAcceso()
+        && d.uid == request.auth.uid
+        && d.rol == perfil().rol
+        && d.rol in ['conductor', 'guia']
+        && d.servicioId is string
+        && checkinId == request.auth.uid + '_' + d.servicioId
+        && d.checkInEn == request.time
+        && d.lat is number
+        && d.lon is number
+        && d.distanciaM is int
+        && d.gpsReal is bool
+        && d.keys().hasOnly(['uid', 'servicioId', 'rol', 'checkInEn', 'lat', 'lon', 'distanciaM', 'gpsReal']);
+    }
+
+    function checkoutValido() {
+      let d = request.resource.data;
+      return signedIn()
+        && resource.data.uid == request.auth.uid
+        && !('checkOutEn' in resource.data)
+        && d.diff(resource.data).affectedKeys().hasOnly(['checkOutEn', 'latFin', 'lonFin'])
+        && d.checkOutEn == request.time
+        && d.latFin is number
+        && d.lonFin is number;
+    }
+
+    match /checkins/{checkinId} {
+      allow read: if signedIn() && (resource.data.uid == request.auth.uid || esAdmin());
+      allow create: if checkinValido(checkinId);
+      allow update: if checkoutValido();
+      allow delete: if false;
+    }
+
+    // Todo lo demás queda DENEGADO por defecto.
+    // Cada colección nueva (respuestas, checkins, incidencias, alertas...) se agrega
+    // aquí con su propio bloque "match" y sus reglas. No usar comodines {document=**}.
   }
 }

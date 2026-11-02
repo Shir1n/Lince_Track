@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -60,16 +61,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.EstadoServicio
+import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.formatFecha
 import com.example.lince_track.data.formatHora
+import com.example.lince_track.data.formatNombreMes
 import com.example.lince_track.data.formatPrecioCLP
 import com.example.lince_track.ui.agenda.AgendaViewModel
 import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.RejectServicioDialog
 import java.time.LocalDate
 import java.time.YearMonth
+import com.example.lince_track.ui.theme.BarraSuperior
 
 private val weekDayLabels = listOf("L", "M", "X", "J", "V", "S", "D")
 
@@ -98,7 +103,11 @@ fun CalendarioScreen(onServiceClick: (String) -> Unit = {}) {
     }
 
     val serviciosPorFecha = remember(servicios) { servicios.groupBy { it.fecha } }
-    val conflictos = remember(servicios) { detectarConflictos(servicios) }
+    // El administrador ve servicios de varias personas: que coincidan en hora no es un conflicto.
+    val rolActual by AuthRepository.rolActual.collectAsState()
+    val conflictos = remember(servicios, rolActual) {
+        if (rolActual == Rol.ADMINISTRADOR) emptySet() else detectarConflictos(servicios)
+    }
 
     var filtro by remember { mutableStateOf(FiltroAgenda.TODOS) }
     var rechazoPendiente by remember { mutableStateOf<Servicio?>(null) }
@@ -153,8 +162,8 @@ fun CalendarioScreen(onServiceClick: (String) -> Unit = {}) {
         RejectServicioDialog(
             servicio = servicio,
             onDismiss = { rechazoPendiente = null },
-            onConfirm = {
-                viewModel.rechazar(servicio)
+            onConfirm = { motivo, observaciones ->
+                viewModel.rechazar(servicio, motivo, observaciones)
                 rechazoPendiente = null
             }
         )
@@ -166,13 +175,13 @@ private fun AgendaTopBar() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp)
-            .background(MaterialTheme.colorScheme.primary),
+            .height(51.dp)
+            .background(BarraSuperior.fondo),
         contentAlignment = Alignment.CenterStart
     ) {
         Text(
             text = "Agenda",
-            color = MaterialTheme.colorScheme.onPrimary,
+            color = BarraSuperior.contenido,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp)
@@ -215,7 +224,7 @@ private fun CalendarioSection(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = capitalizar(month.month.toString()),
+                        text = formatNombreMes(month.month),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -381,7 +390,7 @@ private fun StatusDot(estado: EstadoServicio) {
 @Composable
 private fun FiltroChips(filtro: FiltroAgenda, onFiltro: (FiltroAgenda) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         FiltroAgenda.entries.forEach { opcion ->
@@ -391,13 +400,10 @@ private fun FiltroChips(filtro: FiltroAgenda, onFiltro: (FiltroAgenda) -> Unit) 
                 label = {
                     Text(
                         text = opcion.label,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center,
                         maxLines = 1,
                         style = MaterialTheme.typography.labelMedium
                     )
                 },
-                modifier = Modifier.weight(1f),
                 colors = FilterChipDefaults.filterChipColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -576,14 +582,20 @@ private fun AgendaCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = formatPrecioCLP(servicio.tarifa),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                // La API aún no trae tarifa: sin ella no se muestra. El espacio mantiene los botones a la derecha.
+                if (servicio.tarifa > 0) {
+                    Text(
+                        text = formatPrecioCLP(servicio.tarifa),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                } else {
+                    Spacer(modifier = Modifier.width(0.dp))
+                }
 
-                if (servicio.estado == EstadoServicio.PENDIENTE) {
+                val rol by AuthRepository.rolActual.collectAsState()
+                if (servicio.estado == EstadoServicio.PENDIENTE && rol != Rol.ADMINISTRADOR) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (procesando) {
                             CircularProgressIndicator(
@@ -660,5 +672,3 @@ private fun detectarConflictos(servicios: List<Servicio>): Set<String> {
     return conflictos
 }
 
-private fun capitalizar(texto: String): String =
-    texto.lowercase().replaceFirstChar { it.titlecase() }

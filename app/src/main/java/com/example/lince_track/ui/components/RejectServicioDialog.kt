@@ -20,31 +20,26 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lince_track.data.MotivoRechazo
+import com.example.lince_track.data.ReglasRespuesta
 import com.example.lince_track.data.Servicio
 
 @Composable
 fun RejectServicioDialog(
     servicio: Servicio,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: (MotivoRechazo, String) -> Unit
 ) {
-    var selectedReason by remember { mutableIntStateOf(0) }
-    var observations by remember { mutableStateOf("") }
-    val reasons = listOf(
-        "Falla mecánica de vehículo",
-        "Problema de salud / Fuerza mayor",
-        "Cruce de horario con otro servicio",
-        "Otro"
-    )
+    var selectedReason by rememberSaveable { mutableStateOf<MotivoRechazo?>(null) }
+    var observations by rememberSaveable { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -68,7 +63,7 @@ fun RejectServicioDialog(
         text = {
             Column {
                 Text(
-                    text = "Se notificará de inmediato a Coordinación Logística para buscar un reemplazo.",
+                    text = "Tu respuesta quedará registrada para Coordinación Logística.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -80,19 +75,19 @@ fun RejectServicioDialog(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                reasons.forEachIndexed { index, reason ->
+                MotivoRechazo.entries.forEach { reason ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { selectedReason = index },
+                            .clickable { selectedReason = reason },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
-                            selected = selectedReason == index,
-                            onClick = { selectedReason = index }
+                            selected = selectedReason == reason,
+                            onClick = { selectedReason = reason }
                         )
                         Text(
-                            text = reason,
+                            text = reason.etiqueta,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -101,10 +96,14 @@ fun RejectServicioDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = observations,
-                    onValueChange = { observations = it },
+                    onValueChange = { observations = it.take(ReglasRespuesta.MAX_OBSERVACIONES) },
                     placeholder = {
                         Text(
-                            text = "Observaciones para el coordinador...",
+                            text = if (selectedReason?.requiereTexto == true) {
+                                "Describe el motivo (Obligatorio)..."
+                            } else {
+                                "Observaciones para el coordinador..."
+                            },
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
@@ -115,7 +114,8 @@ fun RejectServicioDialog(
         },
         confirmButton = {
             Button(
-                onClick = onConfirm,
+                onClick = { selectedReason?.let { onConfirm(it, observations.trim()) } },
+                enabled = ReglasRespuesta.motivoValido(selectedReason, observations),
                 shape = RoundedCornerShape(50),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {

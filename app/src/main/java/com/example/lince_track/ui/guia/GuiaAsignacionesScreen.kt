@@ -52,32 +52,29 @@ import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.formatFechaCorta
 import com.example.lince_track.data.formatHora
+import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.RejectServicioDialog
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import com.example.lince_track.ui.theme.BarraSuperior
 
 /**
  * Lista de excursiones/traslados asignados al guía logueado.
  *
- * Basada en ServiciosScreen: muestra los servicios del día filtrados por el
- * nombre del guía (campo `guia` de Servicio).
- *
- * TODO: obtener el nombre del guía desde la sesión (AuthRepository) en lugar
- * del valor por defecto.
+ * Basada en ServiciosScreen: muestra los servicios del día. ServicioRepository ya
+ * entrega solo los del guía con sesión iniciada (por su guiaId).
  */
 @Composable
 fun GuiaAsignacionesScreen(
-    guiaNombre: String = "Andrea Soto",
     onServiceClick: (String) -> Unit = {},
     onRouteClick: (String) -> Unit = {}
 ) {
     val servicios by ServicioRepository.servicios.collectAsState()
+    val error by ServicioRepository.error.collectAsState()
     val hoy = LocalDate.now()
-    val serviciosHoy = remember(servicios, hoy, guiaNombre) {
-        servicios
-            .filter { it.fecha == hoy && it.guia.equals(guiaNombre, ignoreCase = true) }
-            .sortedBy { it.horaInicio }
+    val serviciosHoy = remember(servicios, hoy) {
+        servicios.filter { it.fecha == hoy }.sortedBy { it.horaInicio }
     }
 
     val scope = rememberCoroutineScope()
@@ -85,13 +82,15 @@ fun GuiaAsignacionesScreen(
     var rechazoPendiente by remember { mutableStateOf<Servicio?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    fun operar(servicio: Servicio, op: suspend (String) -> Result<Unit>) {
+    fun operar(servicio: Servicio, op: suspend (String) -> Result<String?>) {
         if (servicio.id in procesandoIds) return
         scope.launch {
             procesandoIds = procesandoIds + servicio.id
             val resultado = op(servicio.id)
             procesandoIds = procesandoIds - servicio.id
-            resultado.onFailure { e ->
+            resultado.onSuccess { aviso ->
+                if (aviso != null) snackbarHostState.showSnackbar(aviso)
+            }.onFailure { e ->
                 snackbarHostState.showSnackbar(e.message ?: "No se pudo completar la operación")
             }
         }
@@ -121,7 +120,9 @@ fun GuiaAsignacionesScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                if (serviciosHoy.isEmpty()) {
+                error?.let { AvisoServiciosCard(it) }
+
+                if (serviciosHoy.isEmpty() && error == null) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
@@ -171,8 +172,8 @@ fun GuiaAsignacionesScreen(
         RejectServicioDialog(
             servicio = servicio,
             onDismiss = { rechazoPendiente = null },
-            onConfirm = {
-                operar(servicio, ServicioRepository::rechazar)
+            onConfirm = { motivo, observaciones ->
+                operar(servicio) { ServicioRepository.rechazar(it, motivo, observaciones) }
                 rechazoPendiente = null
             }
         )
@@ -184,8 +185,8 @@ private fun TopBar() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp)
-            .background(MaterialTheme.colorScheme.primary)
+            .height(72.dp)
+            .background(BarraSuperior.fondo)
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.CenterStart
     ) {
@@ -196,7 +197,7 @@ private fun TopBar() {
         ) {
             Text(
                 text = "Lince Track",
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = BarraSuperior.contenido,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -340,7 +341,7 @@ private fun ServicioCard(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "${servicio.origen} → ${servicio.destino}",
+                    text = "${servicio.origen} – ${servicio.destino}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface

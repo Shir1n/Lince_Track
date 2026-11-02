@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:589632568586:android:98377707d04575da798ef3",
+        "android_client_info": {
+          "package_name": "cl.duoc.lince_track"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0LKLl1A3-jjx0HiLtg7oWmmkZRT0Vnqc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:589632568586:android:ab358a8d93bc3b6d798ef3",
         "android_client_info": {
           "package_name": "com.example.lince_track"

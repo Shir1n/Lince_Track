@@ -2,6 +2,7 @@ package com.example.lince_track.ui.agenda
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.lince_track.data.MotivoRechazo
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,19 +50,22 @@ class AgendaViewModel : ViewModel() {
 
     fun aceptar(servicio: Servicio) = operar(servicio) { ServicioRepository.aceptar(it) }
 
-    fun rechazar(servicio: Servicio) = operar(servicio) { ServicioRepository.rechazar(it) }
+    fun rechazar(servicio: Servicio, motivo: MotivoRechazo, observaciones: String) =
+        operar(servicio) { ServicioRepository.rechazar(it, motivo, observaciones) }
 
     fun limpiarMensaje() {
         _message.value = null
     }
 
-    private fun operar(servicio: Servicio, op: suspend (String) -> Result<Unit>) {
+    private fun operar(servicio: Servicio, op: suspend (String) -> Result<String?>) {
         if (servicio.id in _processingIds.value) return
         viewModelScope.launch {
             _processingIds.update { it + servicio.id }
             val resultado = op(servicio.id)
             _processingIds.update { it - servicio.id }
-            resultado.onFailure { e ->
+            resultado.onSuccess { aviso ->
+                if (aviso != null) _message.value = aviso
+            }.onFailure { e ->
                 _message.value = e.message ?: "No se pudo completar la operación"
             }
         }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.Cancel
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Schedule
@@ -21,11 +22,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-enum class TipoAlerta {
-    ATRASO,
-    SERVICIO
-}
+import com.example.lince_track.data.ServicioRepository
+import com.example.lince_track.ui.components.AvisoServiciosCard
+import com.example.lince_track.ui.theme.BarraSuperior
 
 enum class FiltroAlertas(val label: String) {
     TODAS("Todas"),
@@ -33,65 +32,24 @@ enum class FiltroAlertas(val label: String) {
     SERVICIOS("Servicios")
 }
 
-data class AlertaItem(
-    val id: String,
-    val tipo: TipoAlerta,
-    val badgeLabel: String,
-    val badgeIcon: ImageVector,
-    val badgeContainerColor: @Composable () -> Color,
-    val badgeContentColor: @Composable () -> Color,
-    val titulo: String,
-    val descripcion: String,
-    val tiempo: String
-)
-
 @Composable
-fun AlertasScreen() {
+fun AlertasScreen(onServiceClick: (String) -> Unit = {}) {
     var filtroSeleccionado by remember { mutableStateOf(FiltroAlertas.TODAS) }
 
-    val alertas = remember {
-        listOf(
-            AlertaItem(
-                id = "ALT-001",
-                tipo = TipoAlerta.ATRASO,
-                badgeLabel = "Urgent Delay Warning",
-                badgeIcon = Icons.Outlined.NotificationsActive,
-                badgeContainerColor = { MaterialTheme.colorScheme.tertiary },
-                badgeContentColor = { MaterialTheme.colorScheme.onTertiary },
-                titulo = "Alerta Margen 15 min - Transfer Tepual",
-                descripcion = "Faltan 5 minutos para el límite de tolerancia de Check-in en servicio #SB-8941.",
-                tiempo = "Hace 5 min"
-            ),
-            AlertaItem(
-                id = "ALT-002",
-                tipo = TipoAlerta.SERVICIO,
-                badgeLabel = "Reasignement Notice",
-                badgeIcon = Icons.Filled.CheckCircle,
-                badgeContainerColor = { MaterialTheme.colorScheme.secondary },
-                badgeContentColor = { MaterialTheme.colorScheme.onSecondary },
-                titulo = "Reasignación Confirmada",
-                descripcion = "Excursión Saltos del Petrohué reasignada con éxito a Guía: Roberto Díaz.",
-                tiempo = "Hace 30 min"
-            ),
-            AlertaItem(
-                id = "ALT-003",
-                tipo = TipoAlerta.SERVICIO,
-                badgeLabel = "Schedule Change",
-                badgeIcon = Icons.Outlined.Schedule,
-                badgeContainerColor = { MaterialTheme.colorScheme.primary },
-                badgeContentColor = { MaterialTheme.colorScheme.onPrimary },
-                titulo = "Ajuste de Horario Pickup",
-                descripcion = "Pickup en Hotel Cumbres ajustado a 08:45 AM por solicitud de coordinación.",
-                tiempo = "Hace 1 hora"
-            )
-        )
+    val servicios by ServicioRepository.servicios.collectAsState()
+    val checkins by ServicioRepository.checkins.collectAsState()
+    val respuestas by ServicioRepository.respuestas.collectAsState()
+    val error by ServicioRepository.error.collectAsState()
+
+    val alertas = remember(servicios, checkins, respuestas) {
+        GeneradorAlertas.generar(servicios, checkins, respuestas)
     }
 
     val alertasFiltradas = remember(filtroSeleccionado, alertas) {
         when (filtroSeleccionado) {
             FiltroAlertas.TODAS -> alertas
-            FiltroAlertas.ATRASOS -> alertas.filter { it.tipo == TipoAlerta.ATRASO }
-            FiltroAlertas.SERVICIOS -> alertas.filter { it.tipo == TipoAlerta.SERVICIO }
+            FiltroAlertas.ATRASOS -> alertas.filter { it.clase.tipo == TipoAlerta.ATRASO }
+            FiltroAlertas.SERVICIOS -> alertas.filter { it.clase.tipo == TipoAlerta.SERVICIO }
         }
     }
 
@@ -112,7 +70,9 @@ fun AlertasScreen() {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            if (alertasFiltradas.isEmpty()) {
+            error?.let { AvisoServiciosCard(it) }
+
+            if (alertasFiltradas.isEmpty() && error == null) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -140,7 +100,7 @@ fun AlertasScreen() {
                 }
             } else {
                 alertasFiltradas.forEach { alerta ->
-                    AlertaCard(alerta = alerta)
+                    AlertaCard(alerta = alerta, onClick = { onServiceClick(alerta.servicioId) })
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -156,14 +116,13 @@ private fun AlertasHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.primary)
-            .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .background(BarraSuperior.fondo)
+            .padding(horizontal = 16.dp, vertical = 13.dp)
     ) {
         Column {
             Text(
                 text = "Centro de Alertas",
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = BarraSuperior.contenido,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -178,15 +137,15 @@ private fun AlertasHeader(
                     val selected = filtro == filtroSeleccionado
                     Surface(
                         shape = RoundedCornerShape(50),
-                        color = if (selected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.15f),
-                        border = if (selected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.35f)),
+                        color = if (selected) MaterialTheme.colorScheme.surface else BarraSuperior.contenido.copy(alpha = 0.15f),
+                        border = if (selected) null else BorderStroke(1.dp, BarraSuperior.contenido.copy(alpha = 0.35f)),
                         modifier = Modifier.clickable { onSeleccionarFiltro(filtro) }
                     ) {
                         Text(
                             text = filtro.label,
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimary,
+                            color = if (selected) MaterialTheme.colorScheme.onSurface else BarraSuperior.contenido,
                             modifier = Modifier.padding(horizontal = 18.dp, vertical = 7.dp)
                         )
                     }
@@ -197,8 +156,35 @@ private fun AlertasHeader(
 }
 
 @Composable
-private fun AlertaCard(alerta: AlertaItem) {
+private fun AlertaCard(alerta: Alerta, onClick: () -> Unit) {
+    val colorFondo: Color
+    val colorContenido: Color
+    val icono: ImageVector
+    when (alerta.clase) {
+        ClaseAlerta.CHECKIN_ATRASADO -> {
+            colorFondo = MaterialTheme.colorScheme.tertiary
+            colorContenido = MaterialTheme.colorScheme.onTertiary
+            icono = Icons.Outlined.NotificationsActive
+        }
+        ClaseAlerta.POR_RESPONDER -> {
+            colorFondo = MaterialTheme.colorScheme.primary
+            colorContenido = MaterialTheme.colorScheme.onPrimary
+            icono = Icons.Outlined.Schedule
+        }
+        ClaseAlerta.EN_RUTA -> {
+            colorFondo = MaterialTheme.colorScheme.secondary
+            colorContenido = MaterialTheme.colorScheme.onSecondary
+            icono = Icons.Filled.CheckCircle
+        }
+        ClaseAlerta.CANCELADO -> {
+            colorFondo = MaterialTheme.colorScheme.error
+            colorContenido = MaterialTheme.colorScheme.onError
+            icono = Icons.Outlined.Cancel
+        }
+    }
+
     Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -210,7 +196,7 @@ private fun AlertaCard(alerta: AlertaItem) {
                 .padding(16.dp)
         ) {
             Surface(
-                color = alerta.badgeContainerColor(),
+                color = colorFondo,
                 shape = RoundedCornerShape(50)
             ) {
                 Row(
@@ -218,15 +204,15 @@ private fun AlertaCard(alerta: AlertaItem) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = alerta.badgeIcon,
+                        imageVector = icono,
                         contentDescription = null,
-                        tint = alerta.badgeContentColor(),
+                        tint = colorContenido,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = alerta.badgeLabel,
-                        color = alerta.badgeContentColor(),
+                        text = alerta.clase.etiqueta,
+                        color = colorContenido,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold
                     )

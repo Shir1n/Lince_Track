@@ -3,11 +3,11 @@ package com.example.lince_track.ui.ruta
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.net.Uri
+import android.view.MotionEvent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -34,8 +34,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.AlertDialog
@@ -44,14 +42,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -75,19 +69,31 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.lince_track.BuildConfig
+import com.example.lince_track.data.AuthRepository
+import com.example.lince_track.data.CheckinServicio
+import com.example.lince_track.data.ReglasCheckin
+import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.clima.ClimaInfo
 import com.example.lince_track.data.clima.ClimaService
 import com.example.lince_track.data.clima.PresetClima
 import com.example.lince_track.data.clima.RecomendacionConduccion
+import com.example.lince_track.data.clima.zonaClima
 import com.example.lince_track.data.formatHora
 import com.example.lince_track.data.clima.TipoClima
-import com.example.lince_track.util.LinceLogConsoleDialog
+import com.example.lince_track.data.esGuiado
+import com.example.lince_track.data.responsable
+import com.example.lince_track.data.servicios.ServicioMapper
 import com.example.lince_track.util.LinceLogger
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -106,12 +112,23 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
+import java.util.Locale
 import kotlin.math.roundToInt
+import com.example.lince_track.ui.theme.BarraSuperior
 
 enum class RolMapa(val label: String) {
     TRANSPORTISTA("Transportista"),
     GUIA("Guía SERNATUR"),
-    COORDINADOR("Coordinador")
+    COORDINADOR("Coordinador");
+
+    companion object {
+        /** La vista del mapa sale del rol real de la cuenta. */
+        fun desde(rol: Rol?): RolMapa = when (rol) {
+            Rol.GUIA -> GUIA
+            Rol.ADMINISTRADOR -> COORDINADOR
+            else -> TRANSPORTISTA
+        }
+    }
 }
 
 enum class AppNavegacionExterna(val label: String, val subtitle: String) {
@@ -129,27 +146,66 @@ private val SimuladorCercaPickup = GeoPoint(-41.3208, -72.9869)
 
 @Composable
 fun RutaMapaScreen(
-    servicioId: String = "SB-2026-8890",
-    onBack: () -> Unit = {},
-    initialRole: RolMapa = RolMapa.TRANSPORTISTA
+    servicioId: String,
+    onBack: () -> Unit = {}
+) {
+    val servicios by ServicioRepository.servicios.collectAsState()
+    val servicio = remember(servicios, servicioId) { servicios.find { it.id == servicioId } }
+
+    if (servicio == null) {
+        RutaNoEncontrada(onBack = onBack)
+    } else {
+        RutaMapaContenido(servicio = servicio, onBack = onBack)
+    }
+}
+
+@Composable
+private fun RutaNoEncontrada(onBack: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "Servicio no encontrado",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = onBack,
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text("Volver")
+            }
+        }
+    }
+}
+
+@Composable
+private fun RutaMapaContenido(
+    servicio: Servicio,
+    onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val servicios by ServicioRepository.servicios.collectAsState()
-    val servicio = remember(servicios, servicioId) {
-        servicios.find { it.id == servicioId } ?: servicios.firstOrNull()
-    }
+    val rol by AuthRepository.rolActual.collectAsState()
+    val activeRole = RolMapa.desde(rol)
+    val esCoordinador = activeRole == RolMapa.COORDINADOR
 
-    var activeRole by remember { mutableStateOf(initialRole) }
-    var isCheckInDone by remember { mutableStateOf(false) }
-    var isServiceFinished by remember { mutableStateOf(false) }
-    var assignedDriver by remember { mutableStateOf("Carlos Morales (Sprinter LK-VF-84)") }
-    var showReportDialog by remember { mutableStateOf(false) }
-    var showReassignDialog by remember { mutableStateOf(false) }
+    val checkins by ServicioRepository.checkins.collectAsState()
+    val checkin = checkins[servicio.id]
+    val isCheckInDone = checkin != null
+    val isServiceFinished = checkin?.finalizado == true
+
+    var procesando by remember { mutableStateOf(false) }
     var showExternalNavDialog by remember { mutableStateOf(false) }
-    var showLogConsoleDialog by remember { mutableStateOf(false) }
+    var recentrarMapa by remember { mutableIntStateOf(0) }
 
     var hasLocationPermission by remember {
         mutableStateOf(hasPermissions(context))
@@ -162,11 +218,15 @@ fun RutaMapaScreen(
         LocationServices.getFusedLocationProviderClient(context)
     }
 
-    DisposableEffect(hasLocationPermission) {
-        if (!hasLocationPermission) return@DisposableEffect onDispose {}
+    // El administrador no está en terreno: no se pide ni se sigue su ubicación.
+    val seguirUbicacion = hasLocationPermission && !esCoordinador
 
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 2000L)
-            .setMinUpdateIntervalMillis(1000L)
+    DisposableEffect(seguirUbicacion) {
+        if (!seguirUbicacion) return@DisposableEffect onDispose {}
+
+        // Cada lectura redibuja la pantalla: leer más seguido traba los gestos del mapa.
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000L)
+            .setMinUpdateIntervalMillis(2000L)
             .setMinUpdateDistanceMeters(1f)
             .build()
 
@@ -218,19 +278,20 @@ fun RutaMapaScreen(
                 onLocation = { point, real ->
                     userGeoPoint = point
                     isUsingRealGps = real
+                    recentrarMapa++
                 }
             )
         }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(esCoordinador) {
         Configuration.getInstance().userAgentValue = "LinceTrackChile/1.0 (cl.duoc.lince_track)"
         LinceLogger.i(
             tag = "MAPA",
-            message = "Abriendo RutaMapaScreen para servicio $servicioId",
-            details = "titulo='${servicio?.titulo ?: "Por defecto"}', rolInicial=${activeRole.label}"
+            message = "Abriendo RutaMapaScreen para servicio ${servicio.id}",
+            details = "titulo='${servicio.titulo}', rol=${activeRole.label}"
         )
-        LinceLogger.runMapTileDiagnostic()
+        if (esCoordinador) return@LaunchedEffect
         if (hasLocationPermission) {
             fetchCurrentGps(
                 context = context,
@@ -238,6 +299,7 @@ fun RutaMapaScreen(
                 onLocation = { point, real ->
                     userGeoPoint = point
                     isUsingRealGps = real
+                    recentrarMapa++
                 }
             )
         } else {
@@ -253,25 +315,23 @@ fun RutaMapaScreen(
 
     val destinationPoint = remember(servicio) {
         when {
-            servicio?.destino?.contains("Petrohué", ignoreCase = true) == true ||
-                servicio?.destino?.contains("Parque", ignoreCase = true) == true -> DestinoPetrohue
-            servicio?.destino?.contains("Centro", ignoreCase = true) == true -> DestinoCentroPuertoVaras
+            servicio.destino.contains("Petrohué", ignoreCase = true) ||
+                servicio.destino.contains("Parque", ignoreCase = true) -> DestinoPetrohue
+            servicio.destino.contains("Centro", ignoreCase = true) -> DestinoCentroPuertoVaras
             else -> DestinoAeropuertoTepual
         }
     }
 
     val referenceTarget = when {
-        activeRole == RolMapa.COORDINADOR -> PickupHotelCumbres
         isCheckInDone -> destinationPoint
         activeRole == RolMapa.GUIA -> PuntoEncuentroGuias
         else -> PickupHotelCumbres
     }
 
     val targetLabel = when {
-        activeRole == RolMapa.COORDINADOR -> "Posición Unidad en Ruta"
-        isCheckInDone -> servicio?.destino ?: "Aeropuerto El Tepual"
-        activeRole == RolMapa.GUIA -> "Lobby ${servicio?.origen ?: "Hotel Cumbres"} (Punto de Encuentro)"
-        else -> "${servicio?.origen ?: "Hotel Cumbres Puerto Varas"} (Pickup)"
+        isCheckInDone -> servicio.destino
+        activeRole == RolMapa.GUIA -> "Lobby ${servicio.origen} (Punto de Encuentro)"
+        else -> "${servicio.origen} (Pickup)"
     }
 
     val distanceMeters = remember(userGeoPoint, referenceTarget) {
@@ -284,7 +344,6 @@ fun RutaMapaScreen(
 
     var ultimaUbicacionClima by remember { mutableStateOf<GeoPoint?>(null) }
     var ultimoTimestampClimaMs by remember { mutableStateOf(0L) }
-    var mapCenterTrigger by remember { mutableIntStateOf(1) }
 
     suspend fun refrescarClima(lat: Double, lon: Double, forzar: Boolean = false) {
         val ahora = System.currentTimeMillis()
@@ -312,7 +371,11 @@ fun RutaMapaScreen(
         }
     }
 
-    LaunchedEffect(presetClima) {
+    val zonaActual = remember(userGeoPoint) { zonaClima(userGeoPoint.latitude, userGeoPoint.longitude) }
+
+    // La tarjeta de clima solo se muestra al transportista.
+    LaunchedEffect(zonaActual, presetClima, activeRole) {
+        if (activeRole != RolMapa.TRANSPORTISTA) return@LaunchedEffect
         if (presetClima == PresetClima.REAL) {
             refrescarClima(userGeoPoint.latitude, userGeoPoint.longitude, forzar = true)
         } else {
@@ -321,21 +384,38 @@ fun RutaMapaScreen(
     }
 
     LaunchedEffect(userGeoPoint) {
-        if (presetClima == PresetClima.REAL) {
+        if (activeRole == RolMapa.TRANSPORTISTA && presetClima == PresetClima.REAL) {
             refrescarClima(userGeoPoint.latitude, userGeoPoint.longitude, forzar = false)
         }
     }
 
-    val driverDisplayName = remember(assignedDriver) {
-        assignedDriver.substringBefore("(").trim()
-    }
-
-    val recomendacionConduccion = remember(climaInfo, driverDisplayName, servicio) {
+    val recomendacionConduccion = remember(climaInfo, servicio) {
         ClimaService.generarRecomendacion(
             clima = climaInfo,
-            nombreConductor = driverDisplayName,
-            destino = servicio?.destino ?: "Aeropuerto El Tepual"
+            nombreConductor = if (servicio.esGuiado) "" else servicio.conductor,
+            destino = servicio.destino
         )
+    }
+
+    // En la versión final no se registra sin GPS real; en desarrollo se usa la posición simulada.
+    val hayUbicacion = isUsingRealGps || BuildConfig.DEBUG
+
+    fun registrar(mensajeExito: String, operacion: suspend () -> Result<String?>) {
+        if (procesando) return
+        scope.launch {
+            if (!hayUbicacion) {
+                snackbarHostState.showSnackbar("Aún no hay señal GPS. Espera unos segundos e intenta nuevamente.")
+                return@launch
+            }
+            procesando = true
+            val resultado = operacion()
+            procesando = false
+            resultado.onSuccess { aviso ->
+                snackbarHostState.showSnackbar(aviso ?: mensajeExito)
+            }.onFailure { e ->
+                snackbarHostState.showSnackbar(e.message ?: "No se pudo completar la operación")
+            }
+        }
     }
 
     Box(
@@ -347,16 +427,7 @@ fun RutaMapaScreen(
             RutaTopBar(
                 activeRole = activeRole,
                 hasPermission = hasLocationPermission,
-                onOpenLogs = { showLogConsoleDialog = true },
                 onBack = onBack
-            )
-
-            RoleSelectorRow(
-                activeRole = activeRole,
-                onRoleSelected = {
-                    activeRole = it
-                    LinceLogger.i("MAPA", "Cambio de vista de rol a ${it.label}")
-                }
             )
 
             Column(
@@ -364,13 +435,13 @@ fun RutaMapaScreen(
                     .weight(1f)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
+                    .padding(top = 12.dp)
             ) {
                 ServiceRouteHeaderCard(
                     servicio = servicio,
                     activeRole = activeRole,
                     isCheckInDone = isCheckInDone,
-                    isServiceFinished = isServiceFinished,
-                    assignedDriver = assignedDriver
+                    isServiceFinished = isServiceFinished
                 )
 
                 Box(
@@ -385,21 +456,22 @@ fun RutaMapaScreen(
                         context = context,
                         userPoint = userGeoPoint,
                         destinationPoint = destinationPoint,
-                        originTitle = servicio?.origen ?: "Hotel Cumbres Puerto Varas",
-                        destinationTitle = servicio?.destino ?: "Aeropuerto El Tepual",
+                        originTitle = servicio.origen,
+                        destinationTitle = servicio.destino,
                         activeRole = activeRole,
-                        routeColorArgb = MaterialTheme.colorScheme.secondary.toArgb(),
-                        centerTrigger = mapCenterTrigger
+                        recentrar = recentrarMapa,
+                        routeColorArgb = MaterialTheme.colorScheme.secondary.toArgb()
                     )
 
-                    // Velocímetro GPS aislado (evita recomponer la pantalla completa con cada km/h)
-                    GpsSpeedometerBadge(
-                        speedProvider = { currentSpeedKmh },
-                        tipoClima = climaInfo.tipo,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(12.dp)
-                    )
+                    if (!esCoordinador) {
+                        GpsSpeedometerBadge(
+                            speedProvider = { currentSpeedKmh },
+                            tipoClima = climaInfo.tipo,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(12.dp)
+                        )
+                    }
 
                     ExtendedFloatingActionButton(
                         onClick = { showExternalNavDialog = true },
@@ -418,7 +490,7 @@ fun RutaMapaScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (activeRole == RolMapa.COORDINADOR) {
+                            text = if (esCoordinador) {
                                 "Ver en Maps / Waze"
                             } else if (!isCheckInDone) {
                                 "Ir al Pickup"
@@ -430,46 +502,48 @@ fun RutaMapaScreen(
                         )
                     }
 
-                    FloatingActionButton(
-                        onClick = {
-                            mapCenterTrigger++
-                            if (hasLocationPermission) {
-                                fetchCurrentGps(
-                                    context = context,
-                                    fusedClient = fusedLocationClient,
-                                    onLocation = { point, real ->
-                                        userGeoPoint = point
-                                        isUsingRealGps = real
-                                        scope.launch {
-                                            val msg = if (real) {
-                                                "GPS actualizado (${formatCoord(point)})"
-                                            } else {
-                                                "GPS de emulador fuera de Chile: centrando en Puerto Varas"
+                    if (!esCoordinador) {
+                        FloatingActionButton(
+                            onClick = {
+                                if (hasLocationPermission) {
+                                    fetchCurrentGps(
+                                        context = context,
+                                        fusedClient = fusedLocationClient,
+                                        onLocation = { point, real ->
+                                            userGeoPoint = point
+                                            isUsingRealGps = real
+                                            recentrarMapa++
+                                            scope.launch {
+                                                val msg = if (real) {
+                                                    "GPS actualizado (${formatCoord(point)})"
+                                                } else {
+                                                    "Sin señal GPS: usando posición simulada en Puerto Varas"
+                                                }
+                                                snackbarHostState.showSnackbar(msg)
                                             }
-                                            snackbarHostState.showSnackbar(msg)
                                         }
-                                    }
-                                )
-                            } else {
-                                permissionLauncher.launch(
-                                    arrayOf(
-                                        Manifest.permission.ACCESS_FINE_LOCATION,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION
                                     )
-                                )
-                            }
-                        },
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(12.dp)
-                            .size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.MyLocation,
-                            contentDescription = "Actualizar ubicación GPS"
-                        )
+                                } else {
+                                    permissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.ACCESS_FINE_LOCATION,
+                                            Manifest.permission.ACCESS_COARSE_LOCATION
+                                        )
+                                    )
+                                }
+                            },
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(12.dp)
+                                .size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.MyLocation,
+                                contentDescription = "Centrar en mi ubicación"
+                            )
+                        }
                     }
                 }
 
@@ -498,58 +572,40 @@ fun RutaMapaScreen(
             RoleBottomActionPanel(
                 servicio = servicio,
                 activeRole = activeRole,
+                checkin = checkin,
                 distanceMeters = distanceMeters,
                 userPoint = userGeoPoint,
-                isCheckInDone = isCheckInDone,
-                isServiceFinished = isServiceFinished,
-                assignedDriver = assignedDriver,
+                isUsingRealGps = isUsingRealGps,
+                procesando = procesando,
                 onPrimaryAction = {
-                    when (activeRole) {
-                        RolMapa.TRANSPORTISTA -> {
-                            if (!isCheckInDone) {
-                                isCheckInDone = true
-                                scope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        "Check-in registrado en GPS (${formatCoord(userGeoPoint)})"
-                                    )
-                                }
-                            } else {
-                                isServiceFinished = true
-                                scope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        "Check-out finalizado en ${servicio?.destino ?: "destino"}"
-                                    )
-                                }
-                            }
+                    val esGuia = activeRole == RolMapa.GUIA
+                    if (!isCheckInDone) {
+                        val exito = if (esGuia) {
+                            "Presentación y grupo de ${servicio.pasajeros} pasajeros confirmados"
+                        } else {
+                            "Check-in registrado (${formatCoord(userGeoPoint)})"
                         }
-                        RolMapa.GUIA -> {
-                            if (!isCheckInDone) {
-                                isCheckInDone = true
-                                scope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        "Presentación SERNATUR y grupo de ${servicio?.pasajeros ?: 4} pasajeros confirmados"
-                                    )
-                                }
-                            } else {
-                                isServiceFinished = true
-                                scope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        "Servicio de guía finalizado sin incidencias"
-                                    )
-                                }
-                            }
+                        registrar(exito) {
+                            ServicioRepository.registrarCheckIn(
+                                id = servicio.id,
+                                lat = userGeoPoint.latitude,
+                                lon = userGeoPoint.longitude,
+                                distanciaM = distanceMeters,
+                                gpsReal = isUsingRealGps
+                            )
                         }
-                        RolMapa.COORDINADOR -> {
-                            showReassignDialog = true
+                    } else {
+                        val exito = if (esGuia) {
+                            "Servicio de guía finalizado"
+                        } else {
+                            "Check-out registrado en ${servicio.destino}"
                         }
-                    }
-                },
-                onSecondaryAction = {
-                    when (activeRole) {
-                        RolMapa.TRANSPORTISTA, RolMapa.GUIA -> showReportDialog = true
-                        RolMapa.COORDINADOR -> {
-                            val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:+56987654321"))
-                            context.startActivity(dialIntent)
+                        registrar(exito) {
+                            ServicioRepository.registrarCheckOut(
+                                id = servicio.id,
+                                lat = userGeoPoint.latitude,
+                                lon = userGeoPoint.longitude
+                            )
                         }
                     }
                 }
@@ -562,38 +618,10 @@ fun RutaMapaScreen(
         )
     }
 
-    if (showReportDialog) {
-        ReportIncidentDialog(
-            activeRole = activeRole,
-            onDismiss = { showReportDialog = false },
-            onConfirm = { motivo ->
-                showReportDialog = false
-                scope.launch {
-                    snackbarHostState.showSnackbar("Alerta enviada a Coordinación: $motivo")
-                }
-            }
-        )
-    }
-
-    if (showReassignDialog) {
-        ReassignDriverDialog(
-            currentDriver = assignedDriver,
-            onDismiss = { showReassignDialog = false },
-            onConfirm = { newDriver ->
-                assignedDriver = newDriver
-                showReassignDialog = false
-                scope.launch {
-                    snackbarHostState.showSnackbar("Servicio reasignado a $newDriver")
-                }
-            }
-        )
-    }
-
     if (showExternalNavDialog) {
-        val navTargetPoint = if (activeRole == RolMapa.COORDINADOR) userGeoPoint else referenceTarget
         ExternalNavigationDialog(
             targetName = targetLabel,
-            targetPoint = navTargetPoint,
+            targetPoint = referenceTarget,
             activeRole = activeRole,
             onDismiss = { showExternalNavDialog = false },
             onSelectApp = { appOption ->
@@ -601,7 +629,7 @@ fun RutaMapaScreen(
                 launchExternalMapApp(
                     context = context,
                     option = appOption,
-                    targetPoint = navTargetPoint,
+                    targetPoint = referenceTarget,
                     targetLabel = targetLabel,
                     onFallbackMessage = { msg ->
                         scope.launch { snackbarHostState.showSnackbar(msg) }
@@ -610,26 +638,19 @@ fun RutaMapaScreen(
             }
         )
     }
-
-    if (showLogConsoleDialog) {
-        LinceLogConsoleDialog(
-            onDismiss = { showLogConsoleDialog = false }
-        )
-    }
 }
 
 @Composable
 private fun RutaTopBar(
     activeRole: RolMapa,
     hasPermission: Boolean,
-    onOpenLogs: () -> Unit,
     onBack: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp)
-            .background(MaterialTheme.colorScheme.primary)
+            .height(58.dp)
+            .background(BarraSuperior.fondo)
             .padding(horizontal = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -642,12 +663,12 @@ private fun RutaTopBar(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Volver",
-                    tint = MaterialTheme.colorScheme.onPrimary
+                    tint = BarraSuperior.contenido
                 )
             }
             Text(
-                text = if (activeRole == RolMapa.COORDINADOR) "Monitoreo GPS" else "Ruta y Check-in",
-                color = MaterialTheme.colorScheme.onPrimary,
+                text = if (activeRole == RolMapa.COORDINADOR) "Ruta del Servicio" else "Ruta y Check-in",
+                color = BarraSuperior.contenido,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -671,80 +692,23 @@ private fun RutaTopBar(
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.padding(end = 6.dp)
+            modifier = Modifier
+                .padding(end = 6.dp)
+                .background(badgeColor, RoundedCornerShape(50))
+                .padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.18f))
-                    .clickable(onClick = onOpenLogs)
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    text = "Logs",
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .background(badgeColor, RoundedCornerShape(50))
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
-            ) {
-                Icon(
-                    imageVector = if (activeRole == RolMapa.COORDINADOR) Icons.Outlined.Person else Icons.Outlined.LocationOn,
-                    contentDescription = null,
-                    tint = badgeTextColor,
-                    modifier = Modifier.size(15.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = badgeText,
-                    color = badgeTextColor,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun RoleSelectorRow(
-    activeRole: RolMapa,
-    onRoleSelected: (RolMapa) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        RolMapa.entries.forEach { role ->
-            val selected = role == activeRole
-            FilterChip(
-                selected = selected,
-                onClick = { onRoleSelected(role) },
-                label = {
-                    Text(
-                        text = role.label,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-                    )
-                },
-                shape = RoundedCornerShape(50),
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    labelColor = MaterialTheme.colorScheme.onSurface
-                )
+            Icon(
+                imageVector = if (activeRole == RolMapa.COORDINADOR) Icons.Outlined.Person else Icons.Outlined.LocationOn,
+                contentDescription = null,
+                tint = badgeTextColor,
+                modifier = Modifier.size(15.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = badgeText,
+                color = badgeTextColor,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold
             )
         }
     }
@@ -752,15 +716,12 @@ private fun RoleSelectorRow(
 
 @Composable
 private fun ServiceRouteHeaderCard(
-    servicio: Servicio?,
+    servicio: Servicio,
     activeRole: RolMapa,
     isCheckInDone: Boolean,
-    isServiceFinished: Boolean,
-    assignedDriver: String
+    isServiceFinished: Boolean
 ) {
-    val horaInicioTexto = servicio?.let { formatHora(it.horaInicio) } ?: "08:30 AM"
-    val margenInicioTexto = servicio?.let { formatHora(it.horaInicio.minusMinutes(15)) } ?: "08:15 AM"
-    val margenFinTexto = servicio?.let { formatHora(it.horaInicio.plusMinutes(15)) } ?: "08:45 AM"
+    val horaInicioTexto = formatHora(servicio.horaInicio)
 
     Card(
         modifier = Modifier
@@ -778,7 +739,7 @@ private fun ServiceRouteHeaderCard(
                 verticalAlignment = Alignment.Top
             ) {
                 Text(
-                    text = servicio?.titulo ?: "Transfer Hotel Cumbres → Aeropuerto Tepual",
+                    text = servicio.titulo,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -795,14 +756,12 @@ private fun ServiceRouteHeaderCard(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            val guiaNombre = servicio?.guia ?: "Andrea Soto"
-            val pasajeros = servicio?.pasajeros ?: 4
-            val reserva = servicio?.reserva ?: "#SB-2026-8890"
-
+            val pasajerosTexto = "${servicio.pasajeros} Pasajeros"
             val subtitle = when (activeRole) {
-                RolMapa.TRANSPORTISTA -> "Guía: $guiaNombre (SERNATUR) • $pasajeros Pasajeros"
-                RolMapa.GUIA -> "Chofer: $assignedDriver • Reserva $reserva"
-                RolMapa.COORDINADOR -> "Unidad: $assignedDriver • Guía: $guiaNombre"
+                RolMapa.TRANSPORTISTA ->
+                    if (servicio.guia == ServicioMapper.SIN_GUIA) pasajerosTexto else "Guía: ${servicio.guia} • $pasajerosTexto"
+                RolMapa.GUIA -> "Reserva ${servicio.reserva} • $pasajerosTexto"
+                RolMapa.COORDINADOR -> "Responsable: ${servicio.responsable} • $pasajerosTexto"
             }
             Text(
                 text = subtitle,
@@ -813,16 +772,15 @@ private fun ServiceRouteHeaderCard(
             Spacer(modifier = Modifier.height(10.dp))
 
             val statusText = when {
-                isServiceFinished -> "Servicio Finalizado (Check-out OK)"
-                isCheckInDone -> "En Ruta — Check-in validado por GPS"
-                activeRole == RolMapa.COORDINADOR -> "Margen 15 min: $margenInicioTexto - $margenFinTexto (Esperando Check-in)"
-                else -> "Margen 15 min activo: $margenInicioTexto - $margenFinTexto (En horario)"
+                isServiceFinished -> "Servicio Finalizado"
+                isCheckInDone -> "En Ruta — Check-in registrado"
+                activeRole == RolMapa.COORDINADOR -> "Esperando check-in"
+                else -> "Inicio programado: $horaInicioTexto"
             }
             val statusColor = when {
                 isServiceFinished -> MaterialTheme.colorScheme.primary
                 isCheckInDone -> MaterialTheme.colorScheme.secondary
-                activeRole == RolMapa.COORDINADOR -> MaterialTheme.colorScheme.tertiary
-                else -> MaterialTheme.colorScheme.secondary
+                else -> MaterialTheme.colorScheme.tertiary
             }
 
             StatusBadge(text = statusText, color = statusColor)
@@ -882,19 +840,13 @@ private fun OsmMapContainer(
     originTitle: String,
     destinationTitle: String,
     activeRole: RolMapa,
-    routeColorArgb: Int,
-    centerTrigger: Int
+    recentrar: Int,
+    routeColorArgb: Int
 ) {
+    val esCoordinador = activeRole == RolMapa.COORDINADOR
+
+    // osmdroid ya queda configurado en MainActivity: volver a cargarlo aquí traba la apertura.
     val mapView = remember {
-        val prefs = context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE)
-        prefs.edit().putString("osmdroid.userAgentValue", "LinceTrackChile/1.0 (cl.duoc.lince_track)").apply()
-        val osmContext = object : ContextWrapper(context.applicationContext) {
-            override fun getPackageName(): String = "cl.duoc.lince_track"
-        }
-        Configuration.getInstance().load(osmContext, prefs)
-        Configuration.getInstance().userAgentValue = "LinceTrackChile/1.0 (cl.duoc.lince_track)"
-        Configuration.getInstance().isDebugMode = false
-        Configuration.getInstance().isDebugMapTileDownloader = true
         val linceTileSource = org.osmdroid.tileprovider.tilesource.XYTileSource(
             "LinceOsmDe",
             0,
@@ -914,106 +866,113 @@ private fun OsmMapContainer(
             setMultiTouchControls(true)
             controller.setZoom(13.0)
             controller.setCenter(PickupHotelCumbres)
+            // La pantalla tiene desplazamiento vertical: sin esto, se queda con los gestos del mapa.
+            setOnTouchListener { vista, evento ->
+                when (evento.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> vista.parent?.requestDisallowInterceptTouchEvent(true)
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
+                        vista.parent?.requestDisallowInterceptTouchEvent(false)
+                }
+                false
+            }
         }
     }
 
-    DisposableEffect(mapView) {
-        mapView.onResume()
+    // El mapa sigue las pausas de la app y se libera al salir de la pantalla.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, mapView) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
             mapView.onPause()
+            mapView.onDetach()
         }
     }
 
-    val routeLine = remember(mapView, destinationPoint, routeColorArgb) {
-        Polyline().apply {
-            setPoints(listOf(PickupHotelCumbres, destinationPoint))
-            outlinePaint.color = routeColorArgb
-            outlinePaint.strokeWidth = 10f
-        }
-    }
-
-    val originMarker = remember(mapView, originTitle) {
-        Marker(mapView).apply {
-            position = PickupHotelCumbres
-            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            title = "Pickup: $originTitle"
-        }
-    }
-
-    val destinationMarker = remember(mapView, destinationPoint, destinationTitle) {
-        Marker(mapView).apply {
-            position = destinationPoint
-            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            title = "Destino: $destinationTitle"
-        }
-    }
-
-    val guideMeetingMarker = remember(mapView) {
-        Marker(mapView).apply {
-            position = PuntoEncuentroGuias
-            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            title = "Punto de Encuentro Guía / Recepción Grupo"
-        }
-    }
-
-    val currentMarker = remember(mapView) {
+    val userMarker = remember(mapView) {
         Marker(mapView).apply {
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
         }
     }
 
-    var lastCenterTrigger by remember { mutableIntStateOf(-1) }
+    // Ruta y marcadores fijos: solo se rehacen si cambia el servicio o el rol.
+    LaunchedEffect(mapView, destinationPoint, originTitle, destinationTitle, activeRole, routeColorArgb) {
+        mapView.overlays.clear()
+
+        val routeLine = Polyline().apply {
+            setPoints(listOf(PickupHotelCumbres, destinationPoint))
+            outlinePaint.color = routeColorArgb
+            outlinePaint.strokeWidth = 10f
+        }
+        mapView.overlays.add(routeLine)
+
+        val originMarker = Marker(mapView).apply {
+            position = PickupHotelCumbres
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            title = "Pickup: $originTitle"
+        }
+        mapView.overlays.add(originMarker)
+
+        val destinationMarker = Marker(mapView).apply {
+            position = destinationPoint
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            title = "Destino: $destinationTitle"
+        }
+        mapView.overlays.add(destinationMarker)
+
+        if (activeRole == RolMapa.GUIA) {
+            val guideMeetingMarker = Marker(mapView).apply {
+                position = PuntoEncuentroGuias
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                title = "Punto de Encuentro Guía / Recepción Grupo"
+            }
+            mapView.overlays.add(guideMeetingMarker)
+        }
+
+        if (!esCoordinador) {
+            userMarker.title = if (activeRole == RolMapa.GUIA) "Tu Ubicación" else "Tu Vehículo"
+            mapView.overlays.add(userMarker)
+        }
+        mapView.invalidate()
+    }
+
+    // Solo se mueve el marcador del usuario, sin tocar lo que está explorando en el mapa.
+    LaunchedEffect(userMarker, userPoint) {
+        userMarker.position = userPoint
+        mapView.invalidate()
+    }
+
+    // Solo se centra al llegar la primera ubicación y al pulsar el botón de ubicación.
+    LaunchedEffect(recentrar) {
+        if (recentrar > 0 && !esCoordinador) mapView.controller.animateTo(userPoint)
+    }
 
     AndroidView(
         modifier = Modifier.fillMaxSize(),
-        factory = { _ ->
-            mapView.apply {
-                overlays.clear()
-                overlays.add(routeLine)
-                overlays.add(originMarker)
-                overlays.add(destinationMarker)
-                if (activeRole == RolMapa.GUIA) {
-                    overlays.add(guideMeetingMarker)
-                }
-                overlays.add(currentMarker)
-            }
-        },
-        update = { map: MapView ->
-            if (activeRole == RolMapa.GUIA && !map.overlays.contains(guideMeetingMarker)) {
-                map.overlays.add(guideMeetingMarker)
-            } else if (activeRole != RolMapa.GUIA && map.overlays.contains(guideMeetingMarker)) {
-                map.overlays.remove(guideMeetingMarker)
-            }
-
-            currentMarker.position = userPoint
-            currentMarker.title = when (activeRole) {
-                RolMapa.TRANSPORTISTA -> "Tu Vehículo (GPS en vivo)"
-                RolMapa.GUIA -> "Tu Ubicación Guía SERNATUR"
-                RolMapa.COORDINADOR -> "Telemetría Vehículo en Ruta"
-            }
-
-            if (lastCenterTrigger != centerTrigger) {
-                lastCenterTrigger = centerTrigger
-                map.controller.animateTo(userPoint)
-            }
-            map.invalidate()
-        }
+        factory = { mapView }
     )
 }
 
 @Composable
 private fun RoleBottomActionPanel(
-    servicio: Servicio?,
+    servicio: Servicio,
     activeRole: RolMapa,
+    checkin: CheckinServicio?,
     distanceMeters: Int,
     userPoint: GeoPoint,
-    isCheckInDone: Boolean,
-    isServiceFinished: Boolean,
-    assignedDriver: String,
-    onPrimaryAction: () -> Unit,
-    onSecondaryAction: () -> Unit
+    isUsingRealGps: Boolean,
+    procesando: Boolean,
+    onPrimaryAction: () -> Unit
 ) {
-    val origenNombre = servicio?.origen ?: "Hotel Cumbres, Puerto Varas"
+    val isCheckInDone = checkin != null
+    val isServiceFinished = checkin?.finalizado == true
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1037,308 +996,82 @@ private fun RoleBottomActionPanel(
             Spacer(modifier = Modifier.height(8.dp))
 
             val locationTitle = when (activeRole) {
-                RolMapa.TRANSPORTISTA -> "Punto de recogida: $origenNombre"
-                RolMapa.GUIA -> "Recepción de pasajeros: Lobby $origenNombre"
-                RolMapa.COORDINADOR -> "Monitoreando: $assignedDriver"
+                RolMapa.TRANSPORTISTA ->
+                    if (isCheckInDone) "Destino: ${servicio.destino}" else "Punto de recogida: ${servicio.origen}"
+                RolMapa.GUIA ->
+                    if (isCheckInDone) "Destino: ${servicio.destino}" else "Recepción de pasajeros: Lobby ${servicio.origen}"
+                RolMapa.COORDINADOR -> servicio.responsable
             }
             Text(
                 text = locationTitle,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(3.dp))
 
+            val detalle = when {
+                activeRole == RolMapa.COORDINADOR ->
+                    checkin?.let { ReglasCheckin.resumen(it) } ?: "Sin check-in registrado"
+                isUsingRealGps ->
+                    "A ${ReglasCheckin.formatoDistancia(distanceMeters)} del punto • GPS: ${formatCoord(userPoint)}"
+                BuildConfig.DEBUG ->
+                    "A ${ReglasCheckin.formatoDistancia(distanceMeters)} del punto • GPS simulado"
+                else -> "Esperando señal GPS..."
+            }
             Text(
-                text = "A $distanceMeters m del punto • GPS: ${formatCoord(userPoint)}",
+                text = detalle,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            if (activeRole != RolMapa.COORDINADOR) {
+                Spacer(modifier = Modifier.height(10.dp))
 
-            val primaryButtonText = when (activeRole) {
-                RolMapa.TRANSPORTISTA -> when {
-                    isServiceFinished -> "SERVICIO COMPLETADO"
-                    !isCheckInDone -> "REGISTRAR CHECK-IN (INICIO)"
-                    else -> "REGISTRAR CHECK-OUT (FIN)"
+                val primaryButtonText = when (activeRole) {
+                    RolMapa.GUIA -> when {
+                        isServiceFinished -> "EXCURSIÓN FINALIZADA"
+                        !isCheckInDone -> "CONFIRMAR PRESENTACIÓN Y GRUPO"
+                        else -> "FINALIZAR SERVICIO DE GUÍA"
+                    }
+                    else -> when {
+                        isServiceFinished -> "SERVICIO COMPLETADO"
+                        !isCheckInDone -> "REGISTRAR CHECK-IN (INICIO)"
+                        else -> "REGISTRAR CHECK-OUT (FIN)"
+                    }
                 }
-                RolMapa.GUIA -> when {
-                    isServiceFinished -> "EXCURSIÓN FINALIZADA"
-                    !isCheckInDone -> "CONFIRMAR PRESENTACIÓN Y GRUPO"
-                    else -> "FINALIZAR SERVICIO DE GUÍA"
-                }
-                RolMapa.COORDINADOR -> "REASIGNAR SERVICIO"
-            }
 
-            val primaryButtonColor = when (activeRole) {
-                RolMapa.COORDINADOR -> MaterialTheme.colorScheme.primary
-                else -> if (!isCheckInDone) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary
-            }
-
-            Button(
-                onClick = onPrimaryAction,
-                enabled = !isServiceFinished || activeRole == RolMapa.COORDINADOR,
-                shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.buttonColors(containerColor = primaryButtonColor),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-            ) {
-                if (isServiceFinished && activeRole != RolMapa.COORDINADOR) {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                Text(
-                    text = primaryButtonText,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            if (activeRole == RolMapa.COORDINADOR) {
-                OutlinedButton(
-                    onClick = onSecondaryAction,
+                Button(
+                    onClick = onPrimaryAction,
+                    enabled = !isServiceFinished && !procesando,
                     shape = RoundedCornerShape(50),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (!isCheckInDone) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(42.dp)
+                        .height(48.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Call,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    if (isServiceFinished) {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
                     Text(
-                        text = "Contactar Equipo en Ruta",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            } else {
-                TextButton(
-                    onClick = onSecondaryAction,
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    Text(
-                        text = if (activeRole == RolMapa.TRANSPORTISTA) {
-                            "Reportar retraso a Coordinación"
-                        } else {
-                            "Reportar incidencia de grupo a Coordinación"
-                        },
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 12.sp
+                        text = primaryButtonText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
                     )
                 }
             }
         }
     }
-}
-
-@Composable
-private fun ReportIncidentDialog(
-    activeRole: RolMapa,
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
-) {
-    var selectedReason by remember { mutableIntStateOf(0) }
-    var observations by remember { mutableStateOf("") }
-
-    val reasons = if (activeRole == RolMapa.TRANSPORTISTA) {
-        listOf(
-            "Tráfico denso / Corte en ruta",
-            "Falla mecánica o neumático",
-            "Espera de pasajeros en lobby",
-            "Condición climática adversa"
-        )
-    } else {
-        listOf(
-            "Pasajeros atrasados en recepción",
-            "Documentación / Voucher incompleto",
-            "Fila o demora en acceso CONAF",
-            "Cambio de itinerario solicitado"
-        )
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
-        icon = {
-            Icon(
-                imageVector = Icons.Filled.Warning,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.tertiary
-            )
-        },
-        title = {
-            Text(
-                text = if (activeRole == RolMapa.TRANSPORTISTA) {
-                    "Reportar Retraso en Ruta"
-                } else {
-                    "Reportar Incidencia de Grupo"
-                },
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        },
-        text = {
-            Column {
-                Text(
-                    text = "Se enviará tu ubicación GPS actual y el motivo a Coordinación Logística.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                reasons.forEachIndexed { index, reason ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { selectedReason = index },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = selectedReason == index,
-                            onClick = { selectedReason = index }
-                        )
-                        Text(
-                            text = reason,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = observations,
-                    onValueChange = { observations = it },
-                    placeholder = {
-                        Text(
-                            "Detalle adicional...",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(reasons[selectedReason]) },
-                shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text(
-                    text = "ENVIAR ALERTA",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onError
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    text = "CANCELAR",
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    )
-}
-
-@Composable
-private fun ReassignDriverDialog(
-    currentDriver: String,
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
-) {
-    var selectedReplacement by remember { mutableIntStateOf(0) }
-    val replacements = listOf(
-        "Miguel Soto (Mercedes Sprinter • A 5 min)",
-        "Jorge Valdivia (Hyundai H1 • Disponible)",
-        "Patricio Lagos (Ford Transit • En base)"
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
-        title = {
-            Text(
-                text = "Reasignar Servicio en Ruta",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        },
-        text = {
-            Column {
-                Text(
-                    text = "Actual: $currentDriver\nSelecciona unidad disponible cercana en el mapa:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                replacements.forEachIndexed { index, candidate ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { selectedReplacement = index },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = selectedReplacement == index,
-                            onClick = { selectedReplacement = index }
-                        )
-                        Text(
-                            text = candidate,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(replacements[selectedReplacement]) },
-                shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-            ) {
-                Text(
-                    text = "CONFIRMAR REEMPLAZO",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSecondary
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    text = "CANCELAR",
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    )
 }
 
 @Composable
@@ -1537,6 +1270,8 @@ private fun fetchCurrentGps(
     onLocation: (GeoPoint, Boolean) -> Unit
 ) {
     if (!hasPermissions(context)) return
+    // La posición simulada solo existe en compilaciones de desarrollo.
+    val usarRespaldo = { if (BuildConfig.DEBUG) onLocation(SimuladorCercaPickup, false) }
     fusedClient.getCurrentLocation(
         Priority.PRIORITY_HIGH_ACCURACY,
         CancellationTokenSource().token
@@ -1556,15 +1291,15 @@ private fun fetchCurrentGps(
                     message = "Coordenada fuera de Chile (emulador); usando punto simulado en Puerto Varas",
                     details = "raw=${location.latitude},${location.longitude} -> sim=${SimuladorCercaPickup.latitude},${SimuladorCercaPickup.longitude}"
                 )
-                onLocation(SimuladorCercaPickup, false)
+                usarRespaldo()
             }
         } else {
-            LinceLogger.w("GPS", "FusedLocation devolvió null; usando ubicación simulada de respaldo")
-            onLocation(SimuladorCercaPickup, false)
+            LinceLogger.w("GPS", "FusedLocation devolvió null; sin ubicación disponible")
+            usarRespaldo()
         }
     }.addOnFailureListener { ex ->
         LinceLogger.e("GPS", "Error al consultar FusedLocationProviderClient", ex)
-        onLocation(SimuladorCercaPickup, false)
+        usarRespaldo()
     }
 }
 
@@ -1581,7 +1316,7 @@ private fun calculateDistanceMeters(from: GeoPoint, to: GeoPoint): Int {
 }
 
 private fun formatCoord(point: GeoPoint): String {
-    val lat = "%.4f".format(point.latitude)
-    val lon = "%.4f".format(point.longitude)
+    val lat = "%.4f".format(Locale.US, point.latitude)
+    val lon = "%.4f".format(Locale.US, point.longitude)
     return "$lat, $lon"
 }
