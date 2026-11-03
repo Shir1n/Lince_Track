@@ -217,7 +217,8 @@ fun PerfilRealScreen(
                     ) {
                         MiniDatoPerfil("Cuenta", rol?.etiqueta ?: SIN_DATO)
                         MiniDatoPerfil("Oficina", "Puerto Varas")
-                        MiniDatoPerfil("Vehículo", vehiculo?.patente ?: SIN_DATO)
+                        // El guía no maneja: no tiene vehículo que mostrar.
+                        if (rol != Rol.GUIA) MiniDatoPerfil("Vehículo", vehiculo?.patente ?: SIN_DATO)
                     }
                 }
             }
@@ -353,7 +354,11 @@ fun PerfilRealScreen(
                     EstadisticaPerfil(Icons.Outlined.Route, viajesMes.toString(), "Viajes Mes",
                         MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.secondary,
                         MaterialTheme.colorScheme.onSecondary, Modifier.weight(1f))
-                    EstadisticaPerfil(Icons.Outlined.Star, if (esPiloto1) CALIFICACION_PATRICIO else "—", "Calificación",
+                    EstadisticaPerfil(Icons.Outlined.Star, when {
+                        esPiloto1 -> CALIFICACION_PATRICIO
+                        rol == Rol.GUIA -> CALIFICACION_GUIA
+                        else -> "—"
+                    }, "Calificación",
                         MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.tertiary,
                         MaterialTheme.colorScheme.onTertiary, Modifier.weight(1f),
                         MaterialTheme.colorScheme.onTertiaryContainer)
@@ -432,9 +437,10 @@ private const val SIN_DATO = "Sin información"
 private const val CAPACIDAD_JAC_S5 = 5
 private const val ODOMETRO_JAC_S5 = "86.400 km"
 private const val CALIFICACION_PATRICIO = "4,9"
+private const val CALIFICACION_GUIA = "4,8"
 
 @Composable
-private fun MiniDatoPerfil(etiqueta: String, valor: String) {
+internal fun MiniDatoPerfil(etiqueta: String, valor: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(96.dp)) {
         Text(etiqueta, style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -444,7 +450,7 @@ private fun MiniDatoPerfil(etiqueta: String, valor: String) {
 }
 
 @Composable
-private fun MiniDatoVehiculo(
+internal fun MiniDatoVehiculo(
     icono: ImageVector,
     titulo: String,
     valor: String,
@@ -465,7 +471,7 @@ private fun MiniDatoVehiculo(
 }
 
 @Composable
-private fun EstadisticaPerfil(
+internal fun EstadisticaPerfil(
     icono: ImageVector,
     valor: String,
     titulo: String,
@@ -489,7 +495,7 @@ private fun EstadisticaPerfil(
 }
 
 @Composable
-private fun EtiquetaPerfil(texto: String) {
+internal fun EtiquetaPerfil(texto: String) {
     androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.secondary,
         shape = RoundedCornerShape(12.dp)) {
         Text(texto, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
@@ -510,7 +516,7 @@ private fun Tarjeta(contenido: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun TituloSeccion(texto: String) {
+internal fun TituloSeccion(texto: String) {
     Text(
         text = texto,
         style = MaterialTheme.typography.titleMedium,
@@ -545,7 +551,7 @@ private fun FilaDato(etiqueta: String, valor: String) {
 }
 
 @Composable
-private fun FilaDatoPersonal(
+internal fun FilaDatoPersonal(
     titulo: String,
     valor: String,
     icono: ImageVector,
@@ -647,7 +653,7 @@ private fun AjustesPerfil(
 }
 
 @Composable
-private fun AjusteNavegacionPerfil(
+internal fun AjusteNavegacionPerfil(
     icono: ImageVector,
     titulo: String,
     descripcion: String,

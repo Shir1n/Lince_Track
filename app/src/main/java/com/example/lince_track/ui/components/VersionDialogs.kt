@@ -31,12 +31,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.lince_track.data.version.ControlVersionRepository
 import com.example.lince_track.data.version.InfoVersion
 
 /**
@@ -146,6 +152,11 @@ fun VersionDesactualizadaDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    // null mientras se comprueba si el archivo de la versión nueva está publicado.
+    var descargaDisponible by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(remota.apkUrl) {
+        descargaDisponible = ControlVersionRepository.descargaDisponible(remota.apkUrl)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -198,7 +209,9 @@ fun VersionDesactualizadaDialog(
         },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                val subtitulo = if (remota.autorUltimoCambio.isNotBlank()) {
+                val subtitulo = if (descargaDisponible == false) {
+                    "Hay una nueva versión en el repositorio principal. Pídele al equipo que te la instale:"
+                } else if (remota.autorUltimoCambio.isNotBlank()) {
                     "Hay una nueva actualización subida por ${remota.autorUltimoCambio}. Actualiza para estar al día con el equipo:"
                 } else {
                     "Hay una nueva actualización en el repositorio principal. Actualiza para estar al día con el equipo:"
@@ -224,7 +237,12 @@ fun VersionDesactualizadaDialog(
             }
         },
         confirmButton = {
-            Button(
+            // Mientras no se sepa si el archivo existe, o si no existe, no se ofrece un enlace roto.
+            if (descargaDisponible != true) {
+                Button(onClick = onDismiss, shape = RoundedCornerShape(50)) {
+                    Text(text = "Entendido", fontWeight = FontWeight.Bold)
+                }
+            } else Button(
                 onClick = {
                     abrirDescargaActualizacion(context, remota.apkUrl)
                     onDismiss()
@@ -241,14 +259,18 @@ fun VersionDesactualizadaDialog(
                 )
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    text = "Más tarde",
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        dismissButton = if (descargaDisponible == true) {
+            {
+                TextButton(onClick = onDismiss) {
+                    Text(
+                        text = "Más tarde",
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
+        } else {
+            null
         }
     )
 }

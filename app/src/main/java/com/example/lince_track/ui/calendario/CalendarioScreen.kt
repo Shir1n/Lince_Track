@@ -69,6 +69,7 @@ import com.example.lince_track.data.formatFecha
 import com.example.lince_track.data.formatHora
 import com.example.lince_track.data.formatNombreMes
 import com.example.lince_track.data.formatPrecioCLP
+import com.example.lince_track.data.servicios.ServicioMapper
 import com.example.lince_track.ui.agenda.AgendaViewModel
 import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.RejectServicioDialog
@@ -550,11 +551,13 @@ private fun AgendaCard(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            Text(
-                text = "Guía: ${servicio.guia}",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (servicio.guia != ServicioMapper.SIN_GUIA) {
+                Text(
+                    text = "Guía: ${servicio.guia}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             if (enConflicto && servicio.estado == EstadoServicio.ACEPTADO) {
                 Spacer(modifier = Modifier.height(10.dp))

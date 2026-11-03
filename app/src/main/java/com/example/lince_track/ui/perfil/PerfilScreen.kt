@@ -45,6 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
+import com.example.lince_track.BuildConfig
 import com.example.lince_track.R
 import com.example.lince_track.ui.components.SoporteDialog
 import com.example.lince_track.ui.theme.BarraSuperior
@@ -389,7 +390,7 @@ private fun ResumenPerfil() {
                 )
                 DatoPerfil(
                     titulo = "Base",
-                    valor = "Patagonia\nHub",
+                    valor = "Puerto\nVaras",
                     modifier = Modifier.weight(1f)
                 )
                 DatoPerfil(
@@ -640,12 +641,12 @@ private fun VehiculoAsignado() {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        "CL  LK · VF -",
+                        "PATENTE",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        "84",
+                        "LK-VF-84",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
@@ -689,7 +690,7 @@ private fun VehiculoAsignado() {
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                "Revisión técnica y homologación SERNATUR al día (Sep 2024).",
+                "Revisión técnica y homologación SERNATUR al día (Sep 2026).",
                 style = MaterialTheme.typography.bodySmall,
                 lineHeight = 15.sp,
                 color = MaterialTheme.colorScheme.onSurface
@@ -769,7 +770,7 @@ private fun ResumenOperacional() {
             )
             Estadistica(
                 icono = Icons.Outlined.Star,
-                valor = "4.9 ★",
+                valor = "4,9 ★",
                 titulo = "Calificación",
                 fondo = MaterialTheme.colorScheme.tertiaryContainer,
                 iconFondo = MaterialTheme.colorScheme.tertiary,
@@ -779,7 +780,7 @@ private fun ResumenOperacional() {
             )
             Estadistica(
                 icono = Icons.Outlined.AccessTime,
-                valor = "98.4%",
+                valor = "98,4 %",
                 titulo = "Puntualidad",
                 fondo = MaterialTheme.colorScheme.surfaceVariant,
                 iconFondo = MaterialTheme.colorScheme.secondary,
@@ -807,7 +808,7 @@ private fun ResumenOperacional() {
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                "Certificación Conductor Destacado\n2024",
+                "Certificación Conductor Destacado\n2026",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.SemiBold,
                 lineHeight = 15.sp,
@@ -1056,7 +1057,7 @@ private fun PieDePagina() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            "Lince Track v2.4.1 (Build 8904)",
+            "Lince Track v${BuildConfig.VERSION_NAME}",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
