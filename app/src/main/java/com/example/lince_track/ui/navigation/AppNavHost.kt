@@ -358,6 +358,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 popExitTransition = { bottomNavExitTransition() }
             ) {
                 PerfilRealScreen(
+                    onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) },
                     onLogout = {
                         AuthRepository.cerrarSesion()
                         navController.navigate(Routes.LOGIN) {

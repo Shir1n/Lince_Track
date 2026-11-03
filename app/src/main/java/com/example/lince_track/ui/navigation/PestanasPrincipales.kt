@@ -67,7 +67,7 @@ fun PestanasPrincipales(
                     )
                     1 -> CalendarioScreen(onServiceClick = onServiceClick)
                     2 -> AlertasScreen(onServiceClick = onServiceClick)
-                    else -> PerfilRealScreen(onLogout = onLogout, onOpenSettings = onOpenSettings)
+                    else -> PerfilRealScreen(onLogout = onLogout, onOpenSettings = onOpenSettings, onServiceClick = onServiceClick)
                 }
             }
             else -> {
@@ -83,7 +83,7 @@ fun PestanasPrincipales(
                     else -> {
                         val perfil by AuthRepository.perfilActual.collectAsState()
                         if (perfil?.perfilNuevo == true) {
-                            PerfilRealScreen(onLogout = onLogout, onOpenSettings = onOpenSettings)
+                            PerfilRealScreen(onLogout = onLogout, onOpenSettings = onOpenSettings, onServiceClick = onServiceClick)
                         } else {
                             PerfilScreen(onLogout = onLogout, onOpenSettings = onOpenSettings)
                         }

@@ -18,8 +18,9 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
 
 ## Estado actual (02-11-2026)
 - **Objetivo cercano:** un video para vender la app a los dueños de Southbound, con el flujo lo más completo posible.
-- **Rama en curso:** ninguna. El resumen para los dueños (PR 30) y la ubicación en la incidencia (PR 31) ya están en
-  `master`. El panel con selector de fecha está en `feature/panel-fecha`, probado y por fusionar.
+- **Rama en curso:** ninguna. El resumen para los dueños (PR 30), la ubicación en la incidencia (PR 31) y el panel con
+  selector de fecha (PR 32) ya están en `master`. El perfil más completo está en `feature/perfil-completo`, probado y
+  por fusionar.
 - **Reglas:** revisar que la versión de `firestore.rules` de `master` (`telefono` en `estadosServicio`, `lat` y `lon` en
   `incidencias`) esté publicada antes de probar: si falta, aceptar, rechazar o reportar da error.
 - **Cuentas de prueba** en `usuarios/{uid}`:
@@ -35,9 +36,9 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
   en `estadosServicio` y los de `respuestas`; también `asignaciones` si se reasignó. Lo aceptado antes de agregar
   `telefono` se guardó sin teléfono.
 - **Lo que sigue para el video, en orden:**
-  1. Perfil real más completo (revisar lo que ya agregó `feature/perfil-piloto1`).
-  2. Revisión visual con los tres roles y número de soporte real.
-  3. Antes de grabar: resolver las incidencias de prueba, para que el panel se vea limpio.
+  1. Revisión visual con los tres roles y número de soporte real.
+  2. Antes de grabar: resolver las incidencias de prueba, para que el panel se vea limpio, y borrar los check-ins de
+     prueba hechos fuera de hora: la puntualidad del perfil y del resumen es real (Patricio aparece con 0 %).
 - **Resumen para los dueños** (`ui/admin/AdminResumenScreen`): sin clave de la API, "Últimos 7 días" suma el historial
   inventado de `ResumenDemostracion`, siempre con un aviso visible; "Hoy" y las cifras con clave son solo datos reales.
   Los márgenes (15 minutos de puntualidad, 500 m de distancia) son provisionales: falta confirmarlos con Southbound.
@@ -88,8 +89,8 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
   - `data/servicios/` — `ServiciosDataSource` (+ `ApiServiciosDataSource`), `FakeServiciosDataSource`,
     `ServicioMapper` (DTO → `Servicio`), `FiltroServicios`.
   - `data/clima/` — `ClimaService` (Open-Meteo).
-- `ui/` — `navigation/AppNavHost` (rutas por rol) y `PestanasConductor` (pestañas deslizables del conductor; guía y
-  administrador siguen con la barra y `NavHost`), `login`, `servicios` (conductor), `guia` (guía),
+- `ui/` — `navigation/AppNavHost` (rutas) y `PestanasPrincipales` (pestañas deslizables de los tres roles;
+  `PestanasConductor` solo delega en ella), `login`, `servicios` (conductor), `guia` (guía),
   `detalle`, `calendario` (+ `agenda/AgendaViewModel`), `ruta` (mapa, check-in, clima), `alertas`,
   `historial` (servicios con check-out; solo alcanza a los últimos 7 días cargados), `perfil`, `ajustes`,
   `components` (incluye `Incidencias`), `theme`.
@@ -189,10 +190,13 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
   más rápido. Antes de usar datos reales o publicar la app: quitar ambos y cambiar las contraseñas (quedan en el historial).
 - `PerfilScreen` tiene datos fijos ("Carlos Morales", "v2.4.1") y su foto no se guarda: se mantiene a propósito
   como placeholder. Conductores con `usuarios/{uid}.perfilNuevo: true` (booleano) y guías usan `PerfilRealScreen`,
-  que muestra datos reales, salvo el vehículo "JAC S5" y "Año modelo 2015", fijos para "Piloto1" y "Patricio Lagos".
+  que muestra próximo servicio, puntualidad, terminados y por realizar reales. Son fijos a propósito, para que se vea
+  completo en el video: "Verificado", la certificación "Nivel Oro" (solo conductores), el interruptor de notificaciones
+  y, para "Piloto1" y "Patricio Lagos", el "JAC S5", 2015, 5 pasajeros, 86.400 km, revisión al día y calificación 4,9.
+  "Viajes Mes" cuenta también lo futuro y lo rechazado. Quitar o reemplazar todo esto antes de usar datos reales.
   Cuando llegue la clave de la API, decidir si reemplaza al placeholder.
-- Navegación de guía y administrador: tras el login se saca `LOGIN` y la barra inferior hace
-  `popUpTo(findStartDestination())` (que es LOGIN) → probablemente se acumulan pestañas en la pila.
+- `AppNavHost` conserva las rutas antiguas de las pestañas de guía y administrador, que ya no se usan desde el PR 33
+  (ahora se abren en `PestanasPrincipales`): se pueden limpiar.
 - Textos fijos fuera de `strings.xml`; recursos sin usar (`logo_solo1.png`, `logo.jpg`, `van.png`).
 - R8 desactivado en release; Coil declarado fuera del catálogo de versiones.
 - Calendario fuera del rango cargado (hoy-7..hoy+30) aparece vacío.
