@@ -1,3 +1,4 @@
+import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -13,24 +14,46 @@ val localProps = Properties().apply {
     if (archivo.exists()) archivo.inputStream().use { load(it) }
 }
 
+// Fuente única de versión del proyecto: version.json en la raíz del repositorio.
+val archivoVersion = rootProject.file("version.json")
+val versionJsonTexto = if (archivoVersion.exists()) archivoVersion.readText(Charsets.UTF_8) else ""
+val versionCodeCalculado = Regex(""""versionCode"\s*:\s*(\d+)""")
+    .find(versionJsonTexto)?.groupValues?.get(1)?.toIntOrNull() ?: 1
+val versionNameCalculado = Regex(""""versionName"\s*:\s*"([^"]+)"""")
+    .find(versionJsonTexto)?.groupValues?.get(1) ?: "1.0"
+val versionJsonB64 = Base64.getEncoder().encodeToString(versionJsonTexto.toByteArray(Charsets.UTF_8))
+
 android {
     namespace = "com.example.lince_track"
     compileSdk {
         version = release(37)
     }
 
+    signingConfigs {
+        getByName("debug") {
+            val keystoreCompartido = file("debug.keystore")
+            if (keystoreCompartido.exists()) {
+                storeFile = keystoreCompartido
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "cl.duoc.lince_track"
         minSdk = 27
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = versionCodeCalculado
+        versionName = versionNameCalculado
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // API de Southbound. Si LINCE_API_KEY está vacía, la app usa datos de ejemplo.
         buildConfigField("String", "LINCE_API_BASE_URL", "\"https://ws.southbound.travel/lince-api/\"")
         buildConfigField("String", "LINCE_API_KEY", "\"${localProps.getProperty("LINCE_API_KEY", "").trim()}\"")
+        buildConfigField("String", "LOCAL_VERSION_JSON_B64", "\"$versionJsonB64\"")
     }
 
     buildTypes {
