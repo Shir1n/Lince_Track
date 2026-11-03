@@ -60,6 +60,30 @@ class ReglasCompaneroTest {
     }
 
     @Test
+    fun `al aceptar se comparte el telefono con el otro del tour`() {
+        val publicado = RespuestaServicio("8941", EstadoServicio.ACEPTADO, nombre = "Pedro Rojas", telefono = "+56911112222")
+
+        val guiado = ReglasCompanero.completar(
+            servicio("8942"),
+            listOf(ReglasCompanero.aplicarPublicado(servicio("8941"), publicado))
+        )
+
+        assertEquals("+56911112222", guiado.telefonoCompanero)
+    }
+
+    @Test
+    fun `si rechaza deja de compartirse el telefono`() {
+        val publicado = RespuestaServicio("8941", EstadoServicio.RECHAZADO, nombre = "Pedro Rojas", telefono = "+56911112222")
+
+        val guiado = ReglasCompanero.completar(
+            servicio("8942"),
+            listOf(ReglasCompanero.aplicarPublicado(servicio("8941"), publicado))
+        )
+
+        assertEquals("", guiado.telefonoCompanero)
+    }
+
+    @Test
     fun `si lo publicado no trae nombre se usa el de la fuente`() {
         val publicado = RespuestaServicio("8941", EstadoServicio.ACEPTADO)
 

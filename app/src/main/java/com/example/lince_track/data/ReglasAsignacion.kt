@@ -15,7 +15,8 @@ data class PersonaDisponible(
     val uid: String,
     val nombre: String,
     val rol: Rol,
-    val idApi: Long?
+    val idApi: Long?,
+    val telefono: String = ""
 )
 
 /** Qué servicios ve cada persona y a quién se le puede reasignar. Sin Android ni Firebase. */
@@ -104,6 +105,23 @@ object ReglasAsignacion {
     /** Solo lo que nadie ha tomado: una vez hecho el check-in, el servicio ya está en curso. */
     fun puedeReasignar(servicio: Servicio, checkin: CheckinServicio?): Boolean =
         !servicio.cancelado && checkin == null && servicio.estado != EstadoServicio.ACEPTADO
+
+    /**
+     * Ante una incidencia se puede enviar a otra persona aunque el servicio esté aceptado o en
+     * curso, por ejemplo si el vehículo falla en ruta. Lo cancelado o terminado ya no cambia.
+     */
+    fun puedeReemplazar(servicio: Servicio, checkin: CheckinServicio?): Boolean =
+        !servicio.cancelado && checkin?.finalizado != true
+
+    /** El check-in de quien ya no tiene el servicio no cuenta: el reemplazo parte de cero. */
+    fun checkinsVigentes(
+        checkins: Map<String, CheckinServicio>,
+        asignaciones: Map<String, AsignacionServicio>
+    ): Map<String, CheckinServicio> =
+        checkins.filter { (servicioId, checkin) ->
+            val asignacion = asignaciones[servicioId]
+            asignacion == null || checkin.uid == asignacion.uid
+        }
 
     /**
      * Cuentas que pueden recibir el servicio: las del rol que corresponde, vinculadas y con nombre.

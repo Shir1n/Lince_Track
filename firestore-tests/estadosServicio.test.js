@@ -64,6 +64,21 @@ test('guía publica que aceptó', () =>
     setDoc(ref(guia(), '8942'), estado({ uid: 'guia1', rol: 'guia', nombre: 'Alfredini Pastelini', servicioId: '8942' })),
   ));
 
+test('se publica el teléfono del perfil', async () => {
+  await entorno.withSecurityRulesDisabled((contexto) =>
+    setDoc(doc(contexto.firestore(), 'usuarios/conductor1'), {
+      rol: 'conductor',
+      nombre: 'Pedro Rojas',
+      telefono: '+56911112222',
+    }),
+  );
+  await assertFails(setDoc(ref(conductor()), estado({ telefono: '+56933334444' })));
+  await assertSucceeds(setDoc(ref(conductor()), estado({ telefono: '+56911112222' })));
+});
+
+test('una versión anterior puede publicar sin teléfono', () =>
+  assertSucceeds(setDoc(ref(conductor()), estado())));
+
 test('no se puede publicar con un nombre distinto al del perfil', () =>
   assertFails(setDoc(ref(conductor()), estado({ nombre: 'Otra Persona' }))));
 

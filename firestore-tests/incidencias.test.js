@@ -138,6 +138,52 @@ test('una incidencia resuelta no se vuelve a resolver', async () => {
   await assertFails(updateDoc(ref(admin()), resolucion()));
 });
 
+const respuesta = (extra = {}) => ({
+  enGestion: true,
+  respuesta: 'Va un reemplazo en camino',
+  atendidaEn: serverTimestamp(),
+  atendidaPor: 'admin1',
+  ...extra,
+});
+
+test('el administrador responde y puede actualizar la respuesta', async () => {
+  await sembrar();
+  await assertSucceeds(updateDoc(ref(admin()), respuesta()));
+  await assertSucceeds(updateDoc(ref(admin()), respuesta({ respuesta: 'Llega en 20 minutos' })));
+});
+
+test('quien reportó no puede responder', async () => {
+  await sembrar();
+  await assertFails(updateDoc(ref(conductor()), respuesta({ atendidaPor: 'conductor1' })));
+});
+
+test('la respuesta no puede ir vacía ni ser muy larga', async () => {
+  await sembrar();
+  await assertFails(updateDoc(ref(admin()), respuesta({ respuesta: '   ' })));
+  await assertFails(updateDoc(ref(admin()), respuesta({ respuesta: 'x'.repeat(501) })));
+});
+
+test('al responder no se puede cambiar el contenido ni cerrarla', async () => {
+  await sembrar();
+  await assertFails(updateDoc(ref(admin()), respuesta({ detalle: 'Otro texto' })));
+  await assertFails(updateDoc(ref(admin()), respuesta({ resuelta: true })));
+});
+
+test('una incidencia resuelta no se puede responder', async () => {
+  await sembrar({ resuelta: true });
+  await assertFails(updateDoc(ref(admin()), respuesta()));
+});
+
+test('se puede resolver con un mensaje', async () => {
+  await sembrar();
+  await assertSucceeds(updateDoc(ref(admin()), resolucion({ respuesta: 'Se cambió el vehículo' })));
+});
+
+test('el mensaje al resolver no puede ser muy largo', async () => {
+  await sembrar();
+  await assertFails(updateDoc(ref(admin()), resolucion({ respuesta: 'x'.repeat(501) })));
+});
+
 test('nadie puede borrar una incidencia', async () => {
   await sembrar();
   await assertFails(deleteDoc(ref(conductor())));
@@ -158,4 +204,16 @@ test('las consultas de la app están permitidas solo a quien corresponde', async
   await assertFails(propias(guia(), 'conductor1'));
   await assertSucceeds(desde(admin()));
   await assertFails(desde(conductor()));
+});
+
+test('la incidencia se guarda con ubicación o sin ella', async () => {
+  await assertSucceeds(setDoc(ref(conductor(), 'i1'), incidencia({ lat: -41.3, lon: -72.9 })));
+  await assertSucceeds(setDoc(ref(conductor(), 'i2'), incidencia()));
+});
+
+test('la ubicación de la incidencia lleva las dos coordenadas y son números', async () => {
+  await assertFails(setDoc(ref(conductor(), 'i1'), incidencia({ lat: -41.3 })));
+  await assertFails(setDoc(ref(conductor(), 'i2'), incidencia({ lon: -72.9 })));
+  await assertFails(setDoc(ref(conductor(), 'i3'), incidencia({ lat: '-41.3', lon: -72.9 })));
+  await assertFails(setDoc(ref(conductor(), 'i4'), incidencia({ lat: -41.3, lon: '-72.9' })));
 });

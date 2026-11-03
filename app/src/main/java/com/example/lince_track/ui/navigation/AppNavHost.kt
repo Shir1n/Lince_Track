@@ -1,6 +1,7 @@
 package com.example.lince_track.ui.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Home
@@ -52,6 +53,7 @@ import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.Rol
 import com.example.lince_track.ui.admin.AdminPanelScreen
 import com.example.lince_track.ui.admin.AdminPerfilScreen
+import com.example.lince_track.ui.admin.AdminResumenScreen
 import com.example.lince_track.ui.ajustes.AjustesScreen
 import com.example.lince_track.ui.alertas.AlertasScreen
 import com.example.lince_track.ui.calendario.CalendarioScreen
@@ -67,9 +69,10 @@ import com.example.lince_track.ui.theme.BarraSuperior
 private fun getBottomNavIndex(route: String?): Int {
     return when (route) {
         Routes.SERVICIOS, Routes.GUIA_ASIGNACIONES, Routes.ADMIN_PANEL -> 0
-        Routes.CALENDARIO -> 1
-        Routes.ALERTAS, Routes.GUIA_CONEXION -> 2
-        Routes.PERFIL, Routes.GUIA_PERFIL, Routes.ADMIN_PERFIL -> 3
+        Routes.ADMIN_RESUMEN -> 1
+        Routes.CALENDARIO -> 2
+        Routes.ALERTAS, Routes.GUIA_CONEXION -> 3
+        Routes.PERFIL, Routes.GUIA_PERFIL, Routes.ADMIN_PERFIL -> 4
         else -> -1
     }
 }
@@ -124,6 +127,7 @@ object Routes {
 
     // Rutas del administrador
     const val ADMIN_PANEL = "admin_panel"
+    const val ADMIN_RESUMEN = "admin_resumen"
     const val ADMIN_PERFIL = "admin_perfil"
 
     fun detalleServicio(id: String) = "detalle_servicio/$id"
@@ -145,6 +149,7 @@ internal fun bottomNavItems(rol: Rol?): List<BottomNavItem> = when (rol) {
     )
     Rol.ADMINISTRADOR -> listOf(
         BottomNavItem(Routes.ADMIN_PANEL, "Panel", Icons.Outlined.Dashboard),
+        BottomNavItem(Routes.ADMIN_RESUMEN, "Resumen", Icons.Outlined.BarChart),
         BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth),
         BottomNavItem(Routes.ADMIN_PERFIL, "Perfil", Icons.Outlined.Person)
     )
@@ -375,6 +380,13 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                     onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) }
                 )
             }
+            composable(
+                route = Routes.ADMIN_RESUMEN,
+                enterTransition = { bottomNavEnterTransition() },
+                exitTransition = { bottomNavExitTransition() },
+                popEnterTransition = { bottomNavEnterTransition() },
+                popExitTransition = { bottomNavExitTransition() }
+            ) { AdminResumenScreen() }
             composable(
                 route = Routes.ADMIN_PERFIL,
                 enterTransition = { bottomNavEnterTransition() },
