@@ -13,6 +13,7 @@ import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.Rol
 import com.example.lince_track.ui.admin.AdminPanelScreen
 import com.example.lince_track.ui.admin.AdminPerfilScreen
+import com.example.lince_track.ui.admin.AdminResumenScreen
 import com.example.lince_track.ui.alertas.AlertasScreen
 import com.example.lince_track.ui.calendario.CalendarioScreen
 import com.example.lince_track.ui.guia.GuiaAsignacionesScreen
@@ -27,7 +28,7 @@ import kotlinx.coroutines.launch
  * Soporta de manera global todos los roles:
  * - Conductor: 0 = Servicios, 1 = Calendario, 2 = Alertas, 3 = Perfil.
  * - Guía: 0 = Asignaciones, 1 = Calendario, 2 = Alertas, 3 = Perfil.
- * - Administrador: 0 = Panel, 1 = Calendario, 2 = Perfil.
+ * - Administrador: 0 = Panel, 1 = Resumen, 2 = Calendario, 3 = Perfil.
  */
 @Composable
 fun PestanasPrincipales(
@@ -52,7 +53,8 @@ fun PestanasPrincipales(
             Rol.ADMINISTRADOR -> {
                 when (pagina) {
                     0 -> AdminPanelScreen(onServiceClick = onServiceClick)
-                    1 -> CalendarioScreen(onServiceClick = onServiceClick)
+                    1 -> AdminResumenScreen()
+                    2 -> CalendarioScreen(onServiceClick = onServiceClick)
                     else -> AdminPerfilScreen(onLogout = onLogout, onOpenSettings = onOpenSettings)
                 }
             }

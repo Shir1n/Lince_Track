@@ -38,15 +38,17 @@ class PestanasPrincipalesTest {
     }
 
     @Test
-    fun administradorTiene3PestanasEnOrdenCorrecto() {
+    fun administradorTiene4PestanasEnOrdenCorrecto() {
         val items = bottomNavItems(Rol.ADMINISTRADOR)
-        assertEquals(3, items.size)
+        assertEquals(4, items.size)
         assertEquals(Routes.ADMIN_PANEL, items[0].route)
         assertEquals("Panel", items[0].label)
-        assertEquals(Routes.CALENDARIO, items[1].route)
-        assertEquals("Calendario", items[1].label)
-        assertEquals(Routes.ADMIN_PERFIL, items[2].route)
-        assertEquals("Perfil", items[2].label)
+        assertEquals(Routes.ADMIN_RESUMEN, items[1].route)
+        assertEquals("Resumen", items[1].label)
+        assertEquals(Routes.CALENDARIO, items[2].route)
+        assertEquals("Calendario", items[2].label)
+        assertEquals(Routes.ADMIN_PERFIL, items[3].route)
+        assertEquals("Perfil", items[3].label)
     }
 
     @Test
