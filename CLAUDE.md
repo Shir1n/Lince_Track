@@ -18,9 +18,9 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
 
 ## Estado actual (02-11-2026)
 - **Objetivo cercano:** un video para vender la app a los dueños de Southbound, con el flujo lo más completo posible.
-- **Rama en curso:** ninguna. El resumen para los dueños (PR 30), la ubicación en la incidencia (PR 31) y el panel con
-  selector de fecha (PR 32) ya están en `master`. El perfil más completo está en `feature/perfil-completo`, probado y
-  por fusionar.
+- **Rama en curso:** `fix/detalles-video` (revisión visual con los tres roles). Ya están en `master` el resumen (PR 30),
+  la ubicación en la incidencia (PR 31), el panel con fecha (PR 32), el perfil (PR 34), las pestañas deslizables de los
+  tres roles (PR 33) y el verificador de versión (PR 36).
 - **Reglas:** revisar que la versión de `firestore.rules` de `master` (`telefono` en `estadosServicio`, `lat` y `lon` en
   `incidencias`) esté publicada antes de probar: si falta, aceptar, rechazar o reportar da error.
 - **Cuentas de prueba** en `usuarios/{uid}`:
@@ -36,9 +36,12 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
   en `estadosServicio` y los de `respuestas`; también `asignaciones` si se reasignó. Lo aceptado antes de agregar
   `telefono` se guardó sin teléfono.
 - **Lo que sigue para el video, en orden:**
-  1. Revisión visual con los tres roles y número de soporte real.
-  2. Antes de grabar: resolver las incidencias de prueba, para que el panel se vea limpio, y borrar los check-ins de
-     prueba hechos fuera de hora: la puntualidad del perfil y del resumen es real (Patricio aparece con 0 %).
+  1. Número de soporte real o deshabilitar los botones (`SoporteDialog.kt`).
+  2. Antes de grabar: abrir la app y cerrar una vez "¡Estás actualizado!", que habla del equipo y aparece una sola vez
+     por versión. Las respuestas de 8941/8942 ya se borraron (03-11-2026) y el administrador se llama "Admin 1"
+     (mejor un nombre real o "Coordinación Southbound"). Tras cada ensayo, limpiar de nuevo lo aceptado y los check-ins
+     hechos fuera de hora: la puntualidad del perfil y del resumen es real.
+  3. Decidir la foto de `PerfilScreen` (`res/drawable/perfil1`): parece de una persona real.
 - **Resumen para los dueños** (`ui/admin/AdminResumenScreen`): sin clave de la API, "Últimos 7 días" suma el historial
   inventado de `ResumenDemostracion`, siempre con un aviso visible; "Hoy" y las cifras con clave son solo datos reales.
   Los márgenes (15 minutos de puntualidad, 500 m de distancia) son provisionales: falta confirmarlos con Southbound.
@@ -68,8 +71,11 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
 - Se prueba en celulares reales por USB: no crear emuladores de Android. `adb` está en `Android\Sdk\platform-tools`, y si
   Java no está en el PATH se puede usar el `jbr` de Android Studio (`C:\Program Files\Android\Android Studio\jbr` o
   `D:\Android\AndroidStudio\jbr`, según el computador).
-- Cada computador firma con su propia clave: si Android rechaza instalar (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`), hay que
-  desinstalar primero. Se pierde la sesión y lo no enviado, y conviene confirmarlo antes con quien usa ese celular.
+- Desde el PR 36 todos firman con `app/debug.keystore` (versionada, solo para debug: el repositorio es público). Un
+  celular con una versión firmada antes con otra clave rechaza instalar (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`) y hay que
+  desinstalar una vez. Se pierde la sesión y lo no enviado: confirmarlo antes con quien usa ese celular.
+- La versión sale de `version.json` (raíz). La app compara con el de `master` en GitHub al abrir; si el APK de
+  `releases/latest` no existe, el aviso de versión desactualizada no ofrece descargar.
 - `gh` puede no estar instalado.
 
 ## Identificadores
@@ -142,7 +148,8 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
   gestión"), las resuelve y, con una abierta, puede enviar reemplazo aunque el servicio esté aceptado o en curso. Los
   botones de llamar y WhatsApp usan `usuarios/{uid}.telefono` (opcional).
 - Notificaciones locales (`NotificadorLocal`, `CambiosServicios`): solo con la app viva. Con la app cerrada requieren
-  Blaze y un servidor.
+  Blaze y un servidor. Los primeros 10 s tras cargar no avisan: Firestore entrega primero la caché del teléfono y
+  después el servidor, y esa diferencia repetía avisos antiguos cada vez que se abría la app.
 - Tests de reglas en `firestore-tests/` con el emulador y un proyecto demo (`npm install`, `npm test`;
   necesita Java en el PATH). Tras cambiar `firestore.rules`, hay que publicarlas en Firebase.
 - `storage.rules` está en el repo pero **sin uso**: Storage exige plan Blaze. Se activará Blaze
@@ -188,11 +195,12 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
 - **Credenciales de prueba públicas:** el repositorio es público, y `USUARIOS_TEST.md` y los botones de `LoginScreen` traen
   correos y contraseña de cuentas reales de Firebase, incluida la de administrador. Se mantienen a propósito para trabajar
   más rápido. Antes de usar datos reales o publicar la app: quitar ambos y cambiar las contraseñas (quedan en el historial).
-- `PerfilScreen` tiene datos fijos ("Carlos Morales", "v2.4.1") y su foto no se guarda: se mantiene a propósito
+- `PerfilScreen` tiene datos fijos ("Carlos Morales", fechas de 2026) y su foto no se guarda: se mantiene a propósito
   como placeholder. Conductores con `usuarios/{uid}.perfilNuevo: true` (booleano) y guías usan `PerfilRealScreen`,
   que muestra próximo servicio, puntualidad, terminados y por realizar reales. Son fijos a propósito, para que se vea
   completo en el video: "Verificado", la certificación "Nivel Oro" (solo conductores), el interruptor de notificaciones
-  y, para "Piloto1" y "Patricio Lagos", el "JAC S5", 2015, 5 pasajeros, 86.400 km, revisión al día y calificación 4,9.
+  y, para "Piloto1" y "Patricio Lagos", el "JAC S5", 2015, 5 pasajeros, 86.400 km, revisión al día y calificación 4,9
+  (los guías, 4,8).
   "Viajes Mes" cuenta también lo futuro y lo rechazado. Quitar o reemplazar todo esto antes de usar datos reales.
   Cuando llegue la clave de la API, decidir si reemplaza al placeholder.
 - `AppNavHost` conserva las rutas antiguas de las pestañas de guía y administrador, que ya no se usan desde el PR 33

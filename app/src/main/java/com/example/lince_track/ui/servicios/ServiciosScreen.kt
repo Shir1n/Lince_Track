@@ -55,6 +55,7 @@ import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.formatFechaCorta
 import com.example.lince_track.data.formatHora
 import com.example.lince_track.data.formatPrecioCLP
+import com.example.lince_track.data.servicios.ServicioMapper
 import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.RejectServicioDialog
@@ -341,7 +342,8 @@ private fun ServicioCard(
             Spacer(modifier = Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MetaChip("${servicio.pasajeros} Pasajeros")
-                MetaChip("Guía: ${servicio.guia}")
+                // Un traslado o una excursión sin guía no necesita la etiqueta.
+                if (servicio.guia != ServicioMapper.SIN_GUIA) MetaChip("Guía: ${servicio.guia}")
             }
             Spacer(modifier = Modifier.height(12.dp))
             Row(

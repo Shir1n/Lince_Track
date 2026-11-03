@@ -139,6 +139,26 @@ object ControlVersionRepository {
         )
     }
 
+    /** true si el archivo responde; sin conexión o con error (por ejemplo, 404), false. */
+    suspend fun descargaDisponible(apkUrl: String): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val url = URL(apkUrl.ifBlank { InfoVersion.DEFAULT_APK_URL })
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "HEAD"
+                instanceFollowRedirects = true
+                connectTimeout = 3500
+                readTimeout = 3500
+            }
+            try {
+                conn.responseCode in 200..299
+            } finally {
+                conn.disconnect()
+            }
+        }.onFailure { e ->
+            LinceLogger.w("VERSION", "No se pudo comprobar la descarga: ${e.message}")
+        }.getOrDefault(false)
+    }
+
     suspend fun consultarVersionRemota(): InfoVersion? = withContext(Dispatchers.IO) {
         runCatching {
             val cacheBuster = System.currentTimeMillis() / 60_000L

@@ -137,7 +137,7 @@ private fun AlertasHeader(
                     val selected = filtro == filtroSeleccionado
                     Surface(
                         shape = RoundedCornerShape(50),
-                        color = if (selected) MaterialTheme.colorScheme.surface else BarraSuperior.contenido.copy(alpha = 0.15f),
+                        color = if (selected) MaterialTheme.colorScheme.secondary else BarraSuperior.contenido.copy(alpha = 0.15f),
                         border = if (selected) null else BorderStroke(1.dp, BarraSuperior.contenido.copy(alpha = 0.35f)),
                         modifier = Modifier.clickable { onSeleccionarFiltro(filtro) }
                     ) {
@@ -145,7 +145,7 @@ private fun AlertasHeader(
                             text = filtro.label,
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (selected) MaterialTheme.colorScheme.onSurface else BarraSuperior.contenido,
+                            color = if (selected) MaterialTheme.colorScheme.onSecondary else BarraSuperior.contenido,
                             modifier = Modifier.padding(horizontal = 18.dp, vertical = 7.dp)
                         )
                     }
