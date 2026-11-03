@@ -41,7 +41,8 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
      por versión. Las respuestas de 8941/8942 ya se borraron (03-11-2026) y el administrador se llama "Admin 1"
      (mejor un nombre real o "Coordinación Southbound"). Tras cada ensayo, limpiar de nuevo lo aceptado y los check-ins
      hechos fuera de hora: la puntualidad del perfil y del resumen es real.
-  3. Decidir la foto de `PerfilScreen` (`res/drawable/perfil1`): parece de una persona real.
+  3. `PerfilScreen` ya no usa `res/drawable/perfil1` (parecía de una persona real): sin foto elegida muestra el ícono
+     de persona. El archivo sigue en el proyecto, sin uso.
 - **Resumen para los dueños** (`ui/admin/AdminResumenScreen`): sin clave de la API, "Últimos 7 días" suma el historial
   inventado de `ResumenDemostracion`, siempre con un aviso visible; "Hoy" y las cifras con clave son solo datos reales.
   Los márgenes (15 minutos de puntualidad, 500 m de distancia) son provisionales: falta confirmarlos con Southbound.

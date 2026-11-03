@@ -299,21 +299,36 @@ private fun ResumenPerfil() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(contentAlignment = Alignment.BottomEnd) {
+                // Sin foto elegida se muestra el ícono de persona, igual que en los demás perfiles.
                 val painter = when {
                     fotoBitmap != null -> BitmapPainter(fotoBitmap!!.asImageBitmap())
                     !fotoUri.isNullOrEmpty() -> rememberAsyncImagePainter(model = fotoUri)
-                    else -> painterResource(R.drawable.perfil1)
+                    else -> null
                 }
-                Image(
-                    painter = painter,
-                    contentDescription = "Foto del conductor",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(76.dp)
-                        .clip(CircleShape)
-                        .border(3.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                        .clickable { mostrarSelector = true }
-                )
+                if (painter != null) {
+                    Image(
+                        painter = painter,
+                        contentDescription = "Foto del conductor",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(76.dp)
+                            .clip(CircleShape)
+                            .border(3.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                            .clickable { mostrarSelector = true }
+                    )
+                } else {
+                    Icon(
+                        Icons.Outlined.Person,
+                        contentDescription = "Foto del conductor",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier
+                            .size(76.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .clickable { mostrarSelector = true }
+                            .padding(18.dp)
+                    )
+                }
                 Surface(
                     color = MaterialTheme.colorScheme.secondary,
                     shape = CircleShape,
