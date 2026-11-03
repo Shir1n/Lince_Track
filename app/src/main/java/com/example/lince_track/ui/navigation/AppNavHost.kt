@@ -49,14 +49,22 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.Rol
+import com.example.lince_track.data.version.ControlVersionRepository
+import com.example.lince_track.data.version.EstadoAvisoVersion
 import com.example.lince_track.ui.admin.AdminPanelScreen
 import com.example.lince_track.ui.admin.AdminPerfilScreen
 import com.example.lince_track.ui.admin.AdminResumenScreen
 import com.example.lince_track.ui.ajustes.AjustesScreen
 import com.example.lince_track.ui.alertas.AlertasScreen
 import com.example.lince_track.ui.calendario.CalendarioScreen
+import com.example.lince_track.ui.components.VersionActualizadaDialog
+import com.example.lince_track.ui.components.VersionDesactualizadaDialog
 import com.example.lince_track.ui.detalle.DetalleServicioScreen
 import com.example.lince_track.ui.guia.ConexionConductorScreen
 import com.example.lince_track.ui.guia.GuiaAsignacionesScreen
@@ -164,6 +172,7 @@ internal fun bottomNavItems(rol: Rol?): List<BottomNavItem> = when (rol) {
 
 @Composable
 fun AppNavHost(navController: NavHostController = rememberNavController()) {
+    val context = LocalContext.current
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val rol by AuthRepository.rolActual.collectAsState()
@@ -173,6 +182,11 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         rememberPagerState(pageCount = { items.size })
     }
     val scope = rememberCoroutineScope()
+    var estadoAvisoVersion by remember { mutableStateOf<EstadoAvisoVersion>(EstadoAvisoVersion.Ninguno) }
+
+    LaunchedEffect(Unit) {
+        estadoAvisoVersion = ControlVersionRepository.evaluarAlIniciar(context)
+    }
 
     // Si Android mató el proceso, la navegación se restaura sin pasar por el login:
     // hay que recuperar aquí el perfil de la sesión.
@@ -187,6 +201,28 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         if (currentRoute == Routes.LOGIN) {
             pagerState.scrollToPage(0)
         }
+    }
+
+    when (val aviso = estadoAvisoVersion) {
+        is EstadoAvisoVersion.RecienActualizada -> {
+            VersionActualizadaDialog(
+                version = aviso.version,
+                onDismiss = {
+                    estadoAvisoVersion = EstadoAvisoVersion.Ninguno
+                    scope.launch {
+                        ControlVersionRepository.marcarVersionVista(context, aviso.version.versionCode)
+                    }
+                }
+            )
+        }
+        is EstadoAvisoVersion.Desactualizada -> {
+            VersionDesactualizadaDialog(
+                local = aviso.local,
+                remota = aviso.remota,
+                onDismiss = { estadoAvisoVersion = EstadoAvisoVersion.Ninguno }
+            )
+        }
+        EstadoAvisoVersion.Ninguno -> Unit
     }
 
     val showBottomBar = currentRoute == Routes.MAIN || currentRoute == Routes.MAIN_CONDUCTOR
