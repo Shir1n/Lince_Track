@@ -46,7 +46,7 @@ fun PestanasConductor(
                 // PerfilScreen queda como placeholder; las cuentas marcadas usan el perfil real.
                 val perfil by AuthRepository.perfilActual.collectAsState()
                 if (perfil?.perfilNuevo == true) {
-                    PerfilRealScreen(onLogout = onLogout, onOpenSettings = onOpenSettings)
+                    PerfilRealScreen(onLogout = onLogout, onOpenSettings = onOpenSettings, onServiceClick = onServiceClick)
                 } else {
                     PerfilScreen(onLogout = onLogout, onOpenSettings = onOpenSettings)
                 }

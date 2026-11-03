@@ -35,7 +35,11 @@ import androidx.compose.material.icons.outlined.Route
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Event
+import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material3.Button
@@ -70,20 +74,24 @@ import com.example.lince_track.R
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.Rol
 import com.example.lince_track.data.ServicioRepository
-import com.example.lince_track.data.servicios.FiltroServicios
+import com.example.lince_track.data.formatFecha
+import com.example.lince_track.data.formatHora
 import com.example.lince_track.ui.components.AvisoServiciosCard
+import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.SoporteDialog
 import com.example.lince_track.ui.theme.BarraSuperior
 import java.time.YearMonth
 
 /**
- * Perfil con datos reales: la cuenta (`usuarios/{uid}`) y los servicios de la API. Lo que no
- * tiene de dónde salir no se muestra, así que sin clave de la API ni id queda casi vacío.
+ * Perfil de la cuenta (`usuarios/{uid}`) con sus servicios y check-ins. Por ahora, para que se vea
+ * completo en el video, el vehículo y la calificación de Patricio, "Verificado", la certificación
+ * y el interruptor de notificaciones son datos fijos.
  */
 @Composable
 fun PerfilRealScreen(
     onLogout: () -> Unit = {},
-    onOpenSettings: () -> Unit = {}
+    onOpenSettings: () -> Unit = {},
+    onServiceClick: (String) -> Unit = {}
 ) {
     val perfil by AuthRepository.perfilActual.collectAsState()
     val servicios by ServicioRepository.servicios.collectAsState()
@@ -99,6 +107,8 @@ fun PerfilRealScreen(
     val vehiculo = remember(servicios) { DatosPerfil.vehiculo(servicios) }
     val totales = remember(servicios, checkins) { DatosPerfil.totales(servicios, checkins) }
     val enRuta = remember(servicios, checkins) { DatosPerfil.enRuta(servicios, checkins) }
+    val proximo = remember(servicios, checkins) { DatosPerfil.proximoServicio(servicios, checkins) }
+    val actividad = remember(servicios, checkins) { DatosPerfil.actividad(servicios, checkins) }
     var notificaciones by remember { mutableStateOf(true) }
     val viajesMes = remember(servicios) {
         val mesActual = YearMonth.now()
@@ -206,8 +216,34 @@ fun PerfilRealScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         MiniDatoPerfil("Cuenta", rol?.etiqueta ?: SIN_DATO)
-                        MiniDatoPerfil("Oficina", FiltroServicios.OFICINA_POR_DEFECTO)
+                        MiniDatoPerfil("Oficina", "Puerto Varas")
                         MiniDatoPerfil("Vehículo", vehiculo?.patente ?: SIN_DATO)
+                    }
+                }
+            }
+
+            proximo?.let { servicio ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable { onServiceClick(servicio.id) },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.Event, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(9.dp))
+                            Text("Próximo Servicio", style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f))
+                            EstadoServicioBadge(servicio.estado)
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Text(servicio.titulo, style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                        Text("${formatFecha(servicio.fecha)} • ${formatHora(servicio.horaInicio)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -230,6 +266,9 @@ fun PerfilRealScreen(
                 FilaDatoPersonal("Nombre Completo", nombre, Icons.Outlined.Person)
                 FilaDatoPersonal("Correo Institucional", email.ifBlank { SIN_DATO },
                     Icons.Outlined.Email, subrayado = true)
+                perfil?.telefono?.takeIf { it.isNotBlank() }?.let { telefono ->
+                    FilaDatoPersonal("Teléfono", telefono, Icons.Outlined.Phone)
+                }
                 FilaDatoPersonal("Rol", rol?.etiqueta ?: SIN_DATO, Icons.Outlined.Badge)
             }
 
@@ -280,8 +319,11 @@ fun PerfilRealScreen(
                     Spacer(Modifier.height(13.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         MiniDatoVehiculo(Icons.Outlined.Groups, "Capacidad",
-                            vehiculo?.let { "${it.capacidad} Pasajeros" } ?: SIN_DATO, Modifier.weight(1f))
-                        MiniDatoVehiculo(Icons.Outlined.Speed, "Odómetro", SIN_DATO, Modifier.weight(1f))
+                            if (esPiloto1) "$CAPACIDAD_JAC_S5 Pasajeros"
+                            else vehiculo?.let { "${it.capacidad} Pasajeros" } ?: SIN_DATO,
+                            Modifier.weight(1f))
+                        MiniDatoVehiculo(Icons.Outlined.Speed, "Odómetro",
+                            if (esPiloto1) ODOMETRO_JAC_S5 else SIN_DATO, Modifier.weight(1f))
                     }
                     Spacer(Modifier.height(8.dp))
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
@@ -290,7 +332,7 @@ fun PerfilRealScreen(
                         Icon(Icons.Outlined.Verified, contentDescription = null,
                             tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Información de revisión técnica no disponible.",
+                        Text(if (esPiloto1) "Revisión técnica al día" else "Información de revisión técnica no disponible.",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
@@ -303,35 +345,46 @@ fun PerfilRealScreen(
                     Spacer(Modifier.width(9.dp))
                     TituloSeccion("Resumen Operacional")
                 }
-                Text("Mes en curso", style = MaterialTheme.typography.labelSmall,
+                Text("Viajes del mes en curso; puntualidad y terminados de los últimos 7 días",
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     EstadisticaPerfil(Icons.Outlined.Route, viajesMes.toString(), "Viajes Mes",
                         MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.secondary,
                         MaterialTheme.colorScheme.onSecondary, Modifier.weight(1f))
-                    EstadisticaPerfil(Icons.Outlined.Star, "—", "Calificación",
+                    EstadisticaPerfil(Icons.Outlined.Star, if (esPiloto1) CALIFICACION_PATRICIO else "—", "Calificación",
                         MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.tertiary,
                         MaterialTheme.colorScheme.onTertiary, Modifier.weight(1f),
                         MaterialTheme.colorScheme.onTertiaryContainer)
-                    EstadisticaPerfil(Icons.Outlined.AccessTime, "—", "Puntualidad",
+                    EstadisticaPerfil(Icons.Outlined.AccessTime,
+                        actividad.puntualidad?.let { "$it %" } ?: "—", "Puntualidad",
                         MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.secondary,
                         MaterialTheme.colorScheme.onSecondary, Modifier.weight(1f),
                         MaterialTheme.colorScheme.secondary)
                 }
-                Spacer(Modifier.height(10.dp))
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant).padding(10.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Verified, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Certificación Conductor Destacado 2026",
-                        style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-                    Text("NIVEL\nORO", style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary,
-                        textAlign = TextAlign.Center)
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    MiniDatoVehiculo(Icons.Outlined.CheckCircle, "Terminados",
+                        actividad.terminados.toString(), Modifier.weight(1f))
+                    MiniDatoVehiculo(Icons.Outlined.Schedule, "Por realizar",
+                        actividad.porRealizar.toString(), Modifier.weight(1f))
+                }
+                if (rol != Rol.GUIA) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant).padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Verified, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Certificación Conductor Destacado 2026",
+                            style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                        Text("NIVEL\nORO", style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary,
+                            textAlign = TextAlign.Center)
+                    }
                 }
             }
 
@@ -376,6 +429,9 @@ fun PerfilRealScreen(
 }
 
 private const val SIN_DATO = "Sin información"
+private const val CAPACIDAD_JAC_S5 = 5
+private const val ODOMETRO_JAC_S5 = "86.400 km"
+private const val CALIFICACION_PATRICIO = "4,9"
 
 @Composable
 private fun MiniDatoPerfil(etiqueta: String, valor: String) {

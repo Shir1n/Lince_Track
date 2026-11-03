@@ -2,12 +2,21 @@ package com.example.lince_track.ui.perfil
 
 import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.EstadoServicio
+import com.example.lince_track.data.ReglasCheckin
 import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.VehiculoServicio
+import com.example.lince_track.ui.admin.DatosResumen
+import com.example.lince_track.ui.admin.PeriodoResumen
+import com.example.lince_track.ui.admin.ResumenOperacion
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 data class TotalesPerfil(val servicios: Int, val aceptados: Int, val finalizados: Int)
+
+/** @property puntualidad porcentaje a tiempo; null si no hay check-ins en el periodo. */
+data class ActividadPerfil(val terminados: Int, val porRealizar: Int, val puntualidad: Int?)
 
 /** Cálculos del perfil, sin dependencias de Android ni Firebase. */
 object DatosPerfil {
@@ -35,6 +44,40 @@ object DatosPerfil {
         aceptados = servicios.count { it.estado == EstadoServicio.ACEPTADO },
         finalizados = servicios.count { checkins[it.id]?.finalizado == true }
     )
+
+    /** Lo que sigue: desde hoy, sin contar lo rechazado ni lo terminado. Incluye lo que está en curso. */
+    fun proximoServicio(
+        servicios: List<Servicio>,
+        checkins: Map<String, CheckinServicio>,
+        hoy: LocalDate = LocalDate.now()
+    ): Servicio? = servicios
+        .filter { !it.fecha.isBefore(hoy) && it.estado != EstadoServicio.RECHAZADO }
+        .filterNot { ReglasCheckin.estaTerminado(it, checkins[it.id]) }
+        .minWithOrNull(compareBy({ it.fecha }, { it.horaInicio }))
+
+    /** Terminados y puntualidad de los últimos 7 días, y lo aceptado que aún falta por hacer. */
+    fun actividad(
+        servicios: List<Servicio>,
+        checkins: Map<String, CheckinServicio>,
+        ahora: LocalDateTime = LocalDateTime.now(),
+        zona: ZoneId = ZoneId.systemDefault()
+    ): ActividadPerfil {
+        val hoy = ahora.toLocalDate()
+        val resumen = ResumenOperacion.calcular(
+            DatosResumen(servicios = servicios, checkins = checkins),
+            ResumenOperacion.rango(PeriodoResumen.SIETE_DIAS, hoy),
+            ahora,
+            zona
+        )
+        return ActividadPerfil(
+            terminados = resumen.terminados,
+            porRealizar = servicios.count {
+                it.estado == EstadoServicio.ACEPTADO && !it.fecha.isBefore(hoy) &&
+                    !ReglasCheckin.estaTerminado(it, checkins[it.id])
+            },
+            puntualidad = ResumenOperacion.porcentaje(resumen.aTiempo, resumen.conCheckIn)
+        )
+    }
 
     /** true si hay un check-in abierto en alguno de los servicios cargados. */
     fun enRuta(servicios: List<Servicio>, checkins: Map<String, CheckinServicio>): Boolean =
