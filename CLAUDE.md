@@ -89,8 +89,8 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
   - `data/servicios/` — `ServiciosDataSource` (+ `ApiServiciosDataSource`), `FakeServiciosDataSource`,
     `ServicioMapper` (DTO → `Servicio`), `FiltroServicios`.
   - `data/clima/` — `ClimaService` (Open-Meteo).
-- `ui/` — `navigation/AppNavHost` (rutas por rol) y `PestanasConductor` (pestañas deslizables del conductor; guía y
-  administrador siguen con la barra y `NavHost`), `login`, `servicios` (conductor), `guia` (guía),
+- `ui/` — `navigation/AppNavHost` (rutas) y `PestanasPrincipales` (pestañas deslizables de los tres roles;
+  `PestanasConductor` solo delega en ella), `login`, `servicios` (conductor), `guia` (guía),
   `detalle`, `calendario` (+ `agenda/AgendaViewModel`), `ruta` (mapa, check-in, clima), `alertas`,
   `historial` (servicios con check-out; solo alcanza a los últimos 7 días cargados), `perfil`, `ajustes`,
   `components` (incluye `Incidencias`), `theme`.
@@ -195,8 +195,8 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
   y, para "Piloto1" y "Patricio Lagos", el "JAC S5", 2015, 5 pasajeros, 86.400 km, revisión al día y calificación 4,9.
   "Viajes Mes" cuenta también lo futuro y lo rechazado. Quitar o reemplazar todo esto antes de usar datos reales.
   Cuando llegue la clave de la API, decidir si reemplaza al placeholder.
-- Navegación de guía y administrador: tras el login se saca `LOGIN` y la barra inferior hace
-  `popUpTo(findStartDestination())` (que es LOGIN) → probablemente se acumulan pestañas en la pila.
+- `AppNavHost` conserva las rutas antiguas de las pestañas de guía y administrador, que ya no se usan desde el PR 33
+  (ahora se abren en `PestanasPrincipales`): se pueden limpiar.
 - Textos fijos fuera de `strings.xml`; recursos sin usar (`logo_solo1.png`, `logo.jpg`, `van.png`).
 - R8 desactivado en release; Coil declarado fuera del catálogo de versiones.
 - Calendario fuera del rango cargado (hoy-7..hoy+30) aparece vacío.

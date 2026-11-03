@@ -109,7 +109,8 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.bottomNavExitTrans
 
 object Routes {
     const val LOGIN = "login"
-    const val MAIN_CONDUCTOR = "main_conductor"
+    const val MAIN = "main"
+    const val MAIN_CONDUCTOR = MAIN
     const val SERVICIOS = "servicios"
     const val DETALLE_SERVICIO = "detalle_servicio/{servicioId}"
     const val RUTA_MAPA = "ruta_mapa/{servicioId}"
@@ -139,7 +140,7 @@ data class BottomNavItem(
     val icon: ImageVector
 )
 
-private fun bottomNavItems(rol: Rol?): List<BottomNavItem> = when (rol) {
+internal fun bottomNavItems(rol: Rol?): List<BottomNavItem> = when (rol) {
     Rol.GUIA -> listOf(
         BottomNavItem(Routes.GUIA_ASIGNACIONES, "Asignaciones", Icons.Outlined.Home),
         BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth),
@@ -168,9 +169,9 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
     val rol by AuthRepository.rolActual.collectAsState()
 
     val items = bottomNavItems(rol)
-    // El conductor cambia de pestaña con swipe (HorizontalPager); guía y admin siguen con NavHost.
-    val esConductor = rol != Rol.GUIA && rol != Rol.ADMINISTRADOR
-    val pagerState = rememberPagerState(pageCount = { items.size })
+    val pagerState = androidx.compose.runtime.key(rol) {
+        rememberPagerState(pageCount = { items.size })
+    }
     val scope = rememberCoroutineScope()
 
     // Si Android mató el proceso, la navegación se restaura sin pasar por el login:
@@ -188,11 +189,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         }
     }
 
-    val showBottomBar = if (esConductor) {
-        currentRoute == Routes.MAIN_CONDUCTOR
-    } else {
-        items.any { it.route == currentRoute }
-    }
+    val showBottomBar = currentRoute == Routes.MAIN || currentRoute == Routes.MAIN_CONDUCTOR
     val containerColor = MaterialTheme.colorScheme.background
 
     Scaffold(
@@ -203,26 +200,12 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                     containerColor = MaterialTheme.colorScheme.surface
                 ) {
                     items.forEachIndexed { index, item ->
-                        val seleccionado = if (esConductor) {
-                            pagerState.currentPage == index
-                        } else {
-                            currentRoute == item.route
-                        }
+                        val seleccionado = pagerState.currentPage == index
                         NavigationBarItem(
                             selected = seleccionado,
                             onClick = {
-                                if (esConductor) {
-                                    if (pagerState.currentPage != index) {
-                                        scope.launch { pagerState.animateScrollToPage(index) }
-                                    }
-                                } else if (currentRoute != item.route) {
-                                    navController.navigate(item.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
+                                if (pagerState.currentPage != index) {
+                                    scope.launch { pagerState.animateScrollToPage(index) }
                                 }
                             },
                             icon = { Icon(imageVector = item.icon, contentDescription = item.label) },
@@ -261,20 +244,16 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         ) {
             composable(Routes.LOGIN) {
                 LoginScreen(
-                    onLoginSuccess = { rol ->
-                        val destino = when (rol) {
-                            Rol.GUIA -> Routes.GUIA_ASIGNACIONES
-                            Rol.ADMINISTRADOR -> Routes.ADMIN_PANEL
-                            else -> Routes.MAIN_CONDUCTOR
-                        }
-                        navController.navigate(destino) {
+                    onLoginSuccess = { _ ->
+                        navController.navigate(Routes.MAIN) {
                             popUpTo(Routes.LOGIN) { inclusive = true }
                         }
                     }
                 )
             }
-            composable(route = Routes.MAIN_CONDUCTOR) {
-                PestanasConductor(
+            composable(route = Routes.MAIN) {
+                PestanasPrincipales(
+                    rol = rol,
                     pagerState = pagerState,
                     onVerTerminados = { navController.navigate(Routes.TERMINADOS) },
                     onServiceClick = { id -> navController.navigate(Routes.detalleServicio(id)) },
