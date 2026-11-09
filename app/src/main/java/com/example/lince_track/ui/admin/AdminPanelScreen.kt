@@ -33,6 +33,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -247,7 +248,11 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
                     FilterChip(
                         selected = filtro == opcion,
                         onClick = { filtro = opcion },
-                        label = { Text(opcion.etiqueta) }
+                        label = { Text(opcion.etiqueta) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.secondary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onSecondary
+                        )
                     )
                 }
             }

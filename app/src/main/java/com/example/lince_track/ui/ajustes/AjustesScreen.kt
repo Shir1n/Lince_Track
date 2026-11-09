@@ -34,9 +34,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.example.lince_track.data.version.ControlVersionRepository
+import com.example.lince_track.data.version.InfoVersion
+import com.example.lince_track.ui.components.VersionActualizadaDialog
+import com.example.lince_track.ui.components.VersionDesactualizadaDialog
 import com.example.lince_track.ui.theme.ThemeMode
 import com.example.lince_track.ui.theme.setThemeMode
 import com.example.lince_track.ui.theme.themeModeFlow
@@ -49,8 +54,14 @@ import com.example.lince_track.ui.theme.BarraSuperior
 fun AjustesScreen(onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val themeMode by context.themeModeFlow.collectAsState(initial = ThemeMode.SYSTEM)
+    val avisosVersionActivos by ControlVersionRepository.avisosActivosFlow(context)
+        .collectAsState(initial = true)
     val logs by LinceLogger.logs.collectAsState()
     var showLogConsole by remember { mutableStateOf(false) }
+    var mostrarNovedadesLocales by remember { mutableStateOf(false) }
+    var versionRemotaPendiente by remember { mutableStateOf<InfoVersion?>(null) }
+    var verificandoVersion by remember { mutableStateOf(false) }
+    val versionLocal = ControlVersionRepository.versionLocal
     val scope = rememberCoroutineScope()
 
     Column(
@@ -109,6 +120,90 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Versión de la Aplicación",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = buildString {
+                            append("Instalada: v${versionLocal.versionName} (código ${versionLocal.versionCode})")
+                            if (versionLocal.autorUltimoCambio.isNotBlank()) {
+                                append(" · Último cambio por ${versionLocal.autorUltimoCambio}")
+                            }
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Avisos de versión al iniciar",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Notificar si hay cambios nuevos en master",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = avisosVersionActivos,
+                            onCheckedChange = { activo ->
+                                scope.launch {
+                                    ControlVersionRepository.setAvisosActivos(context, activo)
+                                }
+                            }
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            if (!verificandoVersion) {
+                                verificandoVersion = true
+                                scope.launch {
+                                    val remota = ControlVersionRepository.consultarVersionRemota()
+                                    verificandoVersion = false
+                                    if (remota != null && remota.versionCode > versionLocal.versionCode) {
+                                        versionRemotaPendiente = remota
+                                    } else {
+                                        mostrarNovedadesLocales = true
+                                    }
+                                }
+                            }
+                        },
+                        enabled = !verificandoVersion,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            contentColor = MaterialTheme.colorScheme.onSecondary
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = if (verificandoVersion) "VERIFICANDO..." else "VERIFICAR ACTUALIZACIÓN / NOVEDADES",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
@@ -143,6 +238,26 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
 
     if (showLogConsole) {
         LinceLogConsoleDialog(onDismiss = { showLogConsole = false })
+    }
+
+    if (mostrarNovedadesLocales) {
+        VersionActualizadaDialog(
+            version = versionLocal,
+            onDismiss = {
+                mostrarNovedadesLocales = false
+                scope.launch {
+                    ControlVersionRepository.marcarVersionVista(context, versionLocal.versionCode)
+                }
+            }
+        )
+    }
+
+    versionRemotaPendiente?.let { remota ->
+        VersionDesactualizadaDialog(
+            local = versionLocal,
+            remota = remota,
+            onDismiss = { versionRemotaPendiente = null }
+        )
     }
 }
 

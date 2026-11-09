@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -95,7 +96,11 @@ fun AdminResumenScreen() {
                     FilterChip(
                         selected = periodo == opcion,
                         onClick = { periodo = opcion },
-                        label = { Text(opcion.etiqueta) }
+                        label = { Text(opcion.etiqueta) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.secondary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onSecondary
+                        )
                     )
                 }
             }

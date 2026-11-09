@@ -1,0 +1,13 @@
+{
+  "versionCode": 2,
+  "versionName": "1.2",
+  "autorUltimoCambio": "Benjamín",
+  "apkUrl": "https://github.com/Shir1n/Lince_Track/releases/latest/download/lince-track.apk",
+  "novedades": [
+    "Verificador automático de versión y diálogo de novedades al actualizar",
+    "Swipe horizontal global en Conductor, Guía y Administrador",
+    "Pestaña Resumen de operación para dueños en Administrador",
+    "Botón de llamada telefónica junto al de WhatsApp del compañero asignado",
+    "Ubicación GPS en reporte de incidencias y selector de fecha en panel"
+  ]
+}

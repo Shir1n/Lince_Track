@@ -572,7 +572,10 @@ private fun GuideCard(servicio: Servicio) {
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            IconButton(onClick = { abrirWhatsApp(context, servicio.telefonoCompanero) }) {
+            IconButton(onClick = {
+                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${servicio.telefonoCompanero}"))
+                context.startActivity(intent)
+            }) {
                 Box(
                     modifier = Modifier
                         .size(44.dp)
@@ -581,6 +584,20 @@ private fun GuideCard(servicio: Servicio) {
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Call,
+                        contentDescription = if (esGuia) "Llamar al conductor" else "Llamar al guía",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+            IconButton(onClick = { abrirWhatsApp(context, servicio.telefonoCompanero) }) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Chat,
                         contentDescription = if (esGuia) "Abrir WhatsApp del conductor" else "Abrir WhatsApp del guía",
                         tint = MaterialTheme.colorScheme.onSurface
                     )
