@@ -16,8 +16,39 @@ Responde y escribe la interfaz en **español de Chile**.
 Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta frenar ni coordinar antes de tocar el
 área de otra persona.
 
-## Estado actual (02-11-2026)
+## Evaluación del curso (DSY1105, revisado el 13-11-2026)
+El material del docente está en `contexto/` (ignorada en Git: trae la API key y un video de 250 MB; **no subirla**):
+pautas `EA4_...Encargo` y `EA5_...Defensa`, caso `Formato_Caso_DSY1105`, guía `ACCESO_ESTUDIANTES.md`, colección de
+Postman y la transcripción de la reunión con Southbound.
+- **EA4 (6 %, en parejas):** entrega en AVA en la semana 15 (código Android y backend, APK release firmada, README,
+  evidencia de pruebas y enlace a GitHub público). Cambios en el repositorio después del plazo = nota 1,0.
+- **EA5 (24 %, individual, 15 min):** defensa en la semana 16, sin IA, con la APK en un celular real. El 40 % es una
+  **modificación en vivo** que recorra Compose → ViewModel → endpoint → base de datos (ej.: radio de 150 a 100 m,
+  tolerancia de puntualidad, motivo obligatorio de incidencia, campo "precisión del GPS").
+- **Lo que piden y falta hoy:**
+  - Backend propio **Spring Boot** + Swagger/OpenAPI + JWT/roles + BD (check-ins, geocercas, disponibilidad,
+    incidencias, confirmaciones). Hoy eso vive en Firebase: la pauta acepta "alternativa autorizada", así que hay que
+    preguntar al docente si Firebase sirve.
+  - Check-in **bloqueado** fuera de la geocerca (radio inicial 150 m, configurable por coordinación) o si es más tarde
+    que 15 min antes del pickup; mostrar distancia, radio y precisión del GPS, y generar incidencia si falla.
+    Validación doble: la app y el backend. Catálogo ficticio de hoteles con coordenadas.
+  - Disponibilidad: bloquear días con 7 días de anticipación y nunca sobre un servicio asignado.
+  - Room + WorkManager: caché, cola de check-ins sin conexión, sincronización con reintentos e idempotencia.
+  - Español e inglés con selector de idioma persistente.
+  - JUnit + MockK con cobertura > 90 % en ViewModel/Repository y al menos un Compose UI Test.
+  - APK release firmada con `signingConfigs` seguros; `.jks`, contraseñas y API key fuera del repositorio.
+  - Usar también `/guias`, `/transportistas`, `/clientes`, `/catalogos` y `/resumen`; mostrar `requestId` en errores.
+  - Coordinación: última posición puntual del transportista durante un servicio activo (sin rastreo 24/7).
+- **Pedidos de Southbound en la reunión (11-09-2026) que aún no están:** datos de la agencia (vehículo, polera, letrero),
+  qué incluye la excursión, reporte mensual con servicios y dinero acumulado, y que los servicios cancelados igual se
+  paguen al transportista. Un guía puede hacer un tour de medio día y un transfer el mismo día, pero no otro servicio
+  si tiene un tour de día completo.
+
+## Estado actual (13-11-2026)
 - **Objetivo cercano:** un video para vender la app a los dueños de Southbound, con el flujo lo más completo posible.
+- **Clave de la API disponible** (vence el 31-12-2026). Los datos de la API llegan hasta el 15-12-2026. Con la clave
+  en `local.properties`, master compila, pasan los 150 tests y los DTO calzan con el JSON real; falta probarla en
+  celulares.
 - **Rama en curso:** `fix/detalles-video` (revisión visual con los tres roles). Ya están en `master` el resumen (PR 30),
   la ubicación en la incidencia (PR 31), el panel con fecha (PR 32), el perfil (PR 34), las pestañas deslizables de los
   tres roles (PR 33) y el verificador de versión (PR 36).
@@ -28,10 +59,16 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
   - Patricio Lagos: `conductor`, `transportistaId: 16`, `perfilNuevo: true`. Es el reemplazo en el video.
   - Guía: `guiaId: 7`, administrador sin ID. `telefono` es texto con código de país (`+569...`).
   - Los correos y la contraseña están en `USUARIOS_TEST.md`, y `LoginScreen` tiene botones que rellenan esas cuentas.
+  - **Con la clave, esos IDs no sirven:** transportistas 12 y 16 y guía 7 son de Santiago (SCL) y la app carga solo PUX,
+    así que verían la lista vacía. IDs de PUX con más servicios (hoy-7 a hoy+30, al 13-11): transportistas 40, 33, 43,
+    37; guías 31, 23, 29, 35.
 - **Recorrido del video:** guía y conductor aceptan "Saltos del Petrohué" (8941/8942) → el conductor hace check-in y
   reporta "Falla mecánica" → el administrador responde y envía reemplazo → Patricio acepta y hace check-in y check-out →
   el administrador la marca resuelta. Tour de mañana para otra prueba: "Lago Todos los Santos" (8960/8961). Otro tour de
   hoy, con Miguel Soto y Roberto Díaz, sirve para mostrar un reemplazo: "Frutillar y Teatro del Lago" (8970/8971).
+  **Esos IDs solo existen en los datos de ejemplo.** En la API real, un tour con ambos asignados y pendiente (RQ) es
+  "Tour Frutillar y Lago Llanquihue" del 20-11 a las 08:30: 3008 (EX, transportista 37) y 3009 (GS, guía 35). Otro:
+  3067/3068 del 22-11 (transportista 37, guía 33, el guía ya en CF).
 - **Limpiar pruebas:** lo ya aceptado no se puede volver a aceptar. Para repetir hay que borrar en Firebase el documento
   en `estadosServicio` y los de `respuestas`; también `asignaciones` si se reasignó. Lo aceptado antes de agregar
   `telefono` se guardó sin teléfono.
@@ -104,17 +141,24 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
 
 ## Fuente de datos: API de Southbound (solo lectura)
 - Docs: https://ws.southbound.travel/lince-api/api-docs/ · Base: `https://ws.southbound.travel/lince-api/`
-- Header `X-API-Key` con la clave del curso (vence al terminar el semestre).
-  Va en `local.properties` como `LINCE_API_KEY=...` → `BuildConfig.LINCE_API_KEY`.
-  **Nunca** escribir la clave en el código, commits, issues ni chats.
+- Header `X-API-Key` con la clave del curso, compartida por todo el curso y vigente hasta el 31-12-2026. Está en
+  `contexto/` (docx y PDF de las pautas). Va en `local.properties` como `LINCE_API_KEY=...` →
+  `BuildConfig.LINCE_API_KEY`. **Nunca** escribir la clave en el código, commits, issues, capturas ni chats.
 - Si la clave está vacía, `ServicioRepository` usa `FakeServiciosDataSource` (misma forma que la API).
-- Endpoints: `/health` (sin clave), `/api/v1/servicios` (filtros fecha, oficina, tipo, estado, statusPL,
-  guiaId, transportistaId; paginado, `pageSize` máx. 100), `/servicios/{id}`, `/guias`, `/transportistas`,
-  `/clientes`, `/catalogos`, `/resumen`. Parámetros desconocidos → 400. Límite → 429 con `Retry-After`.
+- Datos ficticios de tres oficinas (SCL, PUX, PUQ), del 01-09-2026 al 15-12-2026. PUX tiene unos 500 servicios entre
+  hoy-7 y hoy+30.
+- Endpoints: `/health` (sin clave), `/api/v1/servicios` (filtros `fechaDesde`, `fechaHasta`, `oficina`, `tipo`,
+  `estadoServicio`, `estadoReserva`, `statusPL` (incluye `SIN_ASIGNAR`), `clienteId`, `guiaId`, `transportistaId`, `q`,
+  `orden`; paginado, `pageSize` máx. 100), `/servicios/{id}`, `/guias` y `/guias/{id}`, `/transportistas` y
+  `/transportistas/{id}`, `/clientes` y `/clientes/{id}`, `/catalogos`, `/resumen`. Parámetros desconocidos → 400.
+  Errores: `{ error: { code, message, details, requestId } }` con 400, 401 (`UNAUTHORIZED`, `KEY_EXPIRED`), 404, 429
+  (`Retry-After`) y 503. El límite de solicitudes es por minuto y compartido por red.
 - Reglas de negocio: `TRANSFER` y `EXCURSION` llevan **solo transportista**; `GUIDED_SERVICE` **solo guía**.
-  Un tour se relaciona por `reserva.referencia` (por confirmar con Southbound): `ReglasCompanero` busca el otro
-  servicio con la misma referencia, el mismo día y horario cruzado. Mientras esa persona no acepta se muestra
-  "Sin asignar"; al aceptar, el nombre de su cuenta (`usuarios/{uid}.nombre`), no el de la API.
+  Un tour con traslado propio son **dos líneas de la misma reserva a la misma hora** (confirmado en la guía del curso):
+  un `EX` "`<tour>`, sin guía" con el transportista y un `GS` "Servicio guiado…" con el guía. `ReglasCompanero` busca
+  el otro servicio con la misma referencia, el mismo día y horario cruzado. Mientras esa persona no acepta se muestra
+  "Sin asignar"; al aceptar, el nombre de su cuenta (`usuarios/{uid}.nombre`), no el de la API. En `DL` y `CX` el staff
+  informado es el último solicitado; si la reserva está `XX`, todos sus servicios también.
 - `statusPL` → estado de la app (`ServicioMapper.estadoDesde`): CF→ACEPTADO, DL/CX o servicio XX→RECHAZADO,
   RQ/null→PENDIENTE.
 - La API **no trae**: hora de término (se estima por tipo: 60/180/240 min), tarifa (queda 0),
@@ -173,8 +217,8 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
 - Textos de la UI en español; los códigos de la API se guardan como String (tolerar valores nuevos).
 
 ## Pendientes
-1. Reemplazar los IDs de prueba de `usuarios/{uid}` (`transportistaId: 12` y `16`, `guiaId: 7`) por los reales
-   cuando llegue la clave de la API: con la clave, un ID de prueba mostraría servicios de otra persona.
+1. Ya llegó la clave: cambiar en Firebase los IDs de `usuarios/{uid}` (`transportistaId: 12` y `16`, `guiaId: 7`, de
+   Santiago) por IDs de PUX (ver "Cuentas de prueba") y rehacer el recorrido del video con servicios reales.
 2. El panel del administrador (`ui/admin/AdminPanelScreen`) muestra el día elegido (hoy-7 a hoy+30) y, siempre, las
    incidencias abiertas y los rechazos de los próximos días; avisa y reasigna. Lo ya aceptado solo se reasigna con una
    incidencia abierta, y los días pasados no se reasignan. Con datos de ejemplo, los días pasados se ven casi vacíos: el
@@ -210,8 +254,10 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
 - Calendario fuera del rango cargado (hoy-7..hoy+30) aparece vacío.
 
 ## Preguntas abiertas a Southbound
-1. ¿Los datos cambian en el tiempo (statusPL RQ→CF) y cubren las fechas actuales?
-2. ¿Habrá endpoints para escribir (aceptar/rechazar)?
-3. ¿Cómo se relaciona un servicio guiado con su transporte?
-4. ¿Pueden agregar hora de término, tarifa o coordenadas?
-5. ¿Se puede llamar a la API directo desde la app o prefieren un intermediario?
+1. ¿Los datos cambian en el tiempo (statusPL RQ→CF)? Cubren las fechas actuales: llegan hasta el 15-12-2026.
+2. ¿Pueden agregar hora de término, tarifa o coordenadas? (La pauta dice que mantengamos un catálogo ficticio de
+   hoteles con coordenadas.)
+3. Para el docente: ¿se acepta Firebase como "alternativa autorizada" al backend Spring Boot?
+
+Ya respondidas: la API no tendrá endpoints para escribir (lo nuevo va al backend propio), un tour se relaciona por la
+misma reserva y hora (EX + GS), y la app puede llamar a la API directo con la clave en configuración local.
