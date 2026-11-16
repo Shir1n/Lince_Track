@@ -54,6 +54,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lince_track.BuildConfig
 import com.example.lince_track.data.AuthRepository
+import com.example.lince_track.data.CheckinServicio
+import com.example.lince_track.data.IncidenciaServicio
+import com.example.lince_track.data.Rol
+import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ReglasIncidencia
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.ui.components.SoporteDialog
@@ -80,11 +84,35 @@ fun AdminPerfilScreen(
     val servicios by ServicioRepository.servicios.collectAsState()
     val checkins by ServicioRepository.checkins.collectAsState()
     val incidencias by ServicioRepository.incidencias.collectAsState()
-    var mostrarSoporte by remember { mutableStateOf(false) }
-
     val email = AuthRepository.usuarioActual?.email.orEmpty()
     val nombre = perfil?.nombre?.takeIf { it.isNotBlank() } ?: email
-    val hoy = LocalDate.now()
+    AdminPerfilContenido(
+        nombre = nombre,
+        email = email,
+        telefono = perfil?.telefono,
+        rol = perfil?.rol,
+        servicios = servicios,
+        checkins = checkins,
+        incidencias = incidencias,
+        onLogout = onLogout,
+        onOpenSettings = onOpenSettings
+    )
+}
+
+@Composable
+internal fun AdminPerfilContenido(
+    nombre: String,
+    email: String,
+    telefono: String?,
+    rol: Rol?,
+    servicios: List<Servicio>,
+    checkins: Map<String, CheckinServicio>,
+    incidencias: List<IncidenciaServicio>,
+    onLogout: () -> Unit,
+    onOpenSettings: () -> Unit,
+    hoy: LocalDate = LocalDate.now()
+) {
+    var mostrarSoporte by remember { mutableStateOf(false) }
     val serviciosHoy = remember(servicios, hoy) { servicios.filter { it.fecha == hoy } }
     val totales = remember(serviciosHoy, checkins) { PanelAdmin.totales(serviciosHoy, checkins) }
     val abiertas = remember(incidencias) { ReglasIncidencia.abiertas(incidencias).size }
@@ -154,7 +182,7 @@ fun AdminPerfilScreen(
                             .padding(vertical = 10.dp, horizontal = 4.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        MiniDatoPerfil("Cuenta", perfil?.rol?.etiqueta ?: "Administrador")
+                        MiniDatoPerfil("Cuenta", rol?.etiqueta ?: "Administrador")
                         MiniDatoPerfil("Oficina", "Puerto Varas")
                     }
                 }
@@ -207,10 +235,10 @@ fun AdminPerfilScreen(
                 FilaDatoPersonal("Nombre Completo", nombre, Icons.Outlined.Person)
                 FilaDatoPersonal("Correo Institucional", email.ifBlank { "Sin información" },
                     Icons.Outlined.Email, subrayado = true)
-                perfil?.telefono?.takeIf { it.isNotBlank() }?.let { telefono ->
-                    FilaDatoPersonal("Teléfono", telefono, Icons.Outlined.Phone)
+                telefono?.takeIf { it.isNotBlank() }?.let { telefonoActual ->
+                    FilaDatoPersonal("Teléfono", telefonoActual, Icons.Outlined.Phone)
                 }
-                FilaDatoPersonal("Rol", perfil?.rol?.etiqueta ?: "Administrador", Icons.Outlined.Badge)
+                FilaDatoPersonal("Rol", rol?.etiqueta ?: "Administrador", Icons.Outlined.Badge)
             }
 
             TarjetaAdmin {
