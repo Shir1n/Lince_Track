@@ -50,6 +50,11 @@ public class ManejadorErrores {
         return responder(HttpStatus.BAD_GATEWAY, "LINCE_API_ERROR", e.getMessage(), List.of());
     }
 
+    @ExceptionHandler(ErrorFirestore.class)
+    ResponseEntity<Map<String, CuerpoError>> firestore(ErrorFirestore e) {
+        return responder(HttpStatus.SERVICE_UNAVAILABLE, "FIRESTORE_ERROR", e.getMessage(), List.of());
+    }
+
     private ResponseEntity<Map<String, CuerpoError>> responder(
             HttpStatus estado, String codigo, String mensaje, List<Detalle> detalles) {
         String requestId = UUID.randomUUID().toString();

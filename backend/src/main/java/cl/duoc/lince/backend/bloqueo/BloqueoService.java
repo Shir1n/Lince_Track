@@ -1,6 +1,8 @@
 package cl.duoc.lince.backend.bloqueo;
 
+import cl.duoc.lince.backend.asignacion.AsignacionesClient;
 import cl.duoc.lince.backend.comun.ErrorNegocio;
+import cl.duoc.lince.backend.lince.ServicioLince;
 import cl.duoc.lince.backend.comun.UsuarioActual;
 import cl.duoc.lince.backend.config.LinceProperties;
 import cl.duoc.lince.backend.lince.LinceClient;
@@ -12,18 +14,23 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class BloqueoService {
 
     private final BloqueoRepository bloqueos;
     private final LinceClient lince;
+    private final AsignacionesClient asignaciones;
     private final LinceProperties propiedades;
     private final Clock reloj;
 
-    public BloqueoService(BloqueoRepository bloqueos, LinceClient lince, LinceProperties propiedades, Clock reloj) {
+    public BloqueoService(BloqueoRepository bloqueos, LinceClient lince, AsignacionesClient asignaciones,
+                          LinceProperties propiedades, Clock reloj) {
         this.bloqueos = bloqueos;
         this.lince = lince;
+        this.asignaciones = asignaciones;
         this.propiedades = propiedades;
         this.reloj = reloj;
     }
@@ -42,8 +49,13 @@ public class BloqueoService {
         if (usuario.transportistaId() == null && usuario.guiaId() == null) {
             throw ErrorNegocio.prohibido("Tu cuenta no tiene ID de la API: no se puede revisar tu agenda.");
         }
-        if (ReglasBloqueo.tieneServicioAsignado(
-                lince.serviciosDe(s.fecha(), usuario.transportistaId(), usuario.guiaId()))) {
+        List<ServicioLince> propios = lince.serviciosDe(s.fecha(), usuario.transportistaId(), usuario.guiaId());
+        Set<Long> cedidos = propios.stream()
+                .map(ServicioLince::id)
+                .filter(id -> asignaciones.de(id).filter(r -> !r.uid().equals(usuario.uid())).isPresent())
+                .collect(Collectors.toSet());
+        int recibidos = asignaciones.recibidos(usuario.uid(), s.fecha()).size();
+        if (ReglasBloqueo.tieneServicioAsignado(propios, cedidos, recibidos)) {
             throw ErrorNegocio.conflicto("DIA_CON_SERVICIO", "Ese día tienes un servicio asignado.");
         }
         String motivo = s.motivo() == null || s.motivo().isBlank() ? null : s.motivo().trim();

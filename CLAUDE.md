@@ -54,13 +54,14 @@ Postman y la transcripción de la reunión con Southbound.
 - **Reglas:** revisar que la versión de `firestore.rules` de `master` (`telefono` en `estadosServicio`, `lat` y `lon` en
   `incidencias`) esté publicada antes de probar: si falta, aceptar, rechazar o reportar da error.
 - **Cuentas de prueba** en `usuarios/{uid}`:
-  - Carlos Morales: `conductor`, `transportistaId: 12`, sin `perfilNuevo` (se muestra el perfil completo de ejemplo).
-  - Patricio Lagos: `conductor`, `transportistaId: 16`, `perfilNuevo: true`. Es el reemplazo en el video.
-  - Guía: `guiaId: 7`, administrador sin ID. `telefono` es texto con código de país (`+569...`).
+  - Carlos Morales R.: `conductor`, `transportistaId: 37`, sin `perfilNuevo` (se muestra el perfil completo de ejemplo).
+  - Patricio Lagos: `conductor`, `transportistaId: 43`, `perfilNuevo: true`. Es el reemplazo en el video.
+  - Alfredo Pizarro: `guia`, `guiaId: 35`. "Admin 1": administrador sin ID. `telefono` es texto con código de país
+    (`+569...`).
+  - IDs de PUX desde el 16-11-2026, con custom claims aplicados (`rol` y el ID). Carlos y Alfredo comparten el tour real
+    3008/3009 del 20-11 a las 08:30. Tras cambiar un rol o un ID en `usuarios/{uid}`, volver a correr
+    `backend/scripts/sincronizar-claims.mjs --aplicar` y cerrar sesión en la app.
   - Los correos y la contraseña están en `USUARIOS_TEST.md`, y `LoginScreen` tiene botones que rellenan esas cuentas.
-  - **Con la clave, esos IDs no sirven:** transportistas 12 y 16 y guía 7 son de Santiago (SCL) y la app carga solo PUX,
-    así que verían la lista vacía. IDs de PUX con más servicios (hoy-7 a hoy+30, al 13-11): transportistas 40, 33, 43,
-    37; guías 31, 23, 29, 35.
 - **Recorrido del video:** guía y conductor aceptan "Saltos del Petrohué" (8941/8942) → el conductor hace check-in y
   reporta "Falla mecánica" → el administrador responde y envía reemplazo → Patricio acepta y hace check-in y check-out →
   el administrador la marca resuelta. Tour de mañana para otra prueba: "Lago Todos los Santos" (8960/8961). Otro tour de
@@ -211,7 +212,9 @@ Postman y la transcripción de la reunión con Southbound.
   repo).
 - Local usa H2 en `backend/data/`; Docker usa PostgreSQL. La clave de la API va en `LINCE_API_KEY` (variable de entorno o
   `backend/.env`, ignorado).
-- Falta: que la app lo use (Retrofit + Room + WorkManager), y que conozca los reemplazos de `asignaciones`.
+- Lee los reemplazos (`asignaciones/{servicioId}`) con Firebase Admin si `GOOGLE_APPLICATION_CREDENTIALS` apunta a la
+  cuenta de servicio (la de Shir1n está en `D:\IA\Fire`, fuera del repo); sin ella arranca igual y no los ve.
+- Falta: que la app lo use (Retrofit + Room + WorkManager).
 
 ## Convenciones del equipo
 - Una rama por tarea (`feature/...`, `fix/...`) y PR chico a `master`. Nada directo a `master`.
@@ -227,8 +230,7 @@ Postman y la transcripción de la reunión con Southbound.
 - Textos de la UI en español; los códigos de la API se guardan como String (tolerar valores nuevos).
 
 ## Pendientes
-1. Ya llegó la clave: cambiar en Firebase los IDs de `usuarios/{uid}` (`transportistaId: 12` y `16`, `guiaId: 7`, de
-   Santiago) por IDs de PUX (ver "Cuentas de prueba") y rehacer el recorrido del video con servicios reales.
+1. Rehacer el recorrido del video con servicios reales (IDs de PUX ya aplicados el 16-11-2026).
 2. El panel del administrador (`ui/admin/AdminPanelScreen`) muestra el día elegido (hoy-7 a hoy+30) y, siempre, las
    incidencias abiertas y los rechazos de los próximos días; avisa y reasigna. Lo ya aceptado solo se reasigna con una
    incidencia abierta, y los días pasados no se reasignan. Con datos de ejemplo, los días pasados se ven casi vacíos: el

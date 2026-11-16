@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,17 +30,27 @@ class ReglasBloqueoTest {
 
     @Test
     void unServicioVigenteImpideBloquear() {
-        assertThat(ReglasBloqueo.tieneServicioAsignado(List.of(servicio("CF", "RQ")))).isTrue();
+        assertThat(ReglasBloqueo.tieneServicioAsignado(List.of(servicio("CF", "RQ")), Set.of(), 0)).isTrue();
     }
 
     @Test
     void losCanceladosYEliminadosNoCuentan() {
         assertThat(ReglasBloqueo.tieneServicioAsignado(List.of(
-                servicio("XX", "CF"), servicio("CF", "DL"), servicio("CF", "CX")))).isFalse();
+                servicio("XX", "CF"), servicio("CF", "DL"), servicio("CF", "CX")), Set.of(), 0)).isFalse();
     }
 
     @Test
     void sinServiciosSePuede() {
-        assertThat(ReglasBloqueo.tieneServicioAsignado(List.of())).isFalse();
+        assertThat(ReglasBloqueo.tieneServicioAsignado(List.of(), Set.of(), 0)).isFalse();
+    }
+
+    @Test
+    void unServicioQueSeReasignoAOtraPersonaNoCuenta() {
+        assertThat(ReglasBloqueo.tieneServicioAsignado(List.of(servicio("CF", "CF")), Set.of(1L), 0)).isFalse();
+    }
+
+    @Test
+    void unServicioRecibidoComoReemplazoImpideBloquear() {
+        assertThat(ReglasBloqueo.tieneServicioAsignado(List.of(), Set.of(), 1)).isTrue();
     }
 }

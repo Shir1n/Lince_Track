@@ -1,5 +1,8 @@
 package cl.duoc.lince.backend.hito;
 
+import cl.duoc.lince.backend.asignacion.AsignacionesClient;
+import cl.duoc.lince.backend.asignacion.ReglasDueno;
+import cl.duoc.lince.backend.asignacion.Reemplazo;
 import cl.duoc.lince.backend.comun.ErrorNegocio;
 import cl.duoc.lince.backend.comun.UsuarioActual;
 import cl.duoc.lince.backend.config.LinceProperties;
@@ -18,7 +21,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Registra hitos con la validación del servidor: que el servicio sea de esa persona (según la API de Southbound),
+ * Registra hitos con la validación del servidor: que el servicio sea de esa persona (según la API de Southbound,
+ * o el reemplazo que guardó el administrador en Firestore),
  * que no esté cancelado, el orden check-in → posición → check-out, y el resultado de {@link ReglasHito}.
  */
 @Service
@@ -30,14 +34,16 @@ public class HitoService {
     private final HitoRepository hitos;
     private final GeocercaRepository geocercas;
     private final LinceClient lince;
+    private final AsignacionesClient asignaciones;
     private final LinceProperties propiedades;
     private final Clock reloj;
 
     public HitoService(HitoRepository hitos, GeocercaRepository geocercas, LinceClient lince,
-                       LinceProperties propiedades, Clock reloj) {
+                       AsignacionesClient asignaciones, LinceProperties propiedades, Clock reloj) {
         this.hitos = hitos;
         this.geocercas = geocercas;
         this.lince = lince;
+        this.asignaciones = asignaciones;
         this.propiedades = propiedades;
         this.reloj = reloj;
     }
@@ -54,10 +60,13 @@ public class HitoService {
 
         ServicioLince servicio = lince.servicio(s.servicioId())
                 .orElseThrow(() -> ErrorNegocio.noEncontrado("El servicio " + s.servicioId()));
-        if (!servicio.esDe(usuario.transportistaId(), usuario.guiaId())) {
-            throw ErrorNegocio.prohibido("El servicio no está asignado a tu cuenta.");
+        Optional<Reemplazo> reemplazo = asignaciones.de(s.servicioId());
+        if (!ReglasDueno.esDueno(servicio, reemplazo, usuario)) {
+            throw ErrorNegocio.prohibido(reemplazo.isPresent()
+                    ? "El servicio se reasignó a otra persona."
+                    : "El servicio no está asignado a tu cuenta.");
         }
-        if (servicio.estaCancelado()) {
+        if (ReglasDueno.estaCerrado(servicio, reemplazo)) {
             throw ErrorNegocio.conflicto("SERVICIO_CANCELADO", "El servicio está cancelado o ya no es tuyo.");
         }
         revisarOrden(usuario.uid(), s);

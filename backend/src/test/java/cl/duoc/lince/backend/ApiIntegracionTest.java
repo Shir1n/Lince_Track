@@ -1,5 +1,7 @@
 package cl.duoc.lince.backend;
 
+import cl.duoc.lince.backend.asignacion.AsignacionesClient;
+import cl.duoc.lince.backend.asignacion.Reemplazo;
 import cl.duoc.lince.backend.lince.LinceClient;
 import cl.duoc.lince.backend.lince.ServicioLince;
 import org.junit.jupiter.api.Test;
@@ -64,6 +66,10 @@ class ApiIntegracionTest {
 
     @MockitoBean
     LinceClient lince;
+
+    /** Sin configurar devuelve Optional.empty() y listas vacías: nadie ha sido reemplazado. */
+    @MockitoBean
+    AsignacionesClient asignaciones;
 
     static RequestPostProcessor conductor() {
         return jwt().jwt(j -> j.subject("uid-conductor").claim("rol", "conductor").claim("transportistaId", 37))
@@ -204,6 +210,57 @@ class ApiIntegracionTest {
                 .andExpect(status().isForbidden());
         mvc.perform(get("/api/hitos").param("servicioId", "1006").with(admin()))
                 .andExpect(jsonPath("$", hasSize(2)));
+    }
+
+    // ---------- Reemplazos (asignaciones en Firestore) ----------
+
+    static RequestPostProcessor reemplazo() {
+        return jwt().jwt(j -> j.subject("uid-reemplazo").claim("rol", "conductor").claim("transportistaId", 43))
+                .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_CONDUCTOR"));
+    }
+
+    @Test
+    void elReemplazoPuedeMarcarAunqueLaApiTraigaAOtraPersona() throws Exception {
+        // La API dice transportista 37 con DL (lo eliminaron); el administrador lo reasignó a uid-reemplazo.
+        when(lince.servicio(1101)).thenReturn(Optional.of(servicio(1101, 37, "CF", "DL")));
+        when(asignaciones.de(1101)).thenReturn(Optional.of(new Reemplazo(1101, "uid-reemplazo", "conductor", "2026-11-20")));
+        mvc.perform(post("/api/hitos").with(reemplazo()).contentType(MediaType.APPLICATION_JSON)
+                        .content(hito(1101, "CHECK_IN", LAT_HOTEL, LON_HOTEL, "clave-1101")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.uid").value("uid-reemplazo"))
+                .andExpect(jsonPath("$.resultado").value("VERIFICADO"));
+    }
+
+    @Test
+    void quienFueReemplazadoYaNoPuedeMarcar() throws Exception {
+        when(lince.servicio(1102)).thenReturn(Optional.of(servicio(1102, 37, "CF", "CF")));
+        when(asignaciones.de(1102)).thenReturn(Optional.of(new Reemplazo(1102, "uid-reemplazo", "conductor", "2026-11-20")));
+        mvc.perform(post("/api/hitos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
+                        .content(hito(1102, "CHECK_IN", LAT_HOTEL, LON_HOTEL, "clave-1102")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.message").value("El servicio se reasignó a otra persona."));
+    }
+
+    @Test
+    void unDiaConUnServicioRecibidoNoSePuedeBloquear() throws Exception {
+        LocalDate dia = LocalDate.of(2026, 11, 30);
+        when(lince.serviciosDe(eq(dia), eq(43L), any())).thenReturn(List.of());
+        when(asignaciones.recibidos("uid-reemplazo", dia))
+                .thenReturn(List.of(new Reemplazo(1103, "uid-reemplazo", "conductor", "2026-11-30")));
+        mvc.perform(post("/api/bloqueos").with(reemplazo()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fecha\": \"2026-11-30\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("DIA_CON_SERVICIO"));
+    }
+
+    @Test
+    void unDiaCuyoServicioSeReasignoSePuedeBloquear() throws Exception {
+        LocalDate dia = LocalDate.of(2026, 12, 1);
+        when(lince.serviciosDe(eq(dia), eq(37L), any())).thenReturn(List.of(servicio(1104, 37, "CF", "CF")));
+        when(asignaciones.de(1104)).thenReturn(Optional.of(new Reemplazo(1104, "uid-reemplazo", "conductor", "2026-12-01")));
+        mvc.perform(post("/api/bloqueos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fecha\": \"2026-12-01\"}"))
+                .andExpect(status().isCreated());
     }
 
     // ---------- Bloqueos ----------
