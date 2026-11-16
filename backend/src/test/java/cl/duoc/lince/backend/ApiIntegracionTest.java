@@ -2,6 +2,8 @@ package cl.duoc.lince.backend;
 
 import cl.duoc.lince.backend.asignacion.AsignacionesClient;
 import cl.duoc.lince.backend.asignacion.Reemplazo;
+import cl.duoc.lince.backend.comun.ErrorFirestore;
+import cl.duoc.lince.backend.comun.ErrorLince;
 import cl.duoc.lince.backend.lince.LinceClient;
 import cl.duoc.lince.backend.lince.ServicioLince;
 import cl.duoc.lince.backend.parametro.ParametrosRepository;
@@ -29,6 +31,7 @@ import java.util.Optional;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -433,5 +436,127 @@ class ApiIntegracionTest {
                         .content("{\"fecha\": \"2026-11-29\"}"))
                 .andExpect(status().isConflict());
         mvc.perform(delete("/api/bloqueos/" + id).with(conductor())).andExpect(status().isNoContent());
+    }
+
+    // ---------- Casos límite ----------
+
+    static RequestPostProcessor sinIds() {
+        return jwt().jwt(j -> j.subject("uid-sin-ids").claim("rol", "conductor"))
+                .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_CONDUCTOR"));
+    }
+
+    static String idDe(String json) {
+        return json.replaceAll(".*\"id\"\\s*:\\s*(\\d+).*", "$1");
+    }
+
+    @Test
+    void unaGeocercaSeLeeEditaYBorra() throws Exception {
+        String id = idDe(mvc.perform(post("/api/geocercas").with(admin()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nombre\": \"Hotel Temporal\", \"lat\": -41.3, \"lon\": -72.9, \"radioMetros\": 200}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString());
+
+        mvc.perform(get("/api/geocercas/" + id).with(conductor()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.radioMetros").value(200));
+        mvc.perform(put("/api/geocercas/" + id).with(admin()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nombre\": \" Hotel Temporal \", \"lat\": -41.31, \"lon\": -72.91, \"radioMetros\": 100, \"activa\": false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombre").value("Hotel Temporal"))
+                .andExpect(jsonPath("$.radioMetros").value(100))
+                .andExpect(jsonPath("$.activa").value(false));
+        mvc.perform(delete("/api/geocercas/" + id).with(admin())).andExpect(status().isNoContent());
+        mvc.perform(get("/api/geocercas/" + id).with(admin()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+    }
+
+    @Test
+    void unaClaveDeIdempotenciaNoSePuedeUsarConOtraCuenta() throws Exception {
+        when(lince.servicio(1401)).thenReturn(Optional.of(servicio(1401, 37, "CF", "CF")));
+        mvc.perform(post("/api/hitos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
+                .content(hito(1401, "CHECK_IN", LAT_HOTEL, LON_HOTEL, "clave-1401")));
+        mvc.perform(post("/api/hitos").with(reemplazo()).contentType(MediaType.APPLICATION_JSON)
+                        .content(hito(1401, "CHECK_IN", LAT_HOTEL, LON_HOTEL, "clave-1401")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("CLAVE_EN_USO"));
+    }
+
+    @Test
+    void elOrdenCheckInCheckOutSeRespeta() throws Exception {
+        when(lince.servicio(1402)).thenReturn(Optional.of(servicio(1402, 37, "CF", "CF")));
+        mvc.perform(post("/api/hitos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
+                        .content(hito(1402, "CHECK_IN", LAT_HOTEL, LON_HOTEL, "clave-1402-a")))
+                .andExpect(jsonPath("$.resultado").value("VERIFICADO"));
+        mvc.perform(post("/api/hitos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
+                        .content(hito(1402, "CHECK_IN", LAT_HOTEL, LON_HOTEL, "clave-1402-b")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("HITO_DUPLICADO"));
+        mvc.perform(post("/api/hitos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
+                        .content(hito(1402, "CHECK_OUT", LAT_HOTEL, LON_HOTEL, "clave-1402-c")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.resultado").value("VERIFICADO"));
+        mvc.perform(post("/api/hitos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
+                        .content(hito(1402, "POSICION", LAT_HOTEL, LON_HOTEL, "clave-1402-d")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error.code").value("SERVICIO_TERMINADO"));
+        // El conductor ve solo sus hitos de ese servicio.
+        mvc.perform(get("/api/hitos").param("servicioId", "1402").with(conductor()))
+                .andExpect(jsonPath("$", hasSize(2)));
+    }
+
+    @Test
+    void unServicioQueNoExisteEnLaApiDa404() throws Exception {
+        mvc.perform(post("/api/hitos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
+                        .content(hito(1403, "CHECK_IN", LAT_HOTEL, LON_HOTEL, "clave-1403")))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/api/hitos/ultima-posicion").param("servicioId", "1403").with(admin()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("SIN_POSICION"));
+    }
+
+    @Test
+    void siLaApiDeSouthboundFallaSeResponde502() throws Exception {
+        when(lince.servicio(1404)).thenThrow(new ErrorLince("La API de Southbound respondió 503", null));
+        mvc.perform(post("/api/hitos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
+                        .content(hito(1404, "CHECK_IN", LAT_HOTEL, LON_HOTEL, "clave-1404")))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.error.code").value("LINCE_API_ERROR"));
+    }
+
+    @Test
+    void siFirestoreFallaSeResponde503() throws Exception {
+        when(lince.servicio(1405)).thenReturn(Optional.of(servicio(1405, 37, "CF", "CF")));
+        doThrow(new ErrorFirestore("No se pudieron leer los reemplazos en Firestore.", null)).when(asignaciones).de(1405);
+        mvc.perform(post("/api/hitos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
+                        .content(hito(1405, "CHECK_IN", LAT_HOTEL, LON_HOTEL, "clave-1405")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.error.code").value("FIRESTORE_ERROR"));
+    }
+
+    @Test
+    void unaCuentaSinIdDeLaApiNoPuedeBloquear() throws Exception {
+        mvc.perform(post("/api/bloqueos").with(sinIds()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fecha\": \"2026-12-10\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void nadieQuitaElBloqueoDeOtroSalvoElAdministrador() throws Exception {
+        LocalDate dia = LocalDate.of(2026, 12, 12);
+        when(lince.serviciosDe(eq(dia), eq(37L), any())).thenReturn(List.of());
+        String id = idDe(mvc.perform(post("/api/bloqueos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fecha\": \"2026-12-12\", \"motivo\": \"  \"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.motivo").isEmpty())
+                .andReturn().getResponse().getContentAsString());
+
+        mvc.perform(delete("/api/bloqueos/" + id).with(reemplazo())).andExpect(status().isForbidden());
+        mvc.perform(get("/api/bloqueos").with(admin()))
+                .andExpect(jsonPath("$[?(@.id == " + id + ")].uid").value("uid-conductor"));
+        mvc.perform(get("/api/bloqueos").with(reemplazo()))
+                .andExpect(jsonPath("$[?(@.id == " + id + ")]").isEmpty());
+        mvc.perform(delete("/api/bloqueos/" + id).with(admin())).andExpect(status().isNoContent());
+        mvc.perform(delete("/api/bloqueos/" + id).with(admin())).andExpect(status().isNotFound());
     }
 }
