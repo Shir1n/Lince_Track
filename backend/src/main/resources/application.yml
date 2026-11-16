@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: lince-backend
+  # Por defecto H2 en un archivo (data/lince): no necesita instalar nada y los datos sobreviven al reinicio.
+  # Con Docker se usa el perfil "postgres" (ver docker-compose.yml).
+  datasource:
+    url: jdbc:h2:file:./data/lince;AUTO_SERVER=TRUE
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+server:
+  port: ${PORT:8080}
+
+lince:
+  firebase:
+    # Proyecto de Firebase cuyos tokens se aceptan (el mismo de la app).
+    proyecto: lince-track-66c55
+  api:
+    url-base: https://ws.southbound.travel/lince-api/
+    # Nunca escribir la clave aquí: va en la variable de entorno LINCE_API_KEY (o en .env con Docker).
+    clave: ${LINCE_API_KEY:}
+  reglas:
+    # Radio con que se crean las geocercas nuevas (coordinación puede cambiarlo en cada una).
+    radio-por-defecto-metros: 150
+    # El check-in vale si se hace a más tardar estos minutos antes del pickup.
+    anticipacion-minutos: 15
+    # Sobre esta precisión (en metros) el GPS se considera impreciso.
+    precision-maxima-metros: 50
+    # Un día se puede bloquear solo con esta anticipación.
+    dias-anticipacion-bloqueo: 7
+    zona-horaria: America/Santiago
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+---
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/lince}
+    username: ${DB_USER:lince}
+    password: ${DB_PASSWORD:lince}

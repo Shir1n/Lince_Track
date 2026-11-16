@@ -1,0 +1,33 @@
+# Backend + PostgreSQL. La clave de la API va en backend/.env (copiar .env.example), nunca en este archivo.
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: lince
+      POSTGRES_USER: lince
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-lince}
+    ports:
+      - "5432:5432"
+    volumes:
+      - datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lince -d lince"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres
+      DB_URL: jdbc:postgresql://db:5432/lince
+      DB_USER: lince
+      DB_PASSWORD: ${DB_PASSWORD:-lince}
+      LINCE_API_KEY: ${LINCE_API_KEY}
+    ports:
+      - "8080:8080"
+
+volumes:
+  datos:
