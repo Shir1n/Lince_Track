@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="app/src/main/res/drawable/logo_solo.png" width="240" alt="Lince Track logo">
+<img src="app/src/main/res/drawable-nodpi/logo_solo.png" width="240" alt="Lince Track logo">
 
 #  Lince Track
 
