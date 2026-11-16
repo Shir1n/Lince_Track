@@ -124,6 +124,16 @@ npm run sincronizar -- --aplicar
 
 Después cada persona debe cerrar sesión y volver a entrar para que su token traiga los claims.
 
+## Token de prueba para Swagger o curl
+
+```powershell
+cd backend\scripts
+node token-de-prueba.mjs "Carlos" > $env:TEMP\token-carlos.txt   # o "Admin", "Patricio", o el uid
+```
+
+Usa la misma cuenta de servicio (`GOOGLE_APPLICATION_CREDENTIALS`) y no necesita contraseñas. El token vale 1 hora y
+trae los claims; no compartirlo ni subirlo. La guía para la defensa está en `DEFENSA.md`.
+
 ## Reemplazos (asignaciones en Firestore)
 
 Cuando el administrador envía a otra persona, la app guarda `asignaciones/{servicioId}` en Firestore. El backend lo
