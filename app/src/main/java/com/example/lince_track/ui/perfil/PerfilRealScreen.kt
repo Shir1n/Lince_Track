@@ -72,7 +72,9 @@ import androidx.compose.ui.unit.sp
 import com.example.lince_track.BuildConfig
 import com.example.lince_track.R
 import com.example.lince_track.data.AuthRepository
+import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.Rol
+import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.formatFecha
 import com.example.lince_track.data.formatHora
@@ -97,19 +99,43 @@ fun PerfilRealScreen(
     val servicios by ServicioRepository.servicios.collectAsState()
     val checkins by ServicioRepository.checkins.collectAsState()
     val error by ServicioRepository.error.collectAsState()
-    var mostrarSoporte by remember { mutableStateOf(false) }
-
     val email = AuthRepository.usuarioActual?.email.orEmpty()
     val nombre = perfil?.nombre?.takeIf { it.isNotBlank() } ?: email
+    PerfilRealContenido(
+        nombre = nombre,
+        email = email,
+        telefono = perfil?.telefono,
+        rol = perfil?.rol,
+        servicios = servicios,
+        checkins = checkins,
+        error = error,
+        onLogout = onLogout,
+        onOpenSettings = onOpenSettings,
+        onServiceClick = onServiceClick
+    )
+}
+
+@Composable
+internal fun PerfilRealContenido(
+    nombre: String,
+    email: String,
+    telefono: String?,
+    rol: Rol?,
+    servicios: List<Servicio>,
+    checkins: Map<String, CheckinServicio>,
+    error: String?,
+    onLogout: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onServiceClick: (String) -> Unit
+) {
+    var mostrarSoporte by remember { mutableStateOf(false) }
+    var notificaciones by remember { mutableStateOf(true) }
     val esPiloto1 = nombre.equals("Piloto1", ignoreCase = true) ||
         nombre.equals("Patricio Lagos", ignoreCase = true)
-    val rol = perfil?.rol
     val vehiculo = remember(servicios) { DatosPerfil.vehiculo(servicios) }
-    val totales = remember(servicios, checkins) { DatosPerfil.totales(servicios, checkins) }
     val enRuta = remember(servicios, checkins) { DatosPerfil.enRuta(servicios, checkins) }
     val proximo = remember(servicios, checkins) { DatosPerfil.proximoServicio(servicios, checkins) }
     val actividad = remember(servicios, checkins) { DatosPerfil.actividad(servicios, checkins) }
-    var notificaciones by remember { mutableStateOf(true) }
     val viajesMes = remember(servicios) {
         val mesActual = YearMonth.now()
         servicios.count { YearMonth.from(it.fecha) == mesActual }
@@ -267,8 +293,8 @@ fun PerfilRealScreen(
                 FilaDatoPersonal("Nombre Completo", nombre, Icons.Outlined.Person)
                 FilaDatoPersonal("Correo Institucional", email.ifBlank { SIN_DATO },
                     Icons.Outlined.Email, subrayado = true)
-                perfil?.telefono?.takeIf { it.isNotBlank() }?.let { telefono ->
-                    FilaDatoPersonal("Teléfono", telefono, Icons.Outlined.Phone)
+                telefono?.takeIf { it.isNotBlank() }?.let { telefonoActual ->
+                    FilaDatoPersonal("Teléfono", telefonoActual, Icons.Outlined.Phone)
                 }
                 FilaDatoPersonal("Rol", rol?.etiqueta ?: SIN_DATO, Icons.Outlined.Badge)
             }
