@@ -3,6 +3,7 @@ package cl.duoc.lince.backend.lince;
 import cl.duoc.lince.backend.comun.ErrorLince;
 import cl.duoc.lince.backend.config.LinceProperties;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -25,9 +26,15 @@ public class LinceRestClient implements LinceClient {
     private final RestClient http;
     private final boolean tieneClave;
 
+    @Autowired
     public LinceRestClient(LinceProperties propiedades) {
+        this(propiedades, RestClient.builder());
+    }
+
+    /** Los tests pasan un builder enlazado a MockRestServiceServer para simular la API. */
+    LinceRestClient(LinceProperties propiedades, RestClient.Builder builder) {
         this.tieneClave = propiedades.api().tieneClave();
-        this.http = RestClient.builder()
+        this.http = builder
                 .baseUrl(propiedades.api().urlBase())
                 .defaultHeader("X-API-Key", tieneClave ? propiedades.api().clave() : "")
                 .build();

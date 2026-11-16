@@ -100,8 +100,17 @@ docker compose up --build
 .\gradlew.bat test        # reporte de cobertura en build/reports/jacoco/test/html/index.html
 ```
 
-`ApiIntegracionTest` levanta la aplicación con H2 en memoria, la API de Southbound simulada (Mockito), la hora fija y
-tokens simulados con los mismos claims que Firebase.
+Cobertura al 16-11-2026: 95 % de líneas y 83 % de ramas (87 tests). Qué prueba cada grupo:
+
+| Tests | Cómo |
+|---|---|
+| `ReglasHitoTest`, `ReglasBloqueoTest`, `ReglasDuenoTest`, `ReglasResumenTest`, `DistanciaTest` | Las reglas solas, sin Spring ni base de datos |
+| `ApiIntegracionTest` | La aplicación completa con H2 en memoria, la API de Southbound y Firestore simulados (Mockito), la hora fija y tokens simulados con los mismos claims que Firebase |
+| `LinceRestClientTest` | El cliente HTTP contra una API simulada (`MockRestServiceServer`): header, paginación, 404, 401, 429 y sin clave |
+| `FirestoreAsignacionesTest` | La lectura de reemplazos con Firestore simulado, incluido un fallo de red |
+| `ServicioLinceJsonTest` | Que el JSON real de la API se lea bien |
+| `UsuarioYSeguridadTest` | Los claims del token: rol, IDs como número o texto |
+| `FirestoreAsignacionesRealTest` | Opcional: lee el Firestore real (ver "Reemplazos") |
 
 ## Claims de Firebase (una vez, y cada vez que cambie un rol o un ID)
 
