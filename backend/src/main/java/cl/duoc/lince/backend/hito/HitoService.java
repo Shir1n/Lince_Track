@@ -18,7 +18,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -97,6 +100,7 @@ public class HitoService {
         Parametros reglas = parametros.actuales();
         LocalDateTime ahora = LocalDateTime.now(reloj.withZone(propiedades.reglas().zona()));
         LocalDateTime inicio = LocalDateTime.of(servicio.fechaLocal(), servicio.horaPickupLocal());
+        hito.asignarContexto(usuario.rol(), inicio);
         hito.asignarResultado(ReglasHito.evaluar(s.tipo(), distancia, radio, s.precisionMetros(),
                 reglas.getPrecisionMaximaMetros(), ahora, inicio, reglas.getAnticipacionMinutos()));
         return new Registro(hitos.save(hito), false);
@@ -126,6 +130,29 @@ public class HitoService {
         return usuario.esAdministrador()
                 ? hitos.findByServicioIdOrderByRegistradoEnAsc(servicioId)
                 : hitos.findByServicioIdAndUidOrderByRegistradoEnAsc(servicioId, usuario.uid());
+    }
+
+    /** Máximo de días que abarca un resumen (para no recorrer toda la tabla). */
+    static final int MAX_DIAS_RESUMEN = 366;
+
+    /**
+     * Resumen por recurso de los hitos registrados entre [desde] y [hasta] (ambos incluidos, hora de Chile).
+     * Sin fechas: los últimos 30 días hasta hoy.
+     */
+    public ResumenHitos resumen(LocalDate desde, LocalDate hasta) {
+        ZoneId zona = propiedades.reglas().zona();
+        LocalDate fin = hasta != null ? hasta : LocalDate.now(reloj.withZone(zona));
+        LocalDate inicio = desde != null ? desde : fin.minusDays(30);
+        if (inicio.isAfter(fin)) {
+            throw new ErrorNegocio(HttpStatus.BAD_REQUEST, "RANGO_INVALIDO", "desde no puede ser posterior a hasta.");
+        }
+        if (ChronoUnit.DAYS.between(inicio, fin) > MAX_DIAS_RESUMEN) {
+            throw new ErrorNegocio(HttpStatus.BAD_REQUEST, "RANGO_INVALIDO",
+                    "El rango puede abarcar a lo más " + MAX_DIAS_RESUMEN + " días.");
+        }
+        List<Hito> enRango = hitos.findByRegistradoEnGreaterThanEqualAndRegistradoEnLessThanOrderByRegistradoEnAsc(
+                inicio.atStartOfDay(zona).toInstant(), fin.plusDays(1).atStartOfDay(zona).toInstant());
+        return new ResumenHitos(inicio, fin, ReglasResumen.total(enRango, zona), ReglasResumen.porRecurso(enRango, zona));
     }
 
     public Hito ultimaPosicion(long servicioId) {

@@ -6,6 +6,7 @@ Microservicio Spring Boot que guarda lo que la API de Southbound (solo lectura) 
 |---|---|---|
 | `/api/geocercas` | Hoteles y puntos de pickup/dropoff con coordenadas (ficticias) y radio (150 m por defecto) | Administrador |
 | `/api/hitos` | Check-in, check-out y posición puntual, validados en el servidor | Conductor y guía |
+| `/api/hitos/resumen` | Resumen por recurso: puntualidad y resultados de check-in por persona | Solo lectura, administrador |
 | `/api/bloqueos` | Días no disponibles: con 7 días de anticipación y nunca sobre un servicio | Conductor y guía |
 | `/api/parametros` | Reglas vigentes: anticipación del check-in, precisión máxima del GPS, radio por defecto y días para bloquear | Administrador (todos leen) |
 
@@ -50,6 +51,24 @@ valores con que se crea esa fila la primera vez.
 | `diasAnticipacionBloqueo` | 7 | 0 a 60 | Bloqueos: primer día que se puede bloquear |
 
 El radio de **cada hotel** se cambia con `PUT /api/geocercas/{id}` (ese es el que usa el check-in).
+
+## Resumen por recurso
+
+`GET /api/hitos/resumen?desde=2026-11-01&hasta=2026-11-30` (administrador; sin fechas, los últimos 30 días; máximo 366)
+devuelve el `total` y una fila por persona en `recursos`, la menos puntual primero:
+
+| Campo | Qué es |
+|---|---|
+| `uid`, `rol` | Cuenta de Firebase y rol (la app pone el nombre desde `usuarios/{uid}`) |
+| `servicios` | Servicios con al menos un check-in en el rango |
+| `aTiempo`, `tarde`, `fueraDeZona`, `gpsImpreciso`, `sinGeocerca` | Resultado del **último** check-in de cada servicio (si reintentó, vale el último) |
+| `intentosCheckIn` | Todos los check-in, contando reintentos |
+| `conCheckOut` | Servicios que además tienen check-out |
+| `puntualidad` | Porcentaje a tiempo (`aTiempo / servicios`) |
+| `minutosAnticipacionPromedio` | Cuántos minutos antes del pickup llegó en promedio (negativo = después) |
+
+El rango se aplica a la hora en que se **registró** el hito (hora de Chile). Cada hito guarda el rol y la hora de pickup
+del servicio desde esta versión; los hitos anteriores no aportan a los minutos de anticipación.
 
 ## Correr en el computador (sin Docker)
 

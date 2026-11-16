@@ -303,6 +303,51 @@ class ApiIntegracionTest {
                 .andExpect(jsonPath("$.radioMetros").value(100));
     }
 
+    // ---------- Resumen por recurso ----------
+
+    @Test
+    void elResumenCuentaLosCheckInDeCadaPersona() throws Exception {
+        // Otra cuenta (transportista 55) para no mezclarse con los hitos de las demás pruebas.
+        RequestPostProcessor otro = jwt().jwt(j -> j.subject("uid-resumen").claim("rol", "conductor").claim("transportistaId", 55))
+                .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_CONDUCTOR"));
+        when(lince.servicio(1301)).thenReturn(Optional.of(servicio(1301, 55, "CF", "CF")));
+        when(lince.servicio(1302)).thenReturn(Optional.of(servicio(1302, 55, "CF", "CF")));
+        mvc.perform(post("/api/hitos").with(otro).contentType(MediaType.APPLICATION_JSON)
+                .content(hito(1301, "CHECK_IN", LAT_CERCA, LON_HOTEL, "clave-1301")));
+        mvc.perform(post("/api/hitos").with(otro).contentType(MediaType.APPLICATION_JSON)
+                .content(hito(1302, "CHECK_IN", -41.3300, LON_HOTEL, "clave-1302")));
+
+        mvc.perform(get("/api/hitos/resumen").param("desde", "2026-11-20").param("hasta", "2026-11-20").with(admin()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.desde").value("2026-11-20"))
+                .andExpect(jsonPath("$.recursos[?(@.uid == 'uid-resumen')].servicios").value(2))
+                .andExpect(jsonPath("$.recursos[?(@.uid == 'uid-resumen')].aTiempo").value(1))
+                .andExpect(jsonPath("$.recursos[?(@.uid == 'uid-resumen')].fueraDeZona").value(1))
+                .andExpect(jsonPath("$.recursos[?(@.uid == 'uid-resumen')].puntualidad").value(50.0))
+                .andExpect(jsonPath("$.recursos[?(@.uid == 'uid-resumen')].minutosAnticipacionPromedio").value(30.0))
+                .andExpect(jsonPath("$.recursos[?(@.uid == 'uid-resumen')].rol").value("conductor"));
+    }
+
+    @Test
+    void elResumenEsSoloParaElAdministradorYValidaElRango() throws Exception {
+        mvc.perform(get("/api/hitos/resumen").with(conductor())).andExpect(status().isForbidden());
+        mvc.perform(get("/api/hitos/resumen").param("desde", "2026-11-21").param("hasta", "2026-11-20").with(admin()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("RANGO_INVALIDO"));
+        mvc.perform(get("/api/hitos/resumen").with(admin()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.desde").value("2026-10-21"))
+                .andExpect(jsonPath("$.hasta").value("2026-11-20"));
+    }
+
+    @Test
+    void unRangoSinHitosDevuelveTotalEnCero() throws Exception {
+        mvc.perform(get("/api/hitos/resumen").param("desde", "2026-01-01").param("hasta", "2026-01-31").with(admin()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total.servicios").value(0))
+                .andExpect(jsonPath("$.recursos", hasSize(0)));
+    }
+
     // ---------- Reemplazos (asignaciones en Firestore) ----------
 
     static RequestPostProcessor reemplazo() {
