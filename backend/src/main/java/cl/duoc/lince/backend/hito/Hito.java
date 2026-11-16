@@ -11,6 +11,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 /**
  * Check-in, check-out o posición de un conductor o guía en un servicio.
@@ -56,6 +57,13 @@ public class Hito {
     @Column(nullable = false)
     private Instant registradoEn;
 
+    /** "conductor" o "guia", del token al registrar (para agrupar el resumen por recurso). */
+    @Column(length = 20)
+    private String rol;
+
+    /** Fecha y hora de pickup del servicio (hora de Chile), para calcular con cuánta anticipación llegó. */
+    private LocalDateTime inicioServicio;
+
     protected Hito() {
     }
 
@@ -80,6 +88,19 @@ public class Hito {
 
     void asignarResultado(ResultadoHito resultado) {
         this.resultado = resultado;
+    }
+
+    void asignarContexto(String rol, LocalDateTime inicioServicio) {
+        this.rol = rol;
+        this.inicioServicio = inicioServicio;
+    }
+
+    public String getRol() {
+        return rol;
+    }
+
+    public LocalDateTime getInicioServicio() {
+        return inicioServicio;
     }
 
     public Long getId() {
