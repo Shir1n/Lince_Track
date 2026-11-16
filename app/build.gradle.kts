@@ -1,7 +1,11 @@
 import java.util.Base64
 import java.util.Properties
+import org.gradle.api.tasks.testing.Test
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+import org.gradle.testing.jacoco.tasks.JacocoReport
 
 plugins {
+    id("jacoco")
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
@@ -62,6 +66,9 @@ android {
                 enable = false
             }
         }
+        debug {
+            enableUnitTestCoverage = true
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -103,4 +110,40 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.kotlinx.serialization.json)
+}
+
+// ===== JaCoCo: cobertura de tests unitarios =====
+tasks.withType<Test>().configureEach {
+    configure<JacocoTaskExtension> {
+        isIncludeNoLocationClasses = true
+        excludes = listOf("jdk.internal.*")
+    }
+}
+
+tasks.register<JacocoReport>("jacocoTestReport") {
+    dependsOn("testDebugUnitTest")
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+
+    // Filtros para no ensuciar la cobertura con clases generadas o de test.
+    val fileFilter = listOf(
+        "**/R.class", "**/R\$*.class", "**/BuildConfig.*", "**/Manifest*.*",
+        "**/*Test*.*", "**/*\$lambda*", "**/*\$inlined*", "**/ComposableSingletons*.*",
+        "**/*\$WhenMappings*.*"
+    )
+    val buildDir = layout.buildDirectory.get().asFile
+    // AGP 9 compila Kotlin a built_in_kotlinc (antes tmp/kotlin-classes).
+    val kotlinClasses = fileTree(
+        "$buildDir/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes"
+    ) { exclude(fileFilter) }
+
+    sourceDirectories.setFrom(files("src/main/java"))
+    classDirectories.setFrom(kotlinClasses)
+    executionData.setFrom(fileTree(buildDir) {
+        include("outputs/unit_test_code_coverage/debugUnitTest/*.exec")
+        include("jacoco/*.exec")
+    })
 }
