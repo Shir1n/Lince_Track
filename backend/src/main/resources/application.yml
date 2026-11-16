@@ -19,6 +19,9 @@ lince:
   firebase:
     # Proyecto de Firebase cuyos tokens se aceptan (el mismo de la app).
     proyecto: lince-track-66c55
+    # Cuenta de servicio para leer los reemplazos (asignaciones) en Firestore. Nunca dentro del repo.
+    # Sin ella el backend funciona, pero no ve los reemplazos.
+    credenciales: ${GOOGLE_APPLICATION_CREDENTIALS:}
   api:
     url-base: https://ws.southbound.travel/lince-api/
     # Nunca escribir la clave aquí: va en la variable de entorno LINCE_API_KEY (o en .env con Docker).

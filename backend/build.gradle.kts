@@ -29,6 +29,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-security-oauth2-resource-server")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
+    // Para leer los reemplazos (asignaciones/{servicioId}) que el administrador guarda en Firestore.
+    implementation("com.google.firebase:firebase-admin:9.12.0")
 
     runtimeOnly("com.h2database:h2")
     runtimeOnly("org.postgresql:postgresql")

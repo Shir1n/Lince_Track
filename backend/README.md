@@ -83,9 +83,31 @@ npm run sincronizar -- --aplicar
 
 Después cada persona debe cerrar sesión y volver a entrar para que su token traiga los claims.
 
+## Reemplazos (asignaciones en Firestore)
+
+Cuando el administrador envía a otra persona, la app guarda `asignaciones/{servicioId}` en Firestore. El backend lo
+lee con Firebase Admin y aplica la misma regla que la app (`ReglasDueno`):
+
+- Con reemplazo, el servicio es **solo** de la cuenta reemplazante (por `uid`); quien lo tenía recibe 403.
+- Con reemplazo, el `DL` o `CX` de la API (de la persona anterior) no cierra el servicio; solo lo cierra `XX`.
+- Al bloquear un día: no cuenta un servicio propio que se reasignó a otra persona, y sí cuenta uno recibido.
+
+Para activarlo, `GOOGLE_APPLICATION_CREDENTIALS` debe apuntar a la cuenta de servicio (fuera del repo):
+
+```powershell
+$env:GOOGLE_APPLICATION_CREDENTIALS = "D:\ruta\fuera\del\repo\cuenta-de-servicio.json"
+.\gradlew.bat bootRun     # el log dice "Reemplazos activos"
+```
+
+Sin esa variable el backend arranca igual, avisa en el log y funciona como si nadie hubiera sido reemplazado (así
+puede trabajar quien no tiene acceso a Firebase). Para probar la conexión real (solo lectura):
+
+```powershell
+$env:LINCE_PRUEBA_FIRESTORE = "1"
+.\gradlew.bat test --tests "*FirestoreAsignacionesRealTest"
+```
+
 ## Limitaciones conocidas
 
-- Los reemplazos viven en Firestore (`asignaciones`): el backend solo conoce a la persona que trae la API, así que
-  quien entra como reemplazo recibe 403 al marcar. Hay que resolverlo (por ejemplo, que el backend lea `asignaciones`
-  con la cuenta de servicio) antes de usar los hitos en el flujo del video.
 - Las geocercas solo cubren los 4 lugares de PUX que usa la API hoy.
+- Leer un reemplazo es una consulta a Firestore por cada hito o bloqueo (unas pocas por día y persona).
