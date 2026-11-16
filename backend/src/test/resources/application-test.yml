@@ -6,5 +6,7 @@ spring:
       ddl-auto: create-drop
 
 lince:
+  firebase:
+    credenciales: ""
   api:
     clave: clave-de-prueba

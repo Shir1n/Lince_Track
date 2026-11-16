@@ -8,7 +8,10 @@ import java.time.ZoneId;
 @ConfigurationProperties(prefix = "lince")
 public record LinceProperties(Firebase firebase, Api api, Reglas reglas) {
 
-    public record Firebase(String proyecto) {
+    /**
+     * @param credenciales ruta al JSON de la cuenta de servicio (fuera del repo). Vacía = sin reemplazos.
+     */
+    public record Firebase(String proyecto, String credenciales) {
         public String emisor() {
             return "https://securetoken.google.com/" + proyecto;
         }
