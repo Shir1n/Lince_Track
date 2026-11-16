@@ -10,6 +10,8 @@ import cl.duoc.lince.backend.geocerca.Geocerca;
 import cl.duoc.lince.backend.geocerca.GeocercaRepository;
 import cl.duoc.lince.backend.lince.LinceClient;
 import cl.duoc.lince.backend.lince.ServicioLince;
+import cl.duoc.lince.backend.parametro.Parametros;
+import cl.duoc.lince.backend.parametro.ParametrosService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,11 +37,14 @@ public class HitoService {
     private final GeocercaRepository geocercas;
     private final LinceClient lince;
     private final AsignacionesClient asignaciones;
+    private final ParametrosService parametros;
     private final LinceProperties propiedades;
     private final Clock reloj;
 
     public HitoService(HitoRepository hitos, GeocercaRepository geocercas, LinceClient lince,
-                       AsignacionesClient asignaciones, LinceProperties propiedades, Clock reloj) {
+                       AsignacionesClient asignaciones, ParametrosService parametros,
+                       LinceProperties propiedades, Clock reloj) {
+        this.parametros = parametros;
         this.hitos = hitos;
         this.geocercas = geocercas;
         this.lince = lince;
@@ -89,11 +94,11 @@ public class HitoService {
             }
         }
 
-        LinceProperties.Reglas reglas = propiedades.reglas();
-        LocalDateTime ahora = LocalDateTime.now(reloj.withZone(reglas.zona()));
+        Parametros reglas = parametros.actuales();
+        LocalDateTime ahora = LocalDateTime.now(reloj.withZone(propiedades.reglas().zona()));
         LocalDateTime inicio = LocalDateTime.of(servicio.fechaLocal(), servicio.horaPickupLocal());
         hito.asignarResultado(ReglasHito.evaluar(s.tipo(), distancia, radio, s.precisionMetros(),
-                reglas.precisionMaximaMetros(), ahora, inicio, reglas.anticipacionMinutos()));
+                reglas.getPrecisionMaximaMetros(), ahora, inicio, reglas.getAnticipacionMinutos()));
         return new Registro(hitos.save(hito), false);
     }
 

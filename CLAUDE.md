@@ -205,8 +205,9 @@ Postman y la transcripción de la reunión con Southbound.
 
 ## Backend propio (`backend/`, Spring Boot)
 - El docente aceptó Firebase, pero igual se necesitan microservicios. `backend/` es un proyecto Gradle aparte
-  (Spring Boot 4.1, Java 21) con geocercas, hitos (check-in, check-out y posición validados en el servidor) y bloqueos
-  de disponibilidad. Detalle y comandos en `backend/README.md`.
+  (Spring Boot 4.1, Java 21) con geocercas, hitos (check-in, check-out y posición validados en el servidor), bloqueos
+  de disponibilidad y parámetros que coordinación cambia sin reiniciar (`/api/parametros`: anticipación, precisión
+  máxima, radio por defecto y días para bloquear). Detalle y comandos en `backend/README.md`.
 - No tiene login propio: valida el token de Firebase Auth. Rol e IDs de la API vienen de custom claims que copia
   `backend/scripts/sincronizar-claims.mjs` desde `usuarios/{uid}` (necesita una cuenta de servicio guardada fuera del
   repo).

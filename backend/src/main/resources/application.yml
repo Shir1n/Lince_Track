@@ -26,6 +26,8 @@ lince:
     url-base: https://ws.southbound.travel/lince-api/
     # Nunca escribir la clave aquí: va en la variable de entorno LINCE_API_KEY (o en .env con Docker).
     clave: ${LINCE_API_KEY:}
+  # Valores iniciales: la primera vez se copian a la tabla "parametros". Después coordinación los cambia con
+  # PUT /api/parametros, y lo que esté en la tabla manda sobre este archivo.
   reglas:
     # Radio con que se crean las geocercas nuevas (coordinación puede cambiarlo en cada una).
     radio-por-defecto-metros: 150

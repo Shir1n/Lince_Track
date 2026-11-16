@@ -4,6 +4,8 @@ import cl.duoc.lince.backend.asignacion.AsignacionesClient;
 import cl.duoc.lince.backend.asignacion.Reemplazo;
 import cl.duoc.lince.backend.lince.LinceClient;
 import cl.duoc.lince.backend.lince.ServicioLince;
+import cl.duoc.lince.backend.parametro.ParametrosRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -210,6 +212,95 @@ class ApiIntegracionTest {
                 .andExpect(status().isForbidden());
         mvc.perform(get("/api/hitos").param("servicioId", "1006").with(admin()))
                 .andExpect(jsonPath("$", hasSize(2)));
+    }
+
+    // ---------- Parámetros ----------
+
+    @Autowired
+    ParametrosRepository parametros;
+
+    /** Vuelve a los valores de application.yml para no afectar a las demás pruebas. */
+    @AfterEach
+    void restaurarParametros() {
+        parametros.deleteAll();
+    }
+
+    static String reglas(int anticipacion, int precision, int radio, int dias) {
+        return """
+                {"anticipacionMinutos": %d, "precisionMaximaMetros": %d, "radioPorDefectoMetros": %d,
+                 "diasAnticipacionBloqueo": %d}
+                """.formatted(anticipacion, precision, radio, dias);
+    }
+
+    @Test
+    void losParametrosPartenConLosValoresDelArchivo() throws Exception {
+        mvc.perform(get("/api/parametros").with(conductor()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.anticipacionMinutos").value(15))
+                .andExpect(jsonPath("$.precisionMaximaMetros").value(50))
+                .andExpect(jsonPath("$.radioPorDefectoMetros").value(150))
+                .andExpect(jsonPath("$.diasAnticipacionBloqueo").value(7));
+    }
+
+    @Test
+    void soloElAdministradorCambiaLosParametrosYSeValidan() throws Exception {
+        mvc.perform(put("/api/parametros").with(conductor()).contentType(MediaType.APPLICATION_JSON)
+                        .content(reglas(30, 50, 150, 7)))
+                .andExpect(status().isForbidden());
+        mvc.perform(put("/api/parametros").with(admin()).contentType(MediaType.APPLICATION_JSON)
+                        .content(reglas(30, 2, 150, 7)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.details[0].field").value("precisionMaximaMetros"));
+        mvc.perform(put("/api/parametros").with(admin()).contentType(MediaType.APPLICATION_JSON)
+                        .content(reglas(30, 50, 150, 7)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.anticipacionMinutos").value(30))
+                .andExpect(jsonPath("$.actualizadoPor").value("uid-admin"));
+    }
+
+    @Test
+    void subirLaAnticipacionVuelveTardeUnCheckInQueAntesEraValido() throws Exception {
+        // Son las 08:00 y el pickup es a las 08:30: con 15 min vale; con 31 min ya es tarde.
+        when(lince.servicio(1201)).thenReturn(Optional.of(servicio(1201, 37, "CF", "CF")));
+        mvc.perform(put("/api/parametros").with(admin()).contentType(MediaType.APPLICATION_JSON)
+                .content(reglas(31, 50, 150, 7)));
+        mvc.perform(post("/api/hitos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
+                        .content(hito(1201, "CHECK_IN", LAT_HOTEL, LON_HOTEL, "clave-1201")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.resultado").value("TARDE"));
+    }
+
+    @Test
+    void bajarLaPrecisionMaximaVuelveImprecisoUnGpsQueAntesServia() throws Exception {
+        // El hito de prueba informa 8 m de precisión.
+        when(lince.servicio(1202)).thenReturn(Optional.of(servicio(1202, 37, "CF", "CF")));
+        mvc.perform(put("/api/parametros").with(admin()).contentType(MediaType.APPLICATION_JSON)
+                .content(reglas(15, 5, 150, 7)));
+        mvc.perform(post("/api/hitos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
+                        .content(hito(1202, "CHECK_IN", LAT_HOTEL, LON_HOTEL, "clave-1202")))
+                .andExpect(jsonPath("$.resultado").value("GPS_IMPRECISO"));
+    }
+
+    @Test
+    void conMenosDiasDeAnticipacionSePuedeBloquearAntes() throws Exception {
+        // Hoy es 20-11: con 7 días el 25-11 se rechaza; con 3 días se acepta.
+        LocalDate dia = LocalDate.of(2026, 11, 25);
+        when(lince.serviciosDe(eq(dia), eq(37L), any())).thenReturn(List.of());
+        mvc.perform(put("/api/parametros").with(admin()).contentType(MediaType.APPLICATION_JSON)
+                .content(reglas(15, 50, 150, 3)));
+        mvc.perform(post("/api/bloqueos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fecha\": \"2026-11-25\"}"))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void unaGeocercaNuevaSinRadioUsaElRadioPorDefectoVigente() throws Exception {
+        mvc.perform(put("/api/parametros").with(admin()).contentType(MediaType.APPLICATION_JSON)
+                .content(reglas(15, 50, 100, 7)));
+        mvc.perform(post("/api/geocercas").with(admin()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nombre\": \"Hotel Radio Nuevo\", \"lat\": -41.31, \"lon\": -72.98}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.radioMetros").value(100));
     }
 
     // ---------- Reemplazos (asignaciones en Firestore) ----------

@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 
-/** Datos para crear o editar una geocerca. Sin radio se usa el de application.yml (150 m). */
+/** Datos para crear o editar una geocerca. Sin radio se usa el radio por defecto de /api/parametros (150 m al partir). */
 public record GeocercaSolicitud(
         @NotBlank(message = "es obligatorio") String nombre,
         @DecimalMin(value = "-90", message = "debe estar entre -90 y 90")

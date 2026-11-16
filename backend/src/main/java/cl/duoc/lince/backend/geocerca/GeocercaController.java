@@ -1,7 +1,7 @@
 package cl.duoc.lince.backend.geocerca;
 
 import cl.duoc.lince.backend.comun.ErrorNegocio;
-import cl.duoc.lince.backend.config.LinceProperties;
+import cl.duoc.lince.backend.parametro.ParametrosService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -27,11 +27,11 @@ import java.util.List;
 public class GeocercaController {
 
     private final GeocercaRepository repositorio;
-    private final LinceProperties propiedades;
+    private final ParametrosService parametros;
 
-    public GeocercaController(GeocercaRepository repositorio, LinceProperties propiedades) {
+    public GeocercaController(GeocercaRepository repositorio, ParametrosService parametros) {
         this.repositorio = repositorio;
-        this.propiedades = propiedades;
+        this.parametros = parametros;
     }
 
     @GetMapping
@@ -55,7 +55,7 @@ public class GeocercaController {
         if (repositorio.existsByNombreIgnoreCase(s.nombre().trim())) {
             throw ErrorNegocio.conflicto("GEOCERCA_DUPLICADA", "Ya existe una geocerca con ese nombre.");
         }
-        int radio = s.radioMetros() != null ? s.radioMetros() : propiedades.reglas().radioPorDefectoMetros();
+        int radio = s.radioMetros() != null ? s.radioMetros() : parametros.actuales().getRadioPorDefectoMetros();
         Geocerca g = new Geocerca(s.nombre().trim(), s.lat(), s.lon(), radio);
         if (s.activa() != null) g.setActiva(s.activa());
         return repositorio.save(g);
