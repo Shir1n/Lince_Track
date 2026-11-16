@@ -1,0 +1,7 @@
+.gradle/
+build/
+data/
+.env
+*.log
+scripts/node_modules/
+scripts/*.json.key
