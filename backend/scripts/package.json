@@ -1,0 +1,12 @@
+{
+  "name": "lince-claims",
+  "private": true,
+  "type": "module",
+  "description": "Copia rol, transportistaId y guiaId de usuarios/{uid} a los custom claims de Firebase Auth",
+  "scripts": {
+    "sincronizar": "node sincronizar-claims.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.5.1"
+  }
+}

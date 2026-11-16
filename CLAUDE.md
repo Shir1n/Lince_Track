@@ -26,9 +26,8 @@ Postman y la transcripción de la reunión con Southbound.
   **modificación en vivo** que recorra Compose → ViewModel → endpoint → base de datos (ej.: radio de 150 a 100 m,
   tolerancia de puntualidad, motivo obligatorio de incidencia, campo "precisión del GPS").
 - **Lo que piden y falta hoy:**
-  - Backend propio **Spring Boot** + Swagger/OpenAPI + JWT/roles + BD (check-ins, geocercas, disponibilidad,
-    incidencias, confirmaciones). Hoy eso vive en Firebase: la pauta acepta "alternativa autorizada", así que hay que
-    preguntar al docente si Firebase sirve.
+  - Backend propio **Spring Boot** + Swagger/OpenAPI + JWT/roles + BD. El docente aceptó Firebase, pero igual pide
+    microservicios: ya existe la base en `backend/` (ver "Backend propio"); falta conectarla a la app.
   - Check-in **bloqueado** fuera de la geocerca (radio inicial 150 m, configurable por coordinación) o si es más tarde
     que 15 min antes del pickup; mostrar distancia, radio y precisión del GPS, y generar incidencia si falla.
     Validación doble: la app y el backend. Catálogo ficticio de hoteles con coordenadas.
@@ -203,6 +202,17 @@ Postman y la transcripción de la reunión con Southbound.
   con la API ya no se crean `servicios` en Firestore, y `asignaciones` ahora guarda solo los reemplazos. Firestore solo
   guarda lo que la app escribe.
 
+## Backend propio (`backend/`, Spring Boot)
+- El docente aceptó Firebase, pero igual se necesitan microservicios. `backend/` es un proyecto Gradle aparte
+  (Spring Boot 4.1, Java 21) con geocercas, hitos (check-in, check-out y posición validados en el servidor) y bloqueos
+  de disponibilidad. Detalle y comandos en `backend/README.md`.
+- No tiene login propio: valida el token de Firebase Auth. Rol e IDs de la API vienen de custom claims que copia
+  `backend/scripts/sincronizar-claims.mjs` desde `usuarios/{uid}` (necesita una cuenta de servicio guardada fuera del
+  repo).
+- Local usa H2 en `backend/data/`; Docker usa PostgreSQL. La clave de la API va en `LINCE_API_KEY` (variable de entorno o
+  `backend/.env`, ignorado).
+- Falta: que la app lo use (Retrofit + Room + WorkManager), y que conozca los reemplazos de `asignaciones`.
+
 ## Convenciones del equipo
 - Una rama por tarea (`feature/...`, `fix/...`) y PR chico a `master`. Nada directo a `master`.
 - **Claude llega hasta el push:** los PR y el merge los hace Shir1n. No crear PR ni preparar enlaces para abrirlos.
@@ -257,7 +267,7 @@ Postman y la transcripción de la reunión con Southbound.
 1. ¿Los datos cambian en el tiempo (statusPL RQ→CF)? Cubren las fechas actuales: llegan hasta el 15-12-2026.
 2. ¿Pueden agregar hora de término, tarifa o coordenadas? (La pauta dice que mantengamos un catálogo ficticio de
    hoteles con coordenadas.)
-3. Para el docente: ¿se acepta Firebase como "alternativa autorizada" al backend Spring Boot?
 
 Ya respondidas: la API no tendrá endpoints para escribir (lo nuevo va al backend propio), un tour se relaciona por la
-misma reserva y hora (EX + GS), y la app puede llamar a la API directo con la clave en configuración local.
+misma reserva y hora (EX + GS), la app puede llamar a la API directo con la clave en configuración local, y el docente
+acepta Firebase siempre que haya microservicios propios.
