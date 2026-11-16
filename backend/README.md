@@ -7,6 +7,7 @@ Microservicio Spring Boot que guarda lo que la API de Southbound (solo lectura) 
 | `/api/geocercas` | Hoteles y puntos de pickup/dropoff con coordenadas (ficticias) y radio (150 m por defecto) | Administrador |
 | `/api/hitos` | Check-in, check-out y posición puntual, validados en el servidor | Conductor y guía |
 | `/api/bloqueos` | Días no disponibles: con 7 días de anticipación y nunca sobre un servicio | Conductor y guía |
+| `/api/parametros` | Reglas vigentes: anticipación del check-in, precisión máxima del GPS, radio por defecto y días para bloquear | Administrador (todos leen) |
 
 El login, las respuestas (aceptar/rechazar), los reemplazos y las incidencias siguen en Firebase.
 
@@ -35,8 +36,20 @@ Repository (JPA) → H2 (local) o PostgreSQL (Docker)
   recuperar conexión (WorkManager), el backend responde 200 con el hito ya guardado en vez de duplicarlo.
 - **Errores** con el mismo formato que la API de Southbound: `{ "error": { code, message, details, requestId } }`.
 
-Las reglas se cambian en `src/main/resources/application.yml` (`lince.reglas`): radio por defecto, anticipación,
-precisión máxima y días de anticipación para bloquear. El radio de cada hotel se cambia con `PUT /api/geocercas/{id}`.
+### Cambiar las reglas
+
+Coordinación las cambia con `PUT /api/parametros` (solo administrador) y valen desde la siguiente solicitud, sin
+reiniciar. Se guardan en la tabla `parametros` (una sola fila); `application.yml` (`lince.reglas`) solo trae los
+valores con que se crea esa fila la primera vez.
+
+| Parámetro | Al partir | Rango permitido | Lo usa |
+|---|---|---|---|
+| `anticipacionMinutos` | 15 | 0 a 240 | Check-in: después de pickup − N minutos queda `TARDE` |
+| `precisionMaximaMetros` | 50 | 5 a 500 | Check-in y check-out: sobre esto queda `GPS_IMPRECISO` |
+| `radioPorDefectoMetros` | 150 | 10 a 5000 | Geocercas nuevas sin radio (las existentes conservan el suyo) |
+| `diasAnticipacionBloqueo` | 7 | 0 a 60 | Bloqueos: primer día que se puede bloquear |
+
+El radio de **cada hotel** se cambia con `PUT /api/geocercas/{id}` (ese es el que usa el check-in).
 
 ## Correr en el computador (sin Docker)
 

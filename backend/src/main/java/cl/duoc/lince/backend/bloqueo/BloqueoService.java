@@ -3,6 +3,7 @@ package cl.duoc.lince.backend.bloqueo;
 import cl.duoc.lince.backend.asignacion.AsignacionesClient;
 import cl.duoc.lince.backend.comun.ErrorNegocio;
 import cl.duoc.lince.backend.lince.ServicioLince;
+import cl.duoc.lince.backend.parametro.ParametrosService;
 import cl.duoc.lince.backend.comun.UsuarioActual;
 import cl.duoc.lince.backend.config.LinceProperties;
 import cl.duoc.lince.backend.lince.LinceClient;
@@ -23,11 +24,13 @@ public class BloqueoService {
     private final BloqueoRepository bloqueos;
     private final LinceClient lince;
     private final AsignacionesClient asignaciones;
+    private final ParametrosService parametros;
     private final LinceProperties propiedades;
     private final Clock reloj;
 
     public BloqueoService(BloqueoRepository bloqueos, LinceClient lince, AsignacionesClient asignaciones,
-                          LinceProperties propiedades, Clock reloj) {
+                          ParametrosService parametros, LinceProperties propiedades, Clock reloj) {
+        this.parametros = parametros;
         this.bloqueos = bloqueos;
         this.lince = lince;
         this.asignaciones = asignaciones;
@@ -37,7 +40,7 @@ public class BloqueoService {
 
     @Transactional
     public Bloqueo crear(UsuarioActual usuario, BloqueoSolicitud s) {
-        int dias = propiedades.reglas().diasAnticipacionBloqueo();
+        int dias = parametros.actuales().getDiasAnticipacionBloqueo();
         LocalDate hoy = LocalDate.now(reloj.withZone(propiedades.reglas().zona()));
         if (!ReglasBloqueo.tieneAnticipacion(s.fecha(), hoy, dias)) {
             throw new ErrorNegocio(HttpStatus.UNPROCESSABLE_CONTENT, "SIN_ANTICIPACION",
