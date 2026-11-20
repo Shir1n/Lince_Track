@@ -35,7 +35,7 @@ Postman y la transcripción de la reunión con Southbound.
   - Room + WorkManager: caché, cola de check-ins sin conexión, sincronización con reintentos e idempotencia.
   - Español e inglés con selector de idioma persistente.
   - JUnit + MockK con cobertura > 90 % en ViewModel/Repository y al menos un Compose UI Test.
-  - APK release firmada con `signingConfigs` seguros; `.jks`, contraseñas y API key fuera del repositorio.
+  - ~~APK release firmada~~ **Hecha el 20-11-2026** (ver "Comandos"); falta instalarla en el celular de la defensa.
   - Usar también `/guias`, `/transportistas`, `/clientes`, `/catalogos` y `/resumen`; mostrar `requestId` en errores.
   - Coordinación: última posición puntual del transportista durante un servicio activo (sin rastreo 24/7).
 - **Pedidos de Southbound en la reunión (11-09-2026) que aún no están:** datos de la agencia (vehículo, polera, letrero),
@@ -122,6 +122,12 @@ Postman y la transcripción de la reunión con Southbound.
 - Desde el PR 36 todos firman con `app/debug.keystore` (versionada, solo para debug: el repositorio es público). Un
   celular con una versión firmada antes con otra clave rechaza instalar (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`) y hay que
   desinstalar una vez. Se pierde la sesión y lo no enviado: confirmarlo antes con quien usa ese celular.
+- **APK release:** `.\gradlew.bat assembleRelease` firma con la keystore `D:\IA\Fire\lince-release.jks` (de Shir1n,
+  fuera del repo); la ruta y las contraseñas están en su `local.properties` (`LINCE_RELEASE_*`). Sin esos datos sale
+  sin firmar. Instrucciones en el README. Un celular con la versión debug instalada no acepta la release encima
+  (firma distinta): hay que desinstalar primero. `androidx.fragment` va fijo en 1.8.9 porque Play Services trae la
+  1.1.0 y el lint de release lo rechaza. En `res/` las imágenes deben tener la extensión de su formato real (un JPEG
+  llamado `.png` rompe la compilación de release).
 - La versión sale de `version.json` (raíz). La app compara con el de `master` en GitHub al abrir; si el APK de
   `releases/latest` no existe, el aviso de versión desactualizada no ofrece descargar.
 - `gh` puede no estar instalado.
