@@ -1,6 +1,8 @@
 package com.example.lince_track.data.version
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -107,30 +109,46 @@ object ControlVersionRepository {
         )
     }
 
-    fun avisosActivosFlow(context: Context): Flow<Boolean> =
-        context.versionDataStore.data.map { prefs ->
+    // Cada función tiene una versión que recibe el DataStore: la app usa la del Context y los tests pasan uno en un
+    // archivo temporal, sin Android.
+
+    fun avisosActivosFlow(context: Context): Flow<Boolean> = avisosActivosFlow(context.versionDataStore)
+
+    fun avisosActivosFlow(datos: DataStore<Preferences>): Flow<Boolean> =
+        datos.data.map { prefs ->
             prefs[AVISOS_VERSION_ACTIVOS_KEY] ?: true
         }
 
-    suspend fun setAvisosActivos(context: Context, activos: Boolean) {
-        context.versionDataStore.edit { prefs ->
+    suspend fun setAvisosActivos(context: Context, activos: Boolean) = setAvisosActivos(context.versionDataStore, activos)
+
+    suspend fun setAvisosActivos(datos: DataStore<Preferences>, activos: Boolean) {
+        datos.edit { prefs ->
             prefs[AVISOS_VERSION_ACTIVOS_KEY] = activos
         }
     }
 
-    suspend fun marcarVersionVista(context: Context, versionCode: Int = versionLocal.versionCode) {
-        context.versionDataStore.edit { prefs ->
+    suspend fun marcarVersionVista(context: Context, versionCode: Int = versionLocal.versionCode) =
+        marcarVersionVista(context.versionDataStore, versionCode)
+
+    suspend fun marcarVersionVista(datos: DataStore<Preferences>, versionCode: Int) {
+        datos.edit { prefs ->
             prefs[ULTIMA_VERSION_VISTA_KEY] = versionCode
         }
     }
 
-    suspend fun evaluarAlIniciar(context: Context): EstadoAvisoVersion {
-        val prefs = context.versionDataStore.data.first()
+    suspend fun evaluarAlIniciar(context: Context): EstadoAvisoVersion =
+        evaluarAlIniciar(context.versionDataStore) { consultarVersionRemota() }
+
+    suspend fun evaluarAlIniciar(
+        datos: DataStore<Preferences>,
+        consultarRemota: suspend () -> InfoVersion?
+    ): EstadoAvisoVersion {
+        val prefs = datos.data.first()
         val avisosActivos = prefs[AVISOS_VERSION_ACTIVOS_KEY] ?: true
         if (!avisosActivos) return EstadoAvisoVersion.Ninguno
 
         val ultimaVista = prefs[ULTIMA_VERSION_VISTA_KEY] ?: 0
-        val remota = consultarVersionRemota()
+        val remota = consultarRemota()
         return ReglasVersion.evaluar(
             local = versionLocal,
             ultimaVersionVista = ultimaVista,
@@ -159,10 +177,11 @@ object ControlVersionRepository {
         }.getOrDefault(false)
     }
 
-    suspend fun consultarVersionRemota(): InfoVersion? = withContext(Dispatchers.IO) {
+    /** [direccion] es la de version.json en master; los tests pasan la de un servidor local. */
+    suspend fun consultarVersionRemota(direccion: String = InfoVersion.REMOTE_VERSION_URL): InfoVersion? = withContext(Dispatchers.IO) {
         runCatching {
             val cacheBuster = System.currentTimeMillis() / 60_000L
-            val url = URL("${InfoVersion.REMOTE_VERSION_URL}?t=$cacheBuster")
+            val url = URL("$direccion?t=$cacheBuster")
             val conn = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
                 connectTimeout = 3500

@@ -14,7 +14,9 @@ object CheckinRepository {
     private const val TAG = "CHECKIN"
     private const val COLECCION = "checkins"
 
-    private val firestore = FirebaseFirestore.getInstance()
+    /** Firestore real; los tests lo reemplazan por uno simulado con MockK. */
+    internal val firestoreReemplazable = Reemplazable { FirebaseFirestore.getInstance() }
+    private val firestore get() = firestoreReemplazable.valor
 
     /**
      * Check-ins por servicio: id del servicio → check-in. Con [uid] trae solo los de esa

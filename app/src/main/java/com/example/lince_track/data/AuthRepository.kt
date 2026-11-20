@@ -33,8 +33,12 @@ object AuthRepository {
         "Tu cuenta no está configurada. Contacta al administrador."
     private const val MENSAJE_ERROR_CUENTA = "No se pudo leer tu cuenta. Intenta nuevamente."
 
-    private val auth = FirebaseAuth.getInstance()
-    private val firestore = FirebaseFirestore.getInstance()
+    /** FirebaseAuth real; los tests lo reemplazan por uno simulado con MockK. */
+    internal val authReemplazable = Reemplazable { FirebaseAuth.getInstance() }
+    private val auth get() = authReemplazable.valor
+    /** Firestore real; los tests lo reemplazan por uno simulado con MockK. */
+    internal val firestoreReemplazable = Reemplazable { FirebaseFirestore.getInstance() }
+    private val firestore get() = firestoreReemplazable.valor
 
     private val _rolActual = MutableStateFlow<Rol?>(null)
     val rolActual: StateFlow<Rol?> = _rolActual.asStateFlow()

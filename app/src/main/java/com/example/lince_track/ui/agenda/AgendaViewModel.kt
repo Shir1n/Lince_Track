@@ -13,12 +13,22 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 
-class AgendaViewModel : ViewModel() {
+/**
+ * Estado del calendario. Las dependencias llegan por el constructor (con la app real como valor por defecto) para
+ * que los tests las reemplacen; Compose lo crea con `viewModel()`, que usa el constructor sin argumentos.
+ */
+class AgendaViewModel(
+    val servicios: StateFlow<List<Servicio>> = ServicioRepository.servicios,
+    private val aceptarServicio: suspend (String) -> Result<String?> = ServicioRepository::aceptar,
+    private val rechazarServicio: suspend (String, MotivoRechazo, String) -> Result<String?> =
+        ServicioRepository::rechazar,
+    private val hoy: () -> LocalDate = LocalDate::now
+) : ViewModel() {
 
-    private val _selectedDate = MutableStateFlow(LocalDate.now())
+    private val _selectedDate = MutableStateFlow(hoy())
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
 
-    private val _month = MutableStateFlow(YearMonth.now())
+    private val _month = MutableStateFlow(YearMonth.from(hoy()))
     val month: StateFlow<YearMonth> = _month.asStateFlow()
 
     private val _processingIds = MutableStateFlow<Set<String>>(emptySet())
@@ -26,8 +36,6 @@ class AgendaViewModel : ViewModel() {
 
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
-
-    val servicios: StateFlow<List<Servicio>> = ServicioRepository.servicios
 
     fun seleccionarFecha(fecha: LocalDate) {
         _selectedDate.value = fecha
@@ -43,15 +51,15 @@ class AgendaViewModel : ViewModel() {
     }
 
     fun irHoy() {
-        val hoy = LocalDate.now()
-        _selectedDate.value = hoy
-        _month.value = YearMonth.from(hoy)
+        val fecha = hoy()
+        _selectedDate.value = fecha
+        _month.value = YearMonth.from(fecha)
     }
 
-    fun aceptar(servicio: Servicio) = operar(servicio) { ServicioRepository.aceptar(it) }
+    fun aceptar(servicio: Servicio) = operar(servicio) { aceptarServicio(it) }
 
     fun rechazar(servicio: Servicio, motivo: MotivoRechazo, observaciones: String) =
-        operar(servicio) { ServicioRepository.rechazar(it, motivo, observaciones) }
+        operar(servicio) { rechazarServicio(it, motivo, observaciones) }
 
     fun limpiarMensaje() {
         _message.value = null

@@ -17,7 +17,9 @@ object RespuestaRepository {
     private const val COLECCION = "respuestas"
     private const val COLECCION_ESTADOS = "estadosServicio"
 
-    private val firestore = FirebaseFirestore.getInstance()
+    /** Firestore real; los tests lo reemplazan por uno simulado con MockK. */
+    internal val firestoreReemplazable = Reemplazable { FirebaseFirestore.getInstance() }
+    private val firestore get() = firestoreReemplazable.valor
 
     /**
      * Respuestas de la más antigua a la más reciente. Con [uid] trae solo las de esa persona; con
