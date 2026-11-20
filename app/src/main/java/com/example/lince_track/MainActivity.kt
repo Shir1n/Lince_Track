@@ -11,6 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.example.lince_track.ui.components.AvisoPrivacidadAlIniciar
 import com.example.lince_track.ui.navigation.AppNavHost
 import com.example.lince_track.ui.theme.Lince_TrackTheme
 import com.example.lince_track.ui.theme.ThemeMode
@@ -49,6 +50,8 @@ class MainActivity : ComponentActivity() {
             val themeMode by this@MainActivity.themeModeFlow.collectAsState(initial = ThemeMode.SYSTEM)
             Lince_TrackTheme(themeMode = themeMode) {
                 AppNavHost()
+                // Encima de todo: la primera vez que se abre la app (o si cambia el aviso).
+                AvisoPrivacidadAlIniciar()
             }
         }
     }
