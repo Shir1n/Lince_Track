@@ -229,6 +229,17 @@ Postman y la transcripción de la reunión con Southbound.
   cuenta de servicio (la de Shir1n está en `D:\IA\Fire`, fuera del repo); sin ella arranca igual y no los ve.
 - Falta: que la app lo use (Retrofit + Room + WorkManager).
 
+## Privacidad (Ley 21.719, vigente desde el 01-12-2026)
+- Aviso "Tus datos en Lince Track" (`ui/components/Privacidad.kt`): se muestra al abrir la app hasta pulsar
+  "Entendido" y se relee en Ajustes. Si cambia lo que dice (qué datos, para qué, quién los ve), subir
+  `PrivacidadRepository.VERSION_AVISO` para que se vuelva a mostrar.
+- La ubicación se pide con `rememberPermisoUbicacion`, que explica el motivo antes del permiso de Android.
+- El mapa lee el GPS cada 2-3 s solo mientras está abierto (velocímetro y distancia) y eso **no se envía**; solo se
+  guardan las coordenadas de check-in, check-out e incidencias. **Nunca** poner coordenadas en `LinceLogger` (la
+  consola se puede compartir). A Open-Meteo se envía la zona con 2 decimales, no la posición exacta.
+- Sin Firebase Analytics (se quitó el 20-11-2026: no se usaba). Pendiente antes de datos reales: contraseñas de
+  prueba fuera del repo, teléfono visible solo para el compañero del tour, plazos de borrado, `allowBackup`.
+
 ## Convenciones del equipo
 - Una rama por tarea (`feature/...`, `fix/...`) y PR chico a `master`. Nada directo a `master`.
 - **Claude llega hasta el push:** los PR y el merge los hace Shir1n. No crear PR ni preparar enlaces para abrirlos.
