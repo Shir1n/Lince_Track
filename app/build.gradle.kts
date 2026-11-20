@@ -43,6 +43,18 @@ android {
                 keyPassword = "android"
             }
         }
+        // Firma de la APK release. La keystore (.jks) y sus contraseñas nunca van al repositorio: se leen de
+        // local.properties (LINCE_RELEASE_STORE_FILE, ..._STORE_PASSWORD, ..._KEY_ALIAS, ..._KEY_PASSWORD).
+        // Sin esos datos, assembleRelease igual compila, pero la APK sale sin firmar.
+        val keystoreRelease = localProps.getProperty("LINCE_RELEASE_STORE_FILE")?.trim()?.takeIf { it.isNotEmpty() }
+        if (keystoreRelease != null && file(keystoreRelease).exists()) {
+            create("release") {
+                storeFile = file(keystoreRelease)
+                storePassword = localProps.getProperty("LINCE_RELEASE_STORE_PASSWORD")
+                keyAlias = localProps.getProperty("LINCE_RELEASE_KEY_ALIAS")
+                keyPassword = localProps.getProperty("LINCE_RELEASE_KEY_PASSWORD")
+            }
+        }
     }
 
     defaultConfig {
@@ -65,6 +77,7 @@ android {
             optimization {
                 enable = false
             }
+            signingConfig = signingConfigs.findByName("release")
         }
         debug {
             enableUnitTestCoverage = true
@@ -108,6 +121,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.osmdroid.android)
     implementation(libs.play.services.location)
+    implementation(libs.androidx.fragment.ktx)
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
