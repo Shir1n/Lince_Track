@@ -9,6 +9,7 @@ import com.example.lince_track.data.servicios.ServicioMapper
 import com.example.lince_track.data.servicios.ServiciosDataSource
 import com.example.lince_track.util.LinceLogger
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -45,15 +46,22 @@ object ServicioRepository {
     /** Primera carga, respuestas, estados, asignaciones e incidencias. */
     private const val FUENTES_INICIALES = 5
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /** Un error inesperado en una carga o escucha se registra en vez de cerrar la app. */
+    private val scope = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO +
+            CoroutineExceptionHandler { _, e -> LinceLogger.e("SERVICIOS", "Error inesperado", e) }
+    )
 
-    private val fuente: ServiciosDataSource by lazy {
+    /** La API de Southbound o los datos de ejemplo; los tests la reemplazan por una simulada. */
+    internal val fuenteReemplazable = Reemplazable<ServiciosDataSource> { fuenteReal }
+    private val fuenteReal: ServiciosDataSource by lazy {
         if (LinceApiClient.estaConfigurada) {
             ApiServiciosDataSource(LinceApiClient.api)
         } else {
             FakeServiciosDataSource()
         }
     }
+    private val fuente get() = fuenteReemplazable.valor
 
     /** Servicios tal como llegan de la fuente (ya convertidos al modelo de la app). */
     private val serviciosFuente = MutableStateFlow<List<Servicio>>(emptyList())

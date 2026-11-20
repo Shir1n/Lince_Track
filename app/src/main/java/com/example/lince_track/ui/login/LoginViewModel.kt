@@ -19,19 +19,25 @@ data class LoginEstado(
     val rol: Rol? = null
 )
 
-class LoginViewModel : ViewModel() {
+/**
+ * Estado del inicio de sesión. Las dependencias llegan por el constructor (con AuthRepository como valor por defecto)
+ * para que los tests las reemplacen; Compose lo crea con `viewModel()`, que usa el constructor sin argumentos.
+ */
+class LoginViewModel(
+    private val uidActual: () -> String? = { AuthRepository.usuarioActual?.uid },
+    private val cargarRol: suspend (String) -> Rol? = AuthRepository::cargarRolActual,
+    private val iniciar: suspend (String, String) -> Result<Rol> = AuthRepository::iniciarSesion
+) : ViewModel() {
 
-    private val _estado = MutableStateFlow(
-        LoginEstado(cargando = AuthRepository.usuarioActual != null)
-    )
+    private val _estado = MutableStateFlow(LoginEstado(cargando = uidActual() != null))
     val estado: StateFlow<LoginEstado> = _estado.asStateFlow()
 
     init {
         // Si ya hay una sesión activa (app reabierta), recupera el rol automáticamente.
-        val usuario = AuthRepository.usuarioActual
-        if (usuario != null) {
+        val uid = uidActual()
+        if (uid != null) {
             viewModelScope.launch {
-                val rol = AuthRepository.cargarRolActual(usuario.uid)
+                val rol = cargarRol(uid)
                 _estado.value = if (rol != null) LoginEstado(rol = rol) else LoginEstado()
             }
         }
@@ -45,7 +51,7 @@ class LoginViewModel : ViewModel() {
         }
         viewModelScope.launch {
             _estado.value = LoginEstado(cargando = true)
-            val resultado = AuthRepository.iniciarSesion(email, password)
+            val resultado = iniciar(email, password)
             _estado.value = resultado.fold(
                 onSuccess = { LoginEstado(rol = it) },
                 onFailure = { LoginEstado(error = it.mensajeAmigable()) }

@@ -14,7 +14,9 @@ object IncidenciaRepository {
     private const val TAG = "INCIDENCIAS"
     private const val COLECCION = "incidencias"
 
-    private val firestore = FirebaseFirestore.getInstance()
+    /** Firestore real; los tests lo reemplazan por uno simulado con MockK. */
+    internal val firestoreReemplazable = Reemplazable { FirebaseFirestore.getInstance() }
+    private val firestore get() = firestoreReemplazable.valor
 
     /**
      * Con [uid] trae las de esa persona; con null, las de todos desde la fecha [desde] (AAAA-MM-DD),

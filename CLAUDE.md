@@ -103,8 +103,19 @@ Postman y la transcripción de la reunión con Southbound.
 ```powershell
 .\gradlew.bat assembleDebug          # compilar
 .\gradlew.bat testDebugUnitTest      # tests unitarios (incluye LinceApiTest)
+.\gradlew.bat jacocoPautaReport      # cobertura de ViewModel + Repository (la pauta pide > 90 %)
 .\gradlew.bat installDebug           # instalar en dispositivo/emulador
 ```
+- **Tests de repositorios y ViewModel (desde el 20-11-2026, 94,7 % de líneas):**
+  - Los repositorios siguen siendo `object`, pero Firebase y la fuente de servicios se obtienen con `Reemplazable`
+    (`firestoreReemplazable`, `authReemplazable`, `fuenteReemplazable`), que los tests cambian por simulaciones de
+    MockK. La app usa siempre la real. Un repositorio nuevo debe seguir el mismo patrón (o recibir todo por constructor).
+  - Los ViewModel reciben sus dependencias por el constructor con la app real como valor por defecto (Compose los crea
+    con `viewModel()`). En sus tests se pasan lambdas, no mocks de MockK: MockK falla al simular funciones `suspend`.
+  - Ayudas en `app/src/test/.../data/FirebaseSimulado.kt` (tareas, documentos, escuchas) y `Datos.kt` (DTO de prueba).
+  - Al terminar un test, dejar `AuthRepository` con `FirebaseSimulado.authSinSesion()`, nunca con `null`: en la JVM no
+    hay Firebase real y `ServicioRepository` (que sigue vivo entre tests) dejaría de escuchar.
+  - `ControlVersionRepository` se prueba con un DataStore en un archivo temporal y un servidor HTTP local.
 - Se prueba en celulares reales por USB: no crear emuladores de Android. `adb` está en `Android\Sdk\platform-tools`, y si
   Java no está en el PATH se puede usar el `jbr` de Android Studio (`C:\Program Files\Android\Android Studio\jbr` o
   `D:\Android\AndroidStudio\jbr`, según el computador).

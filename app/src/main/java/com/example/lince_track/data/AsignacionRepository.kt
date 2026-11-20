@@ -16,7 +16,9 @@ object AsignacionRepository {
     private const val COLECCION_ESTADOS = "estadosServicio"
     private const val COLECCION_USUARIOS = "usuarios"
 
-    private val firestore = FirebaseFirestore.getInstance()
+    /** Firestore real; los tests lo reemplazan por uno simulado con MockK. */
+    internal val firestoreReemplazable = Reemplazable { FirebaseFirestore.getInstance() }
+    private val firestore get() = firestoreReemplazable.valor
 
     /** Reemplazos de los servicios desde la fecha [desde] (AAAA-MM-DD): id del servicio → reemplazo. */
     fun observar(desde: String): Flow<Map<String, AsignacionServicio>> = callbackFlow {

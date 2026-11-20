@@ -78,6 +78,10 @@ android {
         compose = true
         buildConfig = true
     }
+    testOptions {
+        // En los tests de JVM, android.util.Log (que usa LinceLogger) devuelve valores por defecto en vez de fallar.
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {
@@ -92,6 +96,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.datastore.preferences)
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -142,6 +148,25 @@ tasks.register<JacocoReport>("jacocoTestReport") {
 
     sourceDirectories.setFrom(files("src/main/java"))
     classDirectories.setFrom(kotlinClasses)
+    executionData.setFrom(fileTree(buildDir) {
+        include("outputs/unit_test_code_coverage/debugUnitTest/*.exec")
+        include("jacoco/*.exec")
+    })
+}
+// Cobertura que exige la pauta (>90 %): solo ViewModel y Repository.
+// .\gradlew.bat jacocoPautaReport → app/build/reports/jacoco/jacocoPautaReport/html/index.html
+tasks.register<JacocoReport>("jacocoPautaReport") {
+    dependsOn("testDebugUnitTest")
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+    val buildDir = layout.buildDirectory.get().asFile
+    val clases = fileTree("$buildDir/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes") {
+        include("**/*Repository.class", "**/*Repository\$*.class", "**/*ViewModel.class", "**/*ViewModel\$*.class")
+    }
+    sourceDirectories.setFrom(files("src/main/java"))
+    classDirectories.setFrom(clases)
     executionData.setFrom(fileTree(buildDir) {
         include("outputs/unit_test_code_coverage/debugUnitTest/*.exec")
         include("jacoco/*.exec")
