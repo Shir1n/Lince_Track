@@ -58,6 +58,11 @@ android {
         buildConfigField("String", "LINCE_API_BASE_URL", "\"https://ws.southbound.travel/lince-api/\"")
         buildConfigField("String", "LINCE_API_KEY", "\"${localProps.getProperty("LINCE_API_KEY", "").trim()}\"")
         buildConfigField("String", "LOCAL_VERSION_JSON_B64", "\"$versionJsonB64\"")
+
+        // Backend propio de Lince (bloqueo de días, parámetros, etc.)
+        val backendUrl = localProps.getProperty("LINCE_BACKEND_URL", "http://10.0.2.2:8080/").trim()
+            .let { if (it.endsWith("/")) it else "$it/" }
+        buildConfigField("String", "LINCE_BACKEND_URL", "\"$backendUrl\"")
     }
 
     buildTypes {

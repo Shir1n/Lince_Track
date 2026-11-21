@@ -1,10 +1,12 @@
 package com.example.lince_track.ui
 
+import com.example.lince_track.data.BloqueoRepository
 import com.example.lince_track.data.Datos
 import com.example.lince_track.data.MotivoRechazo
 import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.SinRolException
+import com.example.lince_track.data.remote.BloqueoApi
 import com.example.lince_track.ui.agenda.AgendaViewModel
 import com.example.lince_track.ui.login.LoginEstado
 import com.example.lince_track.ui.login.LoginViewModel
@@ -61,7 +63,10 @@ class ViewModelsTest {
         servicios = MutableStateFlow(listOf(servicio)),
         aceptarServicio = { id -> aceptados += id; respuestaAceptar(id) },
         rechazarServicio = { _, motivo, _ -> respuestaRechazar(motivo) },
-        hoy = { hoy }
+        // Sin backend real: el repositorio de bloqueos recibe una API simulada y no carga nada al crearse.
+        bloqueoRepository = BloqueoRepository(mockk<BloqueoApi>(relaxed = true)),
+        hoy = { hoy },
+        autoCargarBloqueos = false
     )
 
     @Test
