@@ -35,9 +35,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lince_track.R
 import com.example.lince_track.data.IncidenciaServicio
 import com.example.lince_track.data.ReglasIncidencia
 import com.example.lince_track.data.ServicioRepository
@@ -60,22 +62,34 @@ fun rememberEnviarIncidencia(
     servicioId: String,
     snackbarHostState: SnackbarHostState
 ): (TipoIncidencia, String) -> Unit {
-    val context = LocalContext.current.applicationContext
+    val localizedContext = LocalContext.current
+    val appContext = localizedContext.applicationContext
     val scope = rememberCoroutineScope()
     var pendiente by remember { mutableStateOf<Pair<TipoIncidencia, String>?>(null) }
 
     fun enviar(tipo: TipoIncidencia, detalle: String) {
         scope.launch {
             val enviando = launch {
-                snackbarHostState.showSnackbar("Enviando incidencia...", duration = SnackbarDuration.Indefinite)
+                snackbarHostState.showSnackbar(
+                    localizedContext.getString(R.string.incidencia_enviando),
+                    duration = SnackbarDuration.Indefinite
+                )
             }
             val resultado = withContext(NonCancellable) {
-                ServicioRepository.reportarIncidencia(servicioId, tipo, detalle, ubicacionActual(context))
+                ServicioRepository.reportarIncidencia(servicioId, tipo, detalle, ubicacionActual(appContext))
             }
             enviando.cancelAndJoin()
             resultado
-                .onSuccess { aviso -> snackbarHostState.showSnackbar(aviso ?: "Incidencia enviada a Coordinación") }
-                .onFailure { e -> snackbarHostState.showSnackbar(e.message ?: "No se pudo enviar la incidencia") }
+                .onSuccess { aviso ->
+                    snackbarHostState.showSnackbar(
+                        aviso ?: localizedContext.getString(R.string.incidencia_enviada)
+                    )
+                }
+                .onFailure { e ->
+                    snackbarHostState.showSnackbar(
+                        e.message ?: localizedContext.getString(R.string.incidencia_error_envio)
+                    )
+                }
         }
     }
 
@@ -85,7 +99,7 @@ fun rememberEnviarIncidencia(
     }
 
     return { tipo, detalle ->
-        if (tienePermisoUbicacion(context)) {
+        if (tienePermisoUbicacion(appContext)) {
             enviar(tipo, detalle)
         } else {
             pendiente = tipo to detalle
@@ -115,7 +129,7 @@ fun ReportarIncidenciaDialog(
         },
         title = {
             Text(
-                text = "Reportar incidencia",
+                text = stringResource(R.string.incidencia_dialogo_titulo),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -124,7 +138,7 @@ fun ReportarIncidenciaDialog(
         text = {
             Column {
                 Text(
-                    text = "Coordinación recibirá el aviso de inmediato. Se enviará tu ubicación a Coordinación.",
+                    text = stringResource(R.string.incidencia_dialogo_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -138,7 +152,7 @@ fun ReportarIncidenciaDialog(
                     ) {
                         RadioButton(selected = tipo == opcion, onClick = { tipo = opcion })
                         Text(
-                            text = opcion.etiqueta,
+                            text = opcion.etiquetaLocalizada(),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -150,7 +164,13 @@ fun ReportarIncidenciaDialog(
                     onValueChange = { detalle = it.take(ReglasIncidencia.MAX_DETALLE) },
                     placeholder = {
                         Text(
-                            text = if (tipo?.requiereTexto == true) "Describe lo que pasó (Obligatorio)..." else "Describe lo que pasó...",
+                            text = stringResource(
+                                if (tipo?.requiereTexto == true) {
+                                    R.string.incidencia_detalle_obligatorio
+                                } else {
+                                    R.string.incidencia_detalle_opcional
+                                }
+                            ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
@@ -165,19 +185,28 @@ fun ReportarIncidenciaDialog(
                 enabled = ReglasIncidencia.detalleValido(tipo, detalle),
                 shape = RoundedCornerShape(50)
             ) {
-                Text("ENVIAR", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.accion_enviar), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(
-                    text = "CANCELAR",
+                    text = stringResource(R.string.accion_cancelar),
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
             }
         }
     )
+}
+
+@Composable
+private fun TipoIncidencia.etiquetaLocalizada(): String = when (this) {
+    TipoIncidencia.FALLA_MECANICA -> stringResource(R.string.incidencia_tipo_falla_mecanica)
+    TipoIncidencia.ATRASO -> stringResource(R.string.incidencia_tipo_retraso)
+    TipoIncidencia.PASAJEROS -> stringResource(R.string.incidencia_tipo_pasajero)
+    TipoIncidencia.CAMINO -> stringResource(R.string.incidencia_tipo_emergencia)
+    TipoIncidencia.OTRO -> stringResource(R.string.incidencia_tipo_otro)
 }
 
 /** Mensaje de Coordinación para quien reportó. */
@@ -209,7 +238,10 @@ fun MensajeIncidenciaDialog(
                 onValueChange = { mensaje = it.take(ReglasIncidencia.MAX_DETALLE) },
                 placeholder = {
                     Text(
-                        text = if (obligatorio) "Mensaje para quien reportó (Obligatorio)..." else "Mensaje para quien reportó...",
+                        text = stringResource(
+                            if (obligatorio) R.string.incidencia_msg_obligatorio
+                            else R.string.incidencia_msg_opcional
+                        ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
@@ -223,13 +255,13 @@ fun MensajeIncidenciaDialog(
                 enabled = ReglasIncidencia.respuestaValida(mensaje, obligatorio),
                 shape = RoundedCornerShape(50)
             ) {
-                Text("ENVIAR", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.accion_enviar), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(
-                    text = "CANCELAR",
+                    text = stringResource(R.string.accion_cancelar),
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
@@ -285,7 +317,7 @@ fun IncidenciaCard(
             if (incidencia.respuesta.isNotBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Coordinación: ${incidencia.respuesta}",
+                    text = stringResource(R.string.incidencia_coordinacion_resp, incidencia.respuesta),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.secondary
@@ -295,7 +327,7 @@ fun IncidenciaCard(
                 if (onResolver != null) {
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedButton(onClick = onResolver, shape = RoundedCornerShape(50)) {
-                        Text("Marcar resuelta", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.incidencia_marcar_resuelta), fontWeight = FontWeight.Bold)
                     }
                 }
                 acciones?.let {

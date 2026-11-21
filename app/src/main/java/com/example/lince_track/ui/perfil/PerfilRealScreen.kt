@@ -65,6 +65,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -104,6 +105,13 @@ fun PerfilRealScreen(
     val esPiloto1 = nombre.equals("Piloto1", ignoreCase = true) ||
         nombre.equals("Patricio Lagos", ignoreCase = true)
     val rol = perfil?.rol
+    val rolEtiqueta = when (rol) {
+        Rol.ADMINISTRADOR -> stringResource(R.string.rol_administrador)
+        Rol.CONDUCTOR -> stringResource(R.string.rol_conductor)
+        Rol.GUIA -> stringResource(R.string.rol_guia)
+        null -> stringResource(R.string.perfil_sin_dato)
+    }
+    val sinDato = stringResource(R.string.perfil_sin_dato)
     val vehiculo = remember(servicios) { DatosPerfil.vehiculo(servicios) }
     val totales = remember(servicios, checkins) { DatosPerfil.totales(servicios, checkins) }
     val enRuta = remember(servicios, checkins) { DatosPerfil.enRuta(servicios, checkins) }
@@ -137,10 +145,10 @@ fun PerfilRealScreen(
                 }
                 Spacer(Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Mi Perfil", color = BarraSuperior.contenido,
+                    Text(stringResource(R.string.perfil_mi_perfil), color = BarraSuperior.contenido,
                         style = MaterialTheme.typography.titleSmall, fontSize = 15.sp,
                         fontWeight = FontWeight.Bold)
-                    Text("Operaciones Southbound", color = BarraSuperior.contenido.copy(alpha = .8f),
+                    Text(stringResource(R.string.login_subtitulo), color = BarraSuperior.contenido.copy(alpha = .8f),
                         style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, maxLines = 1)
                 }
                 Surface(color = MaterialTheme.colorScheme.secondary, shape = RoundedCornerShape(16.dp)) {
@@ -149,16 +157,18 @@ fun PerfilRealScreen(
                         Icon(Icons.Outlined.DirectionsCar, contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSecondary, modifier = Modifier.size(11.dp))
                         Spacer(Modifier.width(3.dp))
-                        Text(rol?.etiqueta?.uppercase() ?: "CONDUCTOR",
+                        Text(
+                            if (rol != null) rolEtiqueta.uppercase() else stringResource(R.string.rol_conductor).uppercase(),
                             color = MaterialTheme.colorScheme.onSecondary,
                             style = MaterialTheme.typography.labelSmall, fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold)
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
                 Spacer(Modifier.width(6.dp))
                 Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer,
                     modifier = Modifier.size(26.dp)) {
-                    Icon(Icons.Outlined.Person, contentDescription = "Perfil",
+                    Icon(Icons.Outlined.Person, contentDescription = stringResource(R.string.nav_perfil),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(5.dp))
                 }
@@ -199,7 +209,7 @@ fun PerfilRealScreen(
                     if (enRuta) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "EN RUTA",
+                            text = stringResource(R.string.perfil_en_ruta),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSecondary,
@@ -215,10 +225,10 @@ fun PerfilRealScreen(
                             .padding(vertical = 10.dp, horizontal = 4.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        MiniDatoPerfil("Cuenta", rol?.etiqueta ?: SIN_DATO)
-                        MiniDatoPerfil("Oficina", "Puerto Varas")
+                        MiniDatoPerfil(stringResource(R.string.perfil_cuenta), rolEtiqueta)
+                        MiniDatoPerfil(stringResource(R.string.perfil_oficina), "Puerto Varas")
                         // El guía no maneja: no tiene vehículo que mostrar.
-                        if (rol != Rol.GUIA) MiniDatoPerfil("Vehículo", vehiculo?.patente ?: SIN_DATO)
+                        if (rol != Rol.GUIA) MiniDatoPerfil(stringResource(R.string.perfil_vehiculo), vehiculo?.patente ?: sinDato)
                     }
                 }
             }
@@ -234,7 +244,7 @@ fun PerfilRealScreen(
                             Icon(Icons.Outlined.Event, contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(9.dp))
-                            Text("Próximo Servicio", style = MaterialTheme.typography.titleMedium,
+                            Text(stringResource(R.string.perfil_proximo_servicio), style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f))
                             EstadoServicioBadge(servicio.estado)
@@ -258,19 +268,19 @@ fun PerfilRealScreen(
                             tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                     }
                     Spacer(Modifier.width(9.dp))
-                    Text("Datos Personales y\nOperativos", style = MaterialTheme.typography.titleMedium,
+                    Text(stringResource(R.string.perfil_datos_personales), style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f))
-                    EtiquetaPerfil("Verificado")
+                    EtiquetaPerfil(stringResource(R.string.perfil_verificado))
                 }
                 Spacer(Modifier.height(16.dp))
-                FilaDatoPersonal("Nombre Completo", nombre, Icons.Outlined.Person)
-                FilaDatoPersonal("Correo Institucional", email.ifBlank { SIN_DATO },
+                FilaDatoPersonal(stringResource(R.string.perfil_nombre_completo), nombre, Icons.Outlined.Person)
+                FilaDatoPersonal(stringResource(R.string.perfil_correo_institucional), email.ifBlank { sinDato },
                     Icons.Outlined.Email, subrayado = true)
                 perfil?.telefono?.takeIf { it.isNotBlank() }?.let { telefono ->
-                    FilaDatoPersonal("Teléfono", telefono, Icons.Outlined.Phone)
+                    FilaDatoPersonal(stringResource(R.string.perfil_telefono), telefono, Icons.Outlined.Phone)
                 }
-                FilaDatoPersonal("Rol", rol?.etiqueta ?: SIN_DATO, Icons.Outlined.Badge)
+                FilaDatoPersonal(stringResource(R.string.perfil_rol), rolEtiqueta, Icons.Outlined.Badge)
             }
 
             if (rol != Rol.GUIA) {
@@ -279,28 +289,32 @@ fun PerfilRealScreen(
                         Icon(Icons.Outlined.DirectionsBus, contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(9.dp))
-                        Text("Vehículo Asignado",
+                        Text(stringResource(R.string.perfil_vehiculo_asignado),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f))
-                        EtiquetaPerfil(if (vehiculo != null) "● Operativo" else "Sin asignar")
+                        EtiquetaPerfil(
+                            stringResource(
+                                if (vehiculo != null) R.string.perfil_operativo else R.string.perfil_sin_asignar
+                            )
+                        )
                     }
                     Spacer(Modifier.height(14.dp))
                     Box(Modifier.fillMaxWidth().height(132.dp).clip(RoundedCornerShape(10.dp))) {
                         Image(painterResource(if (esPiloto1) R.drawable.jacs5_piloto1
                             else R.drawable.mercedes_benz_sprinter),
-                            contentDescription = "Vehículo asignado a Piloto1",
+                            contentDescription = stringResource(R.string.perfil_vehiculo_asignado),
                             contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
                             listOf(Color.Transparent, Color(0xDD00162A)))))
                         Column(Modifier.align(Alignment.BottomStart).padding(10.dp)) {
-                            if (!esPiloto1) Text(vehiculo?.tipo?.uppercase() ?: "VEHÍCULO DE PASAJEROS",
+                            if (!esPiloto1) Text(vehiculo?.tipo?.uppercase() ?: stringResource(R.string.perfil_vehiculo_pasajeros),
                                 style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
                                 color = Color.White)
-                            Text(if (esPiloto1) "JAC S5" else vehiculo?.tipo ?: "Vehículo asignado",
+                            Text(if (esPiloto1) "JAC S5" else vehiculo?.tipo ?: stringResource(R.string.perfil_vehiculo_asignado),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold, color = Color.White)
-                            Text(if (esPiloto1) "Año modelo 2015" else "Vehículo asignado",
+                            Text(if (esPiloto1) stringResource(R.string.perfil_anio_2015) else stringResource(R.string.perfil_vehiculo_asignado),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.White.copy(alpha = .85f))
                         }
@@ -309,9 +323,9 @@ fun PerfilRealScreen(
                             shape = RoundedCornerShape(6.dp), shadowElevation = 3.dp) {
                             Column(Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("PATENTE", style = MaterialTheme.typography.labelSmall,
+                                Text(stringResource(R.string.perfil_patente), style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(vehiculo?.patente?.ifBlank { SIN_DATO } ?: SIN_DATO,
+                                Text(vehiculo?.patente?.ifBlank { sinDato } ?: sinDato,
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                             }
@@ -319,12 +333,12 @@ fun PerfilRealScreen(
                     }
                     Spacer(Modifier.height(13.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        MiniDatoVehiculo(Icons.Outlined.Groups, "Capacidad",
-                            if (esPiloto1) "$CAPACIDAD_JAC_S5 Pasajeros"
-                            else vehiculo?.let { "${it.capacidad} Pasajeros" } ?: SIN_DATO,
+                        MiniDatoVehiculo(Icons.Outlined.Groups, stringResource(R.string.perfil_capacidad),
+                            if (esPiloto1) stringResource(R.string.chip_pasajeros, CAPACIDAD_JAC_S5)
+                            else vehiculo?.let { stringResource(R.string.chip_pasajeros, it.capacidad) } ?: sinDato,
                             Modifier.weight(1f))
-                        MiniDatoVehiculo(Icons.Outlined.Speed, "Odómetro",
-                            if (esPiloto1) ODOMETRO_JAC_S5 else SIN_DATO, Modifier.weight(1f))
+                        MiniDatoVehiculo(Icons.Outlined.Speed, stringResource(R.string.perfil_odometro),
+                            if (esPiloto1) ODOMETRO_JAC_S5 else sinDato, Modifier.weight(1f))
                     }
                     Spacer(Modifier.height(8.dp))
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
@@ -333,8 +347,13 @@ fun PerfilRealScreen(
                         Icon(Icons.Outlined.Verified, contentDescription = null,
                             tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(if (esPiloto1) "Revisión técnica al día" else "Información de revisión técnica no disponible.",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            stringResource(
+                                if (esPiloto1) R.string.perfil_revision_al_dia
+                                else R.string.perfil_revision_no_disponible
+                            ),
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }
@@ -344,35 +363,35 @@ fun PerfilRealScreen(
                     Icon(Icons.Outlined.Analytics, contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(9.dp))
-                    TituloSeccion("Resumen Operacional")
+                    TituloSeccion(stringResource(R.string.perfil_resumen_operacional))
                 }
-                Text("Viajes del mes en curso; puntualidad y terminados de los últimos 7 días",
+                Text(stringResource(R.string.perfil_resumen_desc),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    EstadisticaPerfil(Icons.Outlined.Route, viajesMes.toString(), "Viajes Mes",
+                    EstadisticaPerfil(Icons.Outlined.Route, viajesMes.toString(), stringResource(R.string.perfil_viajes_mes),
                         MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.secondary,
                         MaterialTheme.colorScheme.onSecondary, Modifier.weight(1f))
                     EstadisticaPerfil(Icons.Outlined.Star, when {
                         esPiloto1 -> CALIFICACION_PATRICIO
                         rol == Rol.GUIA -> CALIFICACION_GUIA
                         else -> "—"
-                    }, "Calificación",
+                    }, stringResource(R.string.perfil_calificacion),
                         MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.tertiary,
                         MaterialTheme.colorScheme.onTertiary, Modifier.weight(1f),
                         MaterialTheme.colorScheme.onTertiaryContainer)
                     EstadisticaPerfil(Icons.Outlined.AccessTime,
-                        actividad.puntualidad?.let { "$it %" } ?: "—", "Puntualidad",
+                        actividad.puntualidad?.let { "$it %" } ?: "—", stringResource(R.string.perfil_puntualidad),
                         MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.secondary,
                         MaterialTheme.colorScheme.onSecondary, Modifier.weight(1f),
                         MaterialTheme.colorScheme.secondary)
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MiniDatoVehiculo(Icons.Outlined.CheckCircle, "Terminados",
+                    MiniDatoVehiculo(Icons.Outlined.CheckCircle, stringResource(R.string.perfil_terminados),
                         actividad.terminados.toString(), Modifier.weight(1f))
-                    MiniDatoVehiculo(Icons.Outlined.Schedule, "Por realizar",
+                    MiniDatoVehiculo(Icons.Outlined.Schedule, stringResource(R.string.perfil_por_realizar),
                         actividad.porRealizar.toString(), Modifier.weight(1f))
                 }
                 if (rol != Rol.GUIA) {
@@ -383,10 +402,10 @@ fun PerfilRealScreen(
                         Icon(Icons.Outlined.Verified, contentDescription = null,
                             tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Certificación Conductor Destacado 2026",
+                        Text(stringResource(R.string.perfil_certificacion),
                             style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-                        Text("NIVEL\nORO", style = MaterialTheme.typography.labelSmall,
+                        Text(stringResource(R.string.perfil_nivel_oro), style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary,
                             textAlign = TextAlign.Center)
                     }
@@ -411,7 +430,7 @@ fun PerfilRealScreen(
                     .height(54.dp)
             ) {
                 Text(
-                    text = "Cerrar Sesión",
+                    text = stringResource(R.string.perfil_cerrar_sesion),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onErrorContainer
@@ -628,25 +647,25 @@ private fun AjustesPerfil(
             Icon(Icons.Outlined.Tune, contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(9.dp))
-            TituloSeccion("Ajustes y Soporte")
+            TituloSeccion(stringResource(R.string.perfil_ajustes_soporte))
         }
         AjusteSwitchPerfil(
             icono = Icons.AutoMirrored.Outlined.VolumeUp,
-            titulo = "Notificaciones sonoras en ruta",
-            descripcion = "Alertas de tráfico y paradas prioritarias",
+            titulo = stringResource(R.string.perfil_notif_sonoras),
+            descripcion = stringResource(R.string.perfil_notif_sonoras_desc),
             activo = notificaciones,
             onChange = onNotificacionesChange
         )
         AjusteNavegacionPerfil(
             icono = Icons.Outlined.Palette,
-            titulo = "Ajustes de apariencia",
-            descripcion = "Tema claro, oscuro o del sistema",
+            titulo = stringResource(R.string.perfil_ajustes_apariencia),
+            descripcion = stringResource(R.string.perfil_ajustes_apariencia_desc),
             onClick = onOpenSettings
         )
         AjusteNavegacionPerfil(
             icono = Icons.Outlined.SupportAgent,
-            titulo = "Contactar Soporte TI / Mesa de Ayuda",
-            descripcion = "Línea directa operativa 24/7",
+            titulo = stringResource(R.string.perfil_contactar_soporte),
+            descripcion = stringResource(R.string.perfil_contactar_soporte_desc),
             onClick = onOpenSupport
         )
     }

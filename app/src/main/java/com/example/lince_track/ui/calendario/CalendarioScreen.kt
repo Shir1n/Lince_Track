@@ -56,11 +56,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.lince_track.R
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.EstadoServicio
 import com.example.lince_track.data.Rol
@@ -77,13 +79,21 @@ import java.time.LocalDate
 import java.time.YearMonth
 import com.example.lince_track.ui.theme.BarraSuperior
 
-private val weekDayLabels = listOf("L", "M", "X", "J", "V", "S", "D")
+private val weekDayLabelRes = listOf(
+    R.string.agenda_dia_l,
+    R.string.agenda_dia_m,
+    R.string.agenda_dia_x,
+    R.string.agenda_dia_j,
+    R.string.agenda_dia_v,
+    R.string.agenda_dia_s,
+    R.string.agenda_dia_d
+)
 
-private enum class FiltroAgenda(val label: String) {
-    TODOS("Todos"),
-    PENDIENTES("Pendientes"),
-    ACEPTADAS("Aceptadas"),
-    RECHAZADAS("Rechazadas")
+private enum class FiltroAgenda(@param:androidx.annotation.StringRes val labelRes: Int) {
+    TODOS(R.string.agenda_filtro_todos),
+    PENDIENTES(R.string.agenda_filtro_pendientes),
+    ACEPTADAS(R.string.agenda_filtro_aceptadas),
+    RECHAZADAS(R.string.agenda_filtro_rechazadas)
 }
 
 @Composable
@@ -181,7 +191,7 @@ private fun AgendaTopBar() {
         contentAlignment = Alignment.CenterStart
     ) {
         Text(
-            text = "Agenda",
+            text = stringResource(R.string.agenda_titulo),
             color = BarraSuperior.contenido,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
@@ -216,7 +226,7 @@ private fun CalendarioSection(
                 IconButton(onClick = onMesAnterior) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "Mes anterior",
+                        contentDescription = stringResource(R.string.cd_mes_anterior),
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -239,7 +249,7 @@ private fun CalendarioSection(
                 IconButton(onClick = onMesSiguiente) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Mes siguiente",
+                        contentDescription = stringResource(R.string.cd_mes_siguiente),
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -250,7 +260,7 @@ private fun CalendarioSection(
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
                 Text(
-                    text = "Hoy",
+                    text = stringResource(R.string.agenda_hoy),
                     color = MaterialTheme.colorScheme.secondary,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -259,9 +269,9 @@ private fun CalendarioSection(
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(modifier = Modifier.fillMaxWidth()) {
-                weekDayLabels.forEach { label ->
+                weekDayLabelRes.forEach { labelRes ->
                     Text(
-                        text = label,
+                        text = stringResource(labelRes),
                         modifier = Modifier.weight(1f),
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.labelMedium,
@@ -400,7 +410,7 @@ private fun FiltroChips(filtro: FiltroAgenda, onFiltro: (FiltroAgenda) -> Unit) 
                 onClick = { onFiltro(opcion) },
                 label = {
                     Text(
-                        text = opcion.label,
+                        text = stringResource(opcion.labelRes),
                         maxLines = 1,
                         style = MaterialTheme.typography.labelMedium
                     )
@@ -461,7 +471,7 @@ private fun AgendaDelDia(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Sin trabajos para este día",
+                        text = stringResource(R.string.agenda_sin_trabajos),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -526,7 +536,7 @@ private fun AgendaCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "${servicio.pasajeros} pasajeros",
+                    text = stringResource(R.string.agenda_pasajeros, servicio.pasajeros),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -553,7 +563,7 @@ private fun AgendaCard(
 
             if (servicio.guia != ServicioMapper.SIN_GUIA) {
                 Text(
-                    text = "Guía: ${servicio.guia}",
+                    text = stringResource(R.string.chip_guia, servicio.guia),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -570,7 +580,7 @@ private fun AgendaCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Conflicto de horario con otro trabajo aceptado",
+                        text = stringResource(R.string.agenda_conflicto),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.tertiary
@@ -613,7 +623,7 @@ private fun AgendaCard(
                                     containerColor = MaterialTheme.colorScheme.secondary
                                 )
                             ) {
-                                Text("Aceptar", fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.accion_aceptar), fontWeight = FontWeight.Bold)
                             }
                             OutlinedButton(
                                 onClick = onRechazar,
@@ -623,7 +633,7 @@ private fun AgendaCard(
                                     contentColor = MaterialTheme.colorScheme.error
                                 )
                             ) {
-                                Text("Rechazar", fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.accion_rechazar), fontWeight = FontWeight.Bold)
                             }
                         }
                     }

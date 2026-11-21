@@ -43,10 +43,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lince_track.R
 import com.example.lince_track.data.EstadoServicio
 import com.example.lince_track.data.ReglasCheckin
 import com.example.lince_track.data.Servicio
@@ -74,6 +77,7 @@ fun GuiaAsignacionesScreen(
     onServiceClick: (String) -> Unit = {},
     onRouteClick: (String) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val servicios by ServicioRepository.servicios.collectAsState()
     val error by ServicioRepository.error.collectAsState()
     val hoy = LocalDate.now()
@@ -96,7 +100,7 @@ fun GuiaAsignacionesScreen(
             resultado.onSuccess { aviso ->
                 if (aviso != null) snackbarHostState.showSnackbar(aviso)
             }.onFailure { e ->
-                snackbarHostState.showSnackbar(e.message ?: "No se pudo completar la operación")
+                snackbarHostState.showSnackbar(e.message ?: context.getString(R.string.error_operacion))
             }
         }
     }
@@ -119,7 +123,7 @@ fun GuiaAsignacionesScreen(
                 SummaryKpiCard(serviciosHoy, ReglasCheckin.terminados(servicios, checkins).size, onVerTerminados)
 
                 Text(
-                    text = "Mis Asignaciones de Hoy - ${formatFechaCorta(hoy)}",
+                    text = stringResource(R.string.guia_asignaciones_titulo, formatFechaCorta(hoy)),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -146,7 +150,7 @@ fun GuiaAsignacionesScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "No tienes asignaciones para hoy",
+                                text = stringResource(R.string.guia_asignaciones_vacio),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -201,7 +205,7 @@ private fun TopBar() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Lince Track",
+                text = stringResource(R.string.app_name),
                 color = BarraSuperior.contenido,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
@@ -220,7 +224,7 @@ private fun TopBar() {
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "Guía SERNATUR",
+                    text = stringResource(R.string.rol_guia_sernatur),
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold
@@ -243,7 +247,7 @@ private fun SummaryKpiCard(servicios: List<Servicio>, terminados: Int, onVerTerm
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Text(
-            text = "Resumen",
+            text = stringResource(R.string.kpi_resumen),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -257,19 +261,19 @@ private fun SummaryKpiCard(servicios: List<Servicio>, terminados: Int, onVerTerm
         ) {
             KpiStat(
                 valor = "$totalPasajeros",
-                etiqueta = "Pasajeros hoy",
+                etiqueta = stringResource(R.string.kpi_pasajeros_hoy),
                 colorValor = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
             KpiStat(
                 valor = "${aceptados.size}",
-                etiqueta = "Tours aceptados",
+                etiqueta = stringResource(R.string.kpi_tours_aceptados),
                 colorValor = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.weight(1f)
             )
             KpiStat(
                 valor = "${pendientes.size}",
-                etiqueta = "Tours pendientes",
+                etiqueta = stringResource(R.string.kpi_tours_pendientes),
                 colorValor = MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier.weight(1f)
             )
@@ -362,10 +366,10 @@ private fun ServicioCard(
             }
             Spacer(modifier = Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MetaChip("${servicio.pasajeros} Pasajeros")
+                MetaChip(stringResource(R.string.chip_pasajeros, servicio.pasajeros))
                 // Un servicio guiado sin transporte no necesita la etiqueta.
                 if (servicio.conductor != ServicioMapper.SIN_TRANSPORTISTA) {
-                    MetaChip("Conductor: ${servicio.conductor}")
+                    MetaChip(stringResource(R.string.chip_conductor, servicio.conductor))
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -393,11 +397,11 @@ private fun ServicioCard(
                                         containerColor = MaterialTheme.colorScheme.secondary
                                     )
                                 ) {
-                                    Text("Confirmar", fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.accion_confirmar), fontWeight = FontWeight.Bold)
                                 }
                                 TextButton(onClick = onRechazar) {
                                     Text(
-                                        text = "Rechazar",
+                                        text = stringResource(R.string.accion_rechazar),
                                         color = MaterialTheme.colorScheme.error,
                                         fontWeight = FontWeight.SemiBold
                                     )
@@ -414,7 +418,7 @@ private fun ServicioCard(
                                 contentColor = MaterialTheme.colorScheme.primary
                             )
                         ) {
-                            Text("Ver Ruta", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.accion_ver_ruta), fontWeight = FontWeight.SemiBold)
                         }
                     }
                     EstadoServicio.RECHAZADO -> {
@@ -426,7 +430,7 @@ private fun ServicioCard(
                                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         ) {
-                            Text("Ver Detalle", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.accion_ver_detalle), fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }

@@ -39,9 +39,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.lince_track.R
 import com.example.lince_track.data.version.ControlVersionRepository
 import com.example.lince_track.data.version.InfoVersion
 
@@ -81,7 +83,7 @@ fun VersionActualizadaDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "¡Estás actualizado!",
+                    text = stringResource(R.string.version_actualizada_titulo),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -92,13 +94,16 @@ fun VersionActualizadaDialog(
                     shape = RoundedCornerShape(50),
                     color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
                 ) {
+                    val baseBadge = stringResource(
+                        R.string.version_badge,
+                        version.versionName,
+                        version.versionCode
+                    )
+                    val autorBadge = if (version.autorUltimoCambio.isNotBlank()) {
+                        stringResource(R.string.version_badge_autor, version.autorUltimoCambio)
+                    } else ""
                     Text(
-                        text = buildString {
-                            append("Versión ${version.versionName} (código ${version.versionCode})")
-                            if (version.autorUltimoCambio.isNotBlank()) {
-                                append(" · por ${version.autorUltimoCambio}")
-                            }
-                        },
+                        text = baseBadge + autorBadge,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.secondary,
@@ -110,7 +115,7 @@ fun VersionActualizadaDialog(
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Tu aplicación cuenta con los últimos cambios integrados por el equipo:",
+                    text = stringResource(R.string.version_actualizada_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -133,7 +138,7 @@ fun VersionActualizadaDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Entendido",
+                    text = stringResource(R.string.version_entendido),
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -186,7 +191,7 @@ fun VersionDesactualizadaDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Oops, versión desactualizada",
+                    text = stringResource(R.string.version_desactualizada_titulo),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -198,7 +203,13 @@ fun VersionDesactualizadaDialog(
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                 ) {
                     Text(
-                        text = "Instalada: v${local.versionName} (${local.versionCode})  →  Nueva: v${remota.versionName} (${remota.versionCode})",
+                        text = stringResource(
+                            R.string.version_comparacion,
+                            local.versionName,
+                            local.versionCode,
+                            remota.versionName,
+                            remota.versionCode
+                        ),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
@@ -209,12 +220,13 @@ fun VersionDesactualizadaDialog(
         },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                val subtitulo = if (descargaDisponible == false) {
-                    "Hay una nueva versión en el repositorio principal. Pídele al equipo que te la instale:"
-                } else if (remota.autorUltimoCambio.isNotBlank()) {
-                    "Hay una nueva actualización subida por ${remota.autorUltimoCambio}. Actualiza para estar al día con el equipo:"
-                } else {
-                    "Hay una nueva actualización en el repositorio principal. Actualiza para estar al día con el equipo:"
+                val subtitulo = when {
+                    descargaDisponible == false -> stringResource(R.string.version_desactualizada_sin_descarga)
+                    remota.autorUltimoCambio.isNotBlank() -> stringResource(
+                        R.string.version_desactualizada_con_autor,
+                        remota.autorUltimoCambio
+                    )
+                    else -> stringResource(R.string.version_desactualizada_generico)
                 }
                 Text(
                     text = subtitulo,
@@ -226,7 +238,7 @@ fun VersionDesactualizadaDialog(
                     HorizontalDivider()
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Cambios incluidos en v${remota.versionName}:",
+                        text = stringResource(R.string.version_cambios_incluidos, remota.versionName),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -240,7 +252,7 @@ fun VersionDesactualizadaDialog(
             // Mientras no se sepa si el archivo existe, o si no existe, no se ofrece un enlace roto.
             if (descargaDisponible != true) {
                 Button(onClick = onDismiss, shape = RoundedCornerShape(50)) {
-                    Text(text = "Entendido", fontWeight = FontWeight.Bold)
+                    Text(text = stringResource(R.string.version_entendido), fontWeight = FontWeight.Bold)
                 }
             } else Button(
                 onClick = {
@@ -254,7 +266,7 @@ fun VersionDesactualizadaDialog(
                 )
             ) {
                 Text(
-                    text = "Descargar actualización",
+                    text = stringResource(R.string.version_descargar),
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -263,7 +275,7 @@ fun VersionDesactualizadaDialog(
             {
                 TextButton(onClick = onDismiss) {
                     Text(
-                        text = "Más tarde",
+                        text = stringResource(R.string.version_mas_tarde),
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -313,7 +325,7 @@ fun abrirDescargaActualizacion(context: Context, apkUrl: String) {
     } catch (_: ActivityNotFoundException) {
         Toast.makeText(
             context,
-            "No se encontró un navegador para abrir el enlace de descarga",
+            context.getString(R.string.version_sin_navegador),
             Toast.LENGTH_LONG
         ).show()
     }

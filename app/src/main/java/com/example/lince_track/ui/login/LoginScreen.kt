@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.lince_track.R
 import com.example.lince_track.data.Rol
+import com.example.lince_track.ui.components.LanguageSwitcherButton
 
 @Composable
 fun LoginScreen(
@@ -58,14 +60,14 @@ fun LoginScreen(
         ) {
             Image(
                 painter = painterResource(id = R.drawable.logo_solo),
-                contentDescription = "Logo Lince Track",
+                contentDescription = stringResource(R.string.cd_logo_lince),
                 modifier = Modifier
                     .size(200.dp)
                     .padding(bottom = 16.dp)
             )
 
             Text(
-                text = "Lince Track",
+                text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -73,7 +75,7 @@ fun LoginScreen(
             )
 
             Text(
-                text = "Operaciones Southbound",
+                text = stringResource(R.string.login_subtitulo),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.secondary,
@@ -88,11 +90,16 @@ fun LoginScreen(
                     viewModel.limpiarError()
                 },
                 enabled = !estado.cargando,
-                placeholder = { Text("Correo institucional", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                placeholder = {
+                    Text(
+                        stringResource(R.string.login_correo_placeholder),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Email,
-                        contentDescription = "Icono Correo",
+                        contentDescription = stringResource(R.string.cd_icono_correo),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
@@ -111,7 +118,7 @@ fun LoginScreen(
             )
 
             Text(
-                text = "Ingresa tu correo corporativo",
+                text = stringResource(R.string.login_correo_ayuda),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp, bottom = 20.dp)
@@ -124,11 +131,16 @@ fun LoginScreen(
                     viewModel.limpiarError()
                 },
                 enabled = !estado.cargando,
-                placeholder = { Text("Contraseña", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                placeholder = {
+                    Text(
+                        stringResource(R.string.login_password_placeholder),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Outlined.Lock,
-                        contentDescription = "Icono Contraseña",
+                        contentDescription = stringResource(R.string.cd_icono_password),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
@@ -136,7 +148,10 @@ fun LoginScreen(
                     IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                         Icon(
                             imageVector = if (isPasswordVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff,
-                            contentDescription = if (isPasswordVisible) "Ocultar contraseña" else "Mostrar contraseña",
+                            contentDescription = stringResource(
+                                if (isPasswordVisible) R.string.login_ocultar_password
+                                else R.string.login_mostrar_password
+                            ),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -170,7 +185,7 @@ fun LoginScreen(
                         viewModel.limpiarError()
                     },
                     enabled = !estado.cargando,
-                    label = { Text("Admin", style = MaterialTheme.typography.labelMedium) }
+                    label = { Text(stringResource(R.string.login_chip_admin), style = MaterialTheme.typography.labelMedium) }
                 )
                 SuggestionChip(
                     onClick = {
@@ -179,7 +194,7 @@ fun LoginScreen(
                         viewModel.limpiarError()
                     },
                     enabled = !estado.cargando,
-                    label = { Text("Guía", style = MaterialTheme.typography.labelMedium) }
+                    label = { Text(stringResource(R.string.login_chip_guia), style = MaterialTheme.typography.labelMedium) }
                 )
                 SuggestionChip(
                     onClick = {
@@ -188,7 +203,7 @@ fun LoginScreen(
                         viewModel.limpiarError()
                     },
                     enabled = !estado.cargando,
-                    label = { Text("Conductor", style = MaterialTheme.typography.labelMedium) }
+                    label = { Text(stringResource(R.string.login_chip_conductor), style = MaterialTheme.typography.labelMedium) }
                 )
                 SuggestionChip(
                     onClick = {
@@ -197,7 +212,7 @@ fun LoginScreen(
                         viewModel.limpiarError()
                     },
                     enabled = !estado.cargando,
-                    label = { Text("Piloto 1", style = MaterialTheme.typography.labelMedium) }
+                    label = { Text(stringResource(R.string.login_chip_piloto1), style = MaterialTheme.typography.labelMedium) }
                 )
             }
 
@@ -220,7 +235,7 @@ fun LoginScreen(
                     )
                 } else {
                     Text(
-                        text = "Iniciar Sesión",
+                        text = stringResource(R.string.login_iniciar_sesion),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimary
@@ -230,7 +245,7 @@ fun LoginScreen(
 
             estado.error?.let { mensaje ->
                 Text(
-                    text = mensaje,
+                    text = mensaje.asString(),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center,
@@ -242,11 +257,18 @@ fun LoginScreen(
 
             TextButton(onClick = onForgotPasswordClick) {
                 Text(
-                    text = "¿Problemas para ingresar?",
+                    text = stringResource(R.string.login_problemas),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
+
+        LanguageSwitcherButton(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(16.dp)
+        )
     }
 }

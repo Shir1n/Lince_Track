@@ -51,10 +51,12 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lince_track.BuildConfig
+import com.example.lince_track.R
 import com.example.lince_track.data.clima.ClimaInfo
 import com.example.lince_track.data.clima.NivelRiesgo
 import com.example.lince_track.data.clima.PresetClima
@@ -155,7 +157,11 @@ fun ClimaConduccionCard(
                     }
 
                     Text(
-                        text = "${clima.descripcionCorta} • Viento ${clima.windSpeedKmH.roundToInt()} km/h",
+                        text = stringResource(
+                            R.string.clima_viento,
+                            clima.descripcionCorta,
+                            clima.windSpeedKmH.roundToInt()
+                        ),
                         fontSize = 12.sp,
                         color = secondaryTextColor,
                         fontWeight = FontWeight.Medium
@@ -171,7 +177,7 @@ fun ClimaConduccionCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Refresh,
-                                contentDescription = "Refrescar GPS",
+                                contentDescription = stringResource(R.string.cd_refrescar_gps),
                                 tint = contentColor,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -191,13 +197,16 @@ fun ClimaConduccionCard(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Filled.Tune,
-                                    contentDescription = "Simular",
+                                    contentDescription = stringResource(R.string.cd_simular),
                                     tint = contentColor,
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = if (presetActual == PresetClima.REAL) "Real" else "Simulado",
+                                    text = stringResource(
+                                        if (presetActual == PresetClima.REAL) R.string.clima_real
+                                        else R.string.clima_simulado
+                                    ),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = contentColor
@@ -243,7 +252,11 @@ fun ClimaConduccionCard(
                                 .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = if (recomendacionVestimenta != null) "GUÍA" else nivelActual.label.uppercase(),
+                                text = if (recomendacionVestimenta != null) {
+                                    stringResource(R.string.clima_badge_guia)
+                                } else {
+                                    nivelActual.label.uppercase()
+                                },
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -273,7 +286,7 @@ fun ClimaConduccionCard(
                     if (recomendacionVestimenta != null && recomendacionVestimenta.vestimentaSugerida.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Recomendación de vestimenta:",
+                            text = stringResource(R.string.clima_vestimenta_titulo),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = contentColor
@@ -556,14 +569,14 @@ fun ClimaPresetDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Modo de Clima y Evaluación",
+                text = stringResource(R.string.clima_preset_titulo),
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Selecciona cómo obtener el clima para probar en vivo las recomendaciones viales:",
+                    text = stringResource(R.string.clima_preset_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -592,7 +605,7 @@ fun ClimaPresetDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cerrar")
+                Text(stringResource(R.string.soporte_cerrar))
             }
         }
     )

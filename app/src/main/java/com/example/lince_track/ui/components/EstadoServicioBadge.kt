@@ -19,8 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.lince_track.R
 import com.example.lince_track.data.EstadoServicio
 
 @Composable
@@ -30,19 +32,19 @@ fun EstadoServicioBadge(estado: EstadoServicio) {
             container = MaterialTheme.colorScheme.tertiary,
             content = MaterialTheme.colorScheme.onTertiary,
             icon = Icons.Outlined.Schedule,
-            label = "Pendiente"
+            label = stringResource(R.string.estado_pendiente)
         )
         EstadoServicio.ACEPTADO -> EstadoBadgeStyle(
             container = MaterialTheme.colorScheme.secondary,
             content = MaterialTheme.colorScheme.onSecondary,
             icon = Icons.Filled.CheckCircle,
-            label = "Aceptado"
+            label = stringResource(R.string.estado_aceptado)
         )
         EstadoServicio.RECHAZADO -> EstadoBadgeStyle(
             container = MaterialTheme.colorScheme.surfaceVariant,
             content = MaterialTheme.colorScheme.onSurfaceVariant,
             icon = Icons.Outlined.Close,
-            label = "Rechazado"
+            label = stringResource(R.string.estado_rechazado)
         )
     }
 

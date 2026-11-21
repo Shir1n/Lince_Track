@@ -7,12 +7,12 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-private val Context.dataStore by preferencesDataStore(name = "settings")
+internal val Context.settingsDataStore by preferencesDataStore(name = "settings")
 
 private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
 
 val Context.themeModeFlow: Flow<ThemeMode>
-    get() = dataStore.data.map { preferences ->
+    get() = settingsDataStore.data.map { preferences ->
         when (preferences[THEME_MODE_KEY]) {
             ThemeMode.LIGHT.name -> ThemeMode.LIGHT
             ThemeMode.DARK.name -> ThemeMode.DARK
@@ -21,7 +21,7 @@ val Context.themeModeFlow: Flow<ThemeMode>
     }
 
 suspend fun Context.setThemeMode(mode: ThemeMode) {
-    dataStore.edit { preferences ->
+    settingsDataStore.edit { preferences ->
         preferences[THEME_MODE_KEY] = mode.name
     }
 }
