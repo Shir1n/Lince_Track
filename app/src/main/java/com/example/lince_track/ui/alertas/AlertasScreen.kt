@@ -19,17 +19,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lince_track.R
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.theme.BarraSuperior
 
-enum class FiltroAlertas(val label: String) {
-    TODAS("Todas"),
-    ATRASOS("Atrasos"),
-    SERVICIOS("Servicios")
+enum class FiltroAlertas(val label: String, @param:StringRes val labelRes: Int) {
+    TODAS("Todas", R.string.alertas_filtro_todas),
+    ATRASOS("Atrasos", R.string.alertas_filtro_atrasos),
+    SERVICIOS("Servicios", R.string.alertas_filtro_servicios)
 }
 
 @Composable
@@ -92,7 +95,7 @@ fun AlertasScreen(onServiceClick: (String) -> Unit = {}) {
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "No tienes alertas en esta categoría",
+                            text = stringResource(R.string.alertas_vacio),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -121,7 +124,7 @@ private fun AlertasHeader(
     ) {
         Column {
             Text(
-                text = "Centro de Alertas",
+                text = stringResource(R.string.alertas_titulo),
                 color = BarraSuperior.contenido,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
@@ -142,7 +145,7 @@ private fun AlertasHeader(
                         modifier = Modifier.clickable { onSeleccionarFiltro(filtro) }
                     ) {
                         Text(
-                            text = filtro.label,
+                            text = stringResource(filtro.labelRes),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                             color = if (selected) MaterialTheme.colorScheme.onSecondary else BarraSuperior.contenido,
@@ -160,27 +163,42 @@ private fun AlertaCard(alerta: Alerta, onClick: () -> Unit) {
     val colorFondo: Color
     val colorContenido: Color
     val icono: ImageVector
+    val claseLabelRes: Int
+    val claseDescRes: Int
     when (alerta.clase) {
         ClaseAlerta.CHECKIN_ATRASADO -> {
             colorFondo = MaterialTheme.colorScheme.tertiary
             colorContenido = MaterialTheme.colorScheme.onTertiary
             icono = Icons.Outlined.NotificationsActive
+            claseLabelRes = R.string.alerta_clase_atrasado
+            claseDescRes = R.string.alerta_desc_atrasado
         }
         ClaseAlerta.POR_RESPONDER -> {
             colorFondo = MaterialTheme.colorScheme.primary
             colorContenido = MaterialTheme.colorScheme.onPrimary
             icono = Icons.Outlined.Schedule
+            claseLabelRes = R.string.alerta_clase_por_responder
+            claseDescRes = R.string.alerta_desc_por_responder
         }
         ClaseAlerta.EN_RUTA -> {
             colorFondo = MaterialTheme.colorScheme.secondary
             colorContenido = MaterialTheme.colorScheme.onSecondary
             icono = Icons.Filled.CheckCircle
+            claseLabelRes = R.string.alerta_clase_en_ruta
+            claseDescRes = R.string.alerta_desc_en_ruta
         }
         ClaseAlerta.CANCELADO -> {
             colorFondo = MaterialTheme.colorScheme.error
             colorContenido = MaterialTheme.colorScheme.onError
             icono = Icons.Outlined.Cancel
+            claseLabelRes = R.string.alerta_clase_cancelado
+            claseDescRes = R.string.alerta_desc_cancelado
         }
+    }
+    val tiempoLocalizado = if (alerta.tiempo.startsWith("Hoy • ")) {
+        stringResource(R.string.agenda_hoy) + alerta.tiempo.removePrefix("Hoy")
+    } else {
+        alerta.tiempo
     }
 
     Card(
@@ -211,7 +229,7 @@ private fun AlertaCard(alerta: Alerta, onClick: () -> Unit) {
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = alerta.clase.etiqueta,
+                        text = stringResource(claseLabelRes),
                         color = colorContenido,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold
@@ -231,7 +249,7 @@ private fun AlertaCard(alerta: Alerta, onClick: () -> Unit) {
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = alerta.descripcion,
+                text = stringResource(claseDescRes),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 lineHeight = 20.sp
@@ -240,7 +258,7 @@ private fun AlertaCard(alerta: Alerta, onClick: () -> Unit) {
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = alerta.tiempo,
+                text = tiempoLocalizado,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

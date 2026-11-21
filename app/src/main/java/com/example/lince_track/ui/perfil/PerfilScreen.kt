@@ -40,6 +40,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -166,14 +167,14 @@ private fun PerfilTopBar() {
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Mi Perfil",
+                    stringResource(R.string.perfil_mi_perfil),
                     color = BarraSuperior.contenido,
                     style = MaterialTheme.typography.titleSmall,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Operaciones Southbound",
+                    stringResource(R.string.login_subtitulo),
                     color = BarraSuperior.contenido.copy(alpha = 0.8f),
                     style = MaterialTheme.typography.labelSmall,
                     fontSize = 10.sp,
@@ -200,7 +201,7 @@ private fun PerfilTopBar() {
                     )
                     Spacer(Modifier.width(3.dp))
                     Text(
-                        "TRANSPORTISTA",
+                        stringResource(R.string.rol_transportista).uppercase(),
                         color = MaterialTheme.colorScheme.onSecondary,
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = 10.sp,
@@ -218,7 +219,7 @@ private fun PerfilTopBar() {
             ) {
                 Icon(
                     Icons.Outlined.Person,
-                    contentDescription = "Perfil",
+                    contentDescription = stringResource(R.string.nav_perfil),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.padding(5.dp)
                 )
@@ -263,14 +264,14 @@ private fun ResumenPerfil() {
     if (mostrarSelector) {
         AlertDialog(
             onDismissRequest = { mostrarSelector = false },
-            title = { Text("Cambiar foto de perfil") },
-            text = { Text("Elige una opción") },
+            title = { Text(stringResource(R.string.perfil_cambiar_foto)) },
+            text = { Text(stringResource(R.string.perfil_elige_opcion)) },
             confirmButton = {
                 TextButton(onClick = {
                     mostrarSelector = false
                     permisoCamaraLauncher.launch(Manifest.permission.CAMERA)
                 }) {
-                    Text("Tomar foto")
+                    Text(stringResource(R.string.perfil_tomar_foto))
                 }
             },
             dismissButton = {
@@ -280,7 +281,7 @@ private fun ResumenPerfil() {
                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                     )
                 }) {
-                    Text("Elegir de galería")
+                    Text(stringResource(R.string.perfil_elegir_galeria))
                 }
             }
         )
@@ -888,7 +889,7 @@ private fun AjustesSeguridad(
             IconoCircular(Icons.Outlined.Tune)
             Spacer(Modifier.width(9.dp))
             Text(
-                "Ajustes y Soporte",
+                stringResource(R.string.perfil_ajustes_soporte),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -899,21 +900,21 @@ private fun AjustesSeguridad(
 
         AjusteSwitch(
             icono = Icons.AutoMirrored.Outlined.VolumeUp,
-            titulo = "Notificaciones sonoras en ruta",
-            descripcion = "Alertas de tráfico y paradas prioritarias",
+            titulo = stringResource(R.string.perfil_notif_sonoras),
+            descripcion = stringResource(R.string.perfil_notif_sonoras_desc),
             activo = notificaciones,
             onChange = onNotificacionesChange
         )
         AjusteNavegacion(
             icono = Icons.Outlined.Palette,
-            titulo = "Ajustes de apariencia",
-            descripcion = "Tema claro, oscuro o del sistema",
+            titulo = stringResource(R.string.perfil_ajustes_apariencia),
+            descripcion = stringResource(R.string.perfil_ajustes_apariencia_desc),
             onClick = onOpenSettings
         )
         AjusteNavegacion(
             icono = Icons.Outlined.SupportAgent,
-            titulo = "Contactar Soporte TI / Mesa de Ayuda",
-            descripcion = "Línea directa operativa 24/7",
+            titulo = stringResource(R.string.perfil_contactar_soporte),
+            descripcion = stringResource(R.string.perfil_contactar_soporte_desc),
             onClick = { mostrarSoporte = true }
         )
     }
@@ -1040,7 +1041,7 @@ private fun CerrarSesion(onLogout: () -> Unit) {
         )
         Spacer(Modifier.width(8.dp))
         Text(
-            "Cerrar Sesión",
+            stringResource(R.string.perfil_cerrar_sesion),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onErrorContainer

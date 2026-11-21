@@ -25,9 +25,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lince_track.R
 import com.example.lince_track.data.MotivoRechazo
 import com.example.lince_track.data.ReglasRespuesta
 import com.example.lince_track.data.Servicio
@@ -54,7 +56,7 @@ fun RejectServicioDialog(
         },
         title = {
             Text(
-                text = "Rechazar ${servicio.reserva}",
+                text = stringResource(R.string.rechazar_titulo, servicio.reserva),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -63,13 +65,13 @@ fun RejectServicioDialog(
         text = {
             Column {
                 Text(
-                    text = "Tu respuesta quedará registrada para Coordinación Logística.",
+                    text = stringResource(R.string.rechazar_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Selecciona el motivo (Obligatorio):",
+                    text = stringResource(R.string.rechazar_motivo_label),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -87,7 +89,7 @@ fun RejectServicioDialog(
                             onClick = { selectedReason = reason }
                         )
                         Text(
-                            text = reason.etiqueta,
+                            text = reason.etiquetaLocalizada(),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -99,11 +101,13 @@ fun RejectServicioDialog(
                     onValueChange = { observations = it.take(ReglasRespuesta.MAX_OBSERVACIONES) },
                     placeholder = {
                         Text(
-                            text = if (selectedReason?.requiereTexto == true) {
-                                "Describe el motivo (Obligatorio)..."
-                            } else {
-                                "Observaciones para el coordinador..."
-                            },
+                            text = stringResource(
+                                if (selectedReason?.requiereTexto == true) {
+                                    R.string.rechazar_obs_obligatorio
+                                } else {
+                                    R.string.rechazar_obs_opcional
+                                }
+                            ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
@@ -119,17 +123,25 @@ fun RejectServicioDialog(
                 shape = RoundedCornerShape(50),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
-                Text("CONFIRMAR RECHAZO", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.rechazar_confirmar), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(
-                    text = "CANCELAR",
+                    text = stringResource(R.string.accion_cancelar),
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
             }
         }
     )
+}
+
+@Composable
+private fun MotivoRechazo.etiquetaLocalizada(): String = when (this) {
+    MotivoRechazo.FALLA_MECANICA -> stringResource(R.string.motivo_falla_mecanica)
+    MotivoRechazo.FUERZA_MAYOR -> stringResource(R.string.motivo_fuerza_mayor)
+    MotivoRechazo.CRUCE_HORARIO -> stringResource(R.string.motivo_cruce_horario)
+    MotivoRechazo.OTRO -> stringResource(R.string.motivo_otro)
 }

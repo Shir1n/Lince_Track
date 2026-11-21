@@ -31,8 +31,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.lince_track.R
 import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.ReglasCheckin
 import com.example.lince_track.data.Servicio
@@ -72,12 +74,12 @@ fun ServiciosTerminadosScreen(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Volver",
+                    contentDescription = stringResource(R.string.cd_volver),
                     tint = BarraSuperior.contenido
                 )
             }
             Text(
-                text = "Servicios Terminados",
+                text = stringResource(R.string.terminados_titulo),
                 color = BarraSuperior.contenido,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
@@ -107,7 +109,7 @@ fun ServiciosTerminadosScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Aquí aparecerán los servicios al registrar el check-out",
+                        text = stringResource(R.string.terminados_vacio),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -138,13 +140,17 @@ fun VerTerminadosBoton(cantidad: Int, onClick: () -> Unit) {
             modifier = Modifier.size(18.dp)
         )
         Spacer(modifier = Modifier.width(6.dp))
-        Text("Ver terminados ($cantidad)", fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.terminados_ver_boton, cantidad), fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
 private fun TerminadoCard(servicio: Servicio, checkin: CheckinServicio, onClick: () -> Unit) {
-    val companero = if (servicio.esGuiado) "Conductor: ${servicio.conductor}" else "Guía: ${servicio.guia}"
+    val companero = if (servicio.esGuiado) {
+        stringResource(R.string.chip_conductor, servicio.conductor)
+    } else {
+        stringResource(R.string.chip_guia, servicio.guia)
+    }
 
     Card(
         onClick = onClick,
@@ -162,7 +168,7 @@ private fun TerminadoCard(servicio: Servicio, checkin: CheckinServicio, onClick:
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "${formatFechaCorta(servicio.fecha)} • ${ReglasCheckin.horario(checkin)}",
+                text = "${formatFechaCorta(servicio.fecha, androidx.compose.ui.platform.LocalConfiguration.current.locales[0])} • ${ReglasCheckin.horario(checkin)}",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.secondary
@@ -184,7 +190,7 @@ private fun TerminadoCard(servicio: Servicio, checkin: CheckinServicio, onClick:
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "${servicio.pasajeros} Pasajeros • $companero",
+                text = stringResource(R.string.terminados_pasajeros_companero, servicio.pasajeros, companero),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

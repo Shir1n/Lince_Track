@@ -1,5 +1,6 @@
 package com.example.lince_track.ui
 
+import com.example.lince_track.R
 import com.example.lince_track.data.BloqueoRepository
 import com.example.lince_track.data.Datos
 import com.example.lince_track.data.MotivoRechazo
@@ -10,6 +11,7 @@ import com.example.lince_track.data.remote.BloqueoApi
 import com.example.lince_track.ui.agenda.AgendaViewModel
 import com.example.lince_track.ui.login.LoginEstado
 import com.example.lince_track.ui.login.LoginViewModel
+import com.example.lince_track.util.UiText
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
@@ -174,7 +176,7 @@ class ViewModelsTest {
     fun camposVaciosNoLlamanAFirebase() {
         val vm = login()
         vm.iniciarSesion(" ", "clave")
-        assertEquals("Ingresa tu correo y contraseña", vm.estado.value.error)
+        assertEquals(UiText.StringResource(R.string.login_error_campos_vacios), vm.estado.value.error)
         vm.limpiarError()
         assertNull(vm.estado.value.error)
         assertTrue(intentos.isEmpty())
@@ -198,7 +200,7 @@ class ViewModelsTest {
         assertEquals(listOf("admin@lince.cl"), intentos)
     }
 
-    private fun mensajePara(error: Throwable): String? {
+    private fun mensajePara(error: Throwable): UiText? {
         respuestaLogin = { Result.failure(error) }
         val vm = login()
         vm.iniciarSesion("a@b.cl", "x")
@@ -208,12 +210,12 @@ class ViewModelsTest {
 
     @Test
     fun cadaErrorDeFirebaseTieneUnMensajeClaro() {
-        assertEquals("Tu cuenta no está configurada.", mensajePara(SinRolException("Tu cuenta no está configurada.")))
-        assertEquals("No existe una cuenta con ese correo.", mensajePara(mockk<FirebaseAuthInvalidUserException>()))
-        assertEquals("Correo o contraseña incorrectos.", mensajePara(mockk<FirebaseAuthInvalidCredentialsException>()))
-        assertEquals("Sin conexión. Revisa tu internet.", mensajePara(FirebaseNetworkException("sin red")))
-        assertEquals("Algo raro", mensajePara(IllegalStateException("Algo raro")))
-        assertEquals("No se pudo iniciar sesión. Intenta nuevamente.", mensajePara(IllegalStateException()))
+        assertEquals(UiText.DynamicString("Tu cuenta no está configurada."), mensajePara(SinRolException("Tu cuenta no está configurada.")))
+        assertEquals(UiText.StringResource(R.string.login_error_usuario_no_existe), mensajePara(mockk<FirebaseAuthInvalidUserException>()))
+        assertEquals(UiText.StringResource(R.string.login_error_credenciales), mensajePara(mockk<FirebaseAuthInvalidCredentialsException>()))
+        assertEquals(UiText.StringResource(R.string.login_error_red), mensajePara(FirebaseNetworkException("sin red")))
+        assertEquals(UiText.DynamicString("Algo raro"), mensajePara(IllegalStateException("Algo raro")))
+        assertEquals(UiText.StringResource(R.string.login_error_generico), mensajePara(IllegalStateException()))
     }
 
     @Test

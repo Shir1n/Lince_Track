@@ -39,12 +39,18 @@ import androidx.compose.material3.Switch
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
+import com.example.lince_track.R
 import com.example.lince_track.data.version.ControlVersionRepository
 import com.example.lince_track.data.version.InfoVersion
 import com.example.lince_track.ui.components.AvisoPrivacidadDialog
+import com.example.lince_track.ui.components.LanguageSwitcherButton
 import com.example.lince_track.ui.components.VersionActualizadaDialog
 import com.example.lince_track.ui.components.VersionDesactualizadaDialog
+import com.example.lince_track.ui.components.label
+import com.example.lince_track.ui.theme.AppLanguage
 import com.example.lince_track.ui.theme.ThemeMode
+import com.example.lince_track.ui.theme.appLanguageFlow
 import com.example.lince_track.ui.theme.setThemeMode
 import com.example.lince_track.ui.theme.themeModeFlow
 import com.example.lince_track.util.LinceLogConsoleDialog
@@ -56,6 +62,7 @@ import com.example.lince_track.ui.theme.BarraSuperior
 fun AjustesScreen(onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val themeMode by context.themeModeFlow.collectAsState(initial = ThemeMode.SYSTEM)
+    val appLanguage by context.appLanguageFlow.collectAsState(initial = AppLanguage.SYSTEM)
     val avisosVersionActivos by ControlVersionRepository.avisosActivosFlow(context)
         .collectAsState(initial = true)
     val logs by LinceLogger.logs.collectAsState()
@@ -82,7 +89,7 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Apariencia",
+                text = stringResource(R.string.ajustes_apariencia),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -109,7 +116,44 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
             }
 
             Text(
-                text = "Privacidad",
+                text = stringResource(R.string.idioma_titulo),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.cd_cambiar_idioma),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.idioma_actual, appLanguage.label()),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    LanguageSwitcherButton()
+                }
+            }
+
+            Text(
+                text = stringResource(R.string.ajustes_privacidad),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -126,13 +170,13 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Tus datos en Lince Track",
+                        text = stringResource(R.string.privacidad_titulo),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Qué datos usa la app, para qué, quién los ve y cómo pedir que se corrijan o eliminen.",
+                        text = stringResource(R.string.privacidad_ajustes_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -141,13 +185,13 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(text = "VER AVISO DE PRIVACIDAD", fontWeight = FontWeight.Bold)
+                        Text(text = stringResource(R.string.privacidad_ver_aviso), fontWeight = FontWeight.Bold)
                     }
                 }
             }
 
             Text(
-                text = "Diagnóstico y Desarrollo",
+                text = stringResource(R.string.ajustes_diagnostico),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -164,18 +208,21 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Versión de la Aplicación",
+                        text = stringResource(R.string.ajustes_version_titulo),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                    val versionInstalada = stringResource(
+                        R.string.ajustes_version_instalada,
+                        versionLocal.versionName,
+                        versionLocal.versionCode
+                    )
+                    val versionAutor = if (versionLocal.autorUltimoCambio.isNotBlank()) {
+                        stringResource(R.string.ajustes_version_autor, versionLocal.autorUltimoCambio)
+                    } else ""
                     Text(
-                        text = buildString {
-                            append("Instalada: v${versionLocal.versionName} (código ${versionLocal.versionCode})")
-                            if (versionLocal.autorUltimoCambio.isNotBlank()) {
-                                append(" · Último cambio por ${versionLocal.autorUltimoCambio}")
-                            }
-                        },
+                        text = versionInstalada + versionAutor,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -186,13 +233,13 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Avisos de versión al iniciar",
+                                text = stringResource(R.string.ajustes_avisos_version),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Notificar si hay cambios nuevos en master",
+                                text = stringResource(R.string.ajustes_avisos_version_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -230,7 +277,10 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = if (verificandoVersion) "VERIFICANDO..." else "VERIFICAR ACTUALIZACIÓN / NOVEDADES",
+                            text = stringResource(
+                                if (verificandoVersion) R.string.ajustes_verificando
+                                else R.string.ajustes_verificar_actualizacion
+                            ),
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -248,13 +298,13 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Consola de Logs Lince",
+                        text = stringResource(R.string.ajustes_consola_logs),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Inspecciona eventos de GPS, mapa, red y navegación (${logs.size} registros activos).",
+                        text = stringResource(R.string.ajustes_consola_logs_desc, logs.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -268,7 +318,7 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "ABRIR CONSOLA DE LOGS",
+                            text = stringResource(R.string.ajustes_abrir_consola),
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -319,12 +369,12 @@ private fun AjustesTopBar(onBack: () -> Unit) {
         IconButton(onClick = onBack) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Volver",
+                contentDescription = stringResource(R.string.cd_volver),
                 tint = BarraSuperior.contenido
             )
         }
         Text(
-            text = "Ajustes",
+            text = stringResource(R.string.ajustes_titulo),
             color = BarraSuperior.contenido,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
@@ -345,13 +395,13 @@ private fun ThemeModeOption(mode: ThemeMode, selected: Boolean, onClick: () -> U
         Spacer(modifier = Modifier.width(8.dp))
         Column {
             Text(
-                text = mode.title,
+                text = mode.title(),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = mode.subtitle,
+                text = mode.subtitle(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -359,16 +409,16 @@ private fun ThemeModeOption(mode: ThemeMode, selected: Boolean, onClick: () -> U
     }
 }
 
-private val ThemeMode.title: String
-    get() = when (this) {
-        ThemeMode.LIGHT -> "Claro"
-        ThemeMode.DARK -> "Oscuro"
-        ThemeMode.SYSTEM -> "Sistema"
-    }
+@Composable
+private fun ThemeMode.title(): String = when (this) {
+    ThemeMode.LIGHT -> stringResource(R.string.tema_claro)
+    ThemeMode.DARK -> stringResource(R.string.tema_oscuro)
+    ThemeMode.SYSTEM -> stringResource(R.string.tema_sistema)
+}
 
-private val ThemeMode.subtitle: String
-    get() = when (this) {
-        ThemeMode.LIGHT -> "Usar siempre el tema claro"
-        ThemeMode.DARK -> "Usar siempre el tema oscuro"
-        ThemeMode.SYSTEM -> "Seguir la configuración del dispositivo"
-    }
+@Composable
+private fun ThemeMode.subtitle(): String = when (this) {
+    ThemeMode.LIGHT -> stringResource(R.string.tema_claro_desc)
+    ThemeMode.DARK -> stringResource(R.string.tema_oscuro_desc)
+    ThemeMode.SYSTEM -> stringResource(R.string.tema_sistema_desc)
+}

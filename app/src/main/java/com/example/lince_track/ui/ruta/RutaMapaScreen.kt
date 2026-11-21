@@ -69,6 +69,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -79,6 +80,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.lince_track.BuildConfig
+import com.example.lince_track.R
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.ReglasCheckin
@@ -173,7 +175,7 @@ private fun RutaNoEncontrada(onBack: () -> Unit) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "Servicio no encontrado",
+                text = stringResource(R.string.ruta_no_encontrado),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -183,7 +185,7 @@ private fun RutaNoEncontrada(onBack: () -> Unit) {
                 shape = RoundedCornerShape(50),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("Volver")
+                Text(stringResource(R.string.cd_volver))
             }
         }
     }
@@ -413,7 +415,7 @@ private fun RutaMapaContenido(
         if (procesando) return
         scope.launch {
             if (!hayUbicacion) {
-                snackbarHostState.showSnackbar("Aún no hay señal GPS. Espera unos segundos e intenta nuevamente.")
+                snackbarHostState.showSnackbar(context.getString(R.string.ruta_sin_gps_senal))
                 return@launch
             }
             procesando = true
@@ -422,7 +424,7 @@ private fun RutaMapaContenido(
             resultado.onSuccess { aviso ->
                 snackbarHostState.showSnackbar(aviso ?: mensajeExito)
             }.onFailure { e ->
-                snackbarHostState.showSnackbar(e.message ?: "No se pudo completar la operación")
+                snackbarHostState.showSnackbar(e.message ?: context.getString(R.string.error_operacion))
             }
         }
     }
@@ -494,18 +496,18 @@ private fun RutaMapaContenido(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Navigation,
-                            contentDescription = "Abrir en app de mapas",
+                            contentDescription = stringResource(R.string.cd_abrir_mapas),
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (esCoordinador) {
-                                "Ver en Maps / Waze"
-                            } else if (!isCheckInDone) {
-                                "Ir al Pickup"
-                            } else {
-                                "Ir al Destino"
-                            },
+                            text = stringResource(
+                                when {
+                                    esCoordinador -> R.string.ruta_ver_maps_waze
+                                    !isCheckInDone -> R.string.ruta_ir_pickup
+                                    else -> R.string.ruta_ir_destino
+                                }
+                            ),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -524,9 +526,9 @@ private fun RutaMapaContenido(
                                             recentrarMapa++
                                             scope.launch {
                                                 val msg = if (real) {
-                                                    "GPS actualizado (${formatCoord(point)})"
+                                                    context.getString(R.string.ruta_gps_actualizado, formatCoord(point))
                                                 } else {
-                                                    "Sin señal GPS: usando posición simulada en Puerto Varas"
+                                                    context.getString(R.string.ruta_gps_simulado_aviso)
                                                 }
                                                 snackbarHostState.showSnackbar(msg)
                                             }
@@ -545,7 +547,7 @@ private fun RutaMapaContenido(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.MyLocation,
-                                contentDescription = "Centrar en mi ubicación"
+                                contentDescription = stringResource(R.string.cd_centrar_ubicacion)
                             )
                         }
                     }
@@ -587,9 +589,9 @@ private fun RutaMapaContenido(
                     val esGuia = activeRole == RolMapa.GUIA
                     if (!isCheckInDone) {
                         val exito = if (esGuia) {
-                            "Presentación y grupo de ${servicio.pasajeros} pasajeros confirmados"
+                            context.getString(R.string.ruta_guia_checkin_ok, servicio.pasajeros)
                         } else {
-                            "Check-in registrado (${formatCoord(userGeoPoint)})"
+                            context.getString(R.string.ruta_conductor_checkin_ok, formatCoord(userGeoPoint))
                         }
                         registrar(exito) {
                             ServicioRepository.registrarCheckIn(
@@ -602,9 +604,9 @@ private fun RutaMapaContenido(
                         }
                     } else {
                         val exito = if (esGuia) {
-                            "Servicio de guía finalizado"
+                            context.getString(R.string.ruta_guia_checkout_ok)
                         } else {
-                            "Check-out registrado en ${servicio.destino}"
+                            context.getString(R.string.ruta_conductor_checkout_ok, servicio.destino)
                         }
                         registrar(exito) {
                             ServicioRepository.registrarCheckOut(
@@ -678,23 +680,28 @@ private fun RutaTopBar(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Volver",
+                    contentDescription = stringResource(R.string.cd_volver),
                     tint = BarraSuperior.contenido
                 )
             }
             Text(
-                text = if (activeRole == RolMapa.COORDINADOR) "Ruta del Servicio" else "Ruta y Check-in",
+                text = stringResource(
+                    if (activeRole == RolMapa.COORDINADOR) R.string.ruta_titulo_coordinador
+                    else R.string.ruta_titulo_operativo
+                ),
                 color = BarraSuperior.contenido,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
         }
 
-        val badgeText = when {
-            activeRole == RolMapa.COORDINADOR -> "Supervisión"
-            hasPermission -> "GPS Activo"
-            else -> "Sin GPS"
-        }
+        val badgeText = stringResource(
+            when {
+                activeRole == RolMapa.COORDINADOR -> R.string.ruta_badge_supervision
+                hasPermission -> R.string.ruta_badge_gps_activo
+                else -> R.string.ruta_badge_sin_gps
+            }
+        )
         val badgeColor = when {
             activeRole == RolMapa.COORDINADOR -> MaterialTheme.colorScheme.primaryContainer
             hasPermission -> MaterialTheme.colorScheme.secondary
@@ -772,12 +779,13 @@ private fun ServiceRouteHeaderCard(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            val pasajerosTexto = "${servicio.pasajeros} Pasajeros"
+            val pasajerosTexto = stringResource(R.string.chip_pasajeros, servicio.pasajeros)
             val subtitle = when (activeRole) {
                 RolMapa.TRANSPORTISTA ->
-                    if (servicio.guia == ServicioMapper.SIN_GUIA) pasajerosTexto else "Guía: ${servicio.guia} • $pasajerosTexto"
-                RolMapa.GUIA -> "Reserva ${servicio.reserva} • $pasajerosTexto"
-                RolMapa.COORDINADOR -> "Responsable: ${servicio.responsable} • $pasajerosTexto"
+                    if (servicio.guia == ServicioMapper.SIN_GUIA) pasajerosTexto
+                    else "${stringResource(R.string.chip_guia, servicio.guia)} • $pasajerosTexto"
+                RolMapa.GUIA -> stringResource(R.string.ruta_reserva_pasajeros, servicio.reserva, pasajerosTexto)
+                RolMapa.COORDINADOR -> stringResource(R.string.ruta_responsable, servicio.responsable, pasajerosTexto)
             }
             Text(
                 text = subtitle,
@@ -788,10 +796,10 @@ private fun ServiceRouteHeaderCard(
             Spacer(modifier = Modifier.height(10.dp))
 
             val statusText = when {
-                isServiceFinished -> "Servicio Finalizado"
-                isCheckInDone -> "En Ruta — Check-in registrado"
-                activeRole == RolMapa.COORDINADOR -> "Esperando check-in"
-                else -> "Inicio programado: $horaInicioTexto"
+                isServiceFinished -> stringResource(R.string.ruta_estado_finalizado)
+                isCheckInDone -> stringResource(R.string.ruta_estado_en_ruta)
+                activeRole == RolMapa.COORDINADOR -> stringResource(R.string.ruta_estado_esperando)
+                else -> stringResource(R.string.ruta_estado_programado, horaInicioTexto)
             }
             val statusColor = when {
                 isServiceFinished -> MaterialTheme.colorScheme.primary
@@ -833,7 +841,7 @@ private fun GpsSpeedometerBadge(
         ) {
             Icon(
                 imageVector = Icons.Filled.Speed,
-                contentDescription = "Velocidad GPS",
+                contentDescription = stringResource(R.string.cd_velocidad_gps),
                 tint = if (velocidadExcedida) Color.White else MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(17.dp)
             )
@@ -1013,10 +1021,14 @@ private fun RoleBottomActionPanel(
             Spacer(modifier = Modifier.height(8.dp))
 
             val locationTitle = when (activeRole) {
-                RolMapa.TRANSPORTISTA ->
-                    if (isCheckInDone) "Destino: ${servicio.destino}" else "Punto de recogida: ${servicio.origen}"
-                RolMapa.GUIA ->
-                    if (isCheckInDone) "Destino: ${servicio.destino}" else "Recepción de pasajeros: Lobby ${servicio.origen}"
+                RolMapa.TRANSPORTISTA -> stringResource(
+                    if (isCheckInDone) R.string.ruta_destino else R.string.ruta_punto_recogida,
+                    if (isCheckInDone) servicio.destino else servicio.origen
+                )
+                RolMapa.GUIA -> stringResource(
+                    if (isCheckInDone) R.string.ruta_destino else R.string.ruta_recepcion_pasajeros,
+                    if (isCheckInDone) servicio.destino else servicio.origen
+                )
                 RolMapa.COORDINADOR -> servicio.responsable
             }
             Text(
@@ -1031,12 +1043,19 @@ private fun RoleBottomActionPanel(
 
             val detalle = when {
                 activeRole == RolMapa.COORDINADOR ->
-                    checkin?.let { ReglasCheckin.resumen(it) } ?: "Sin check-in registrado"
+                    checkin?.let { ReglasCheckin.resumen(it) } ?: stringResource(R.string.ruta_sin_checkin)
                 isUsingRealGps ->
-                    "A ${ReglasCheckin.formatoDistancia(distanceMeters)} del punto • GPS: ${formatCoord(userPoint)}"
+                    stringResource(
+                        R.string.ruta_distancia_gps_real,
+                        ReglasCheckin.formatoDistancia(distanceMeters),
+                        formatCoord(userPoint)
+                    )
                 BuildConfig.DEBUG ->
-                    "A ${ReglasCheckin.formatoDistancia(distanceMeters)} del punto • GPS simulado"
-                else -> "Esperando señal GPS..."
+                    stringResource(
+                        R.string.ruta_distancia_gps_simulado,
+                        ReglasCheckin.formatoDistancia(distanceMeters)
+                    )
+                else -> stringResource(R.string.ruta_esperando_gps)
             }
             Text(
                 text = detalle,
@@ -1047,18 +1066,20 @@ private fun RoleBottomActionPanel(
             if (activeRole != RolMapa.COORDINADOR) {
                 Spacer(modifier = Modifier.height(10.dp))
 
-                val primaryButtonText = when (activeRole) {
-                    RolMapa.GUIA -> when {
-                        isServiceFinished -> "EXCURSIÓN FINALIZADA"
-                        !isCheckInDone -> "CONFIRMAR PRESENTACIÓN Y GRUPO"
-                        else -> "FINALIZAR SERVICIO DE GUÍA"
+                val primaryButtonText = stringResource(
+                    when (activeRole) {
+                        RolMapa.GUIA -> when {
+                            isServiceFinished -> R.string.ruta_btn_excursion_finalizada
+                            !isCheckInDone -> R.string.ruta_btn_confirmar_presentacion
+                            else -> R.string.ruta_btn_finalizar_guia
+                        }
+                        else -> when {
+                            isServiceFinished -> R.string.ruta_btn_completado
+                            !isCheckInDone -> R.string.ruta_btn_checkin
+                            else -> R.string.ruta_btn_checkout
+                        }
                     }
-                    else -> when {
-                        isServiceFinished -> "SERVICIO COMPLETADO"
-                        !isCheckInDone -> "REGISTRAR CHECK-IN (INICIO)"
-                        else -> "REGISTRAR CHECK-OUT (FIN)"
-                    }
-                }
+                )
 
                 Button(
                     onClick = onPrimaryAction,
@@ -1089,7 +1110,7 @@ private fun RoleBottomActionPanel(
 
                 if (ReglasIncidencia.puedeReportar(servicio, checkin)) {
                     TextButton(onClick = onReportarIncidencia) {
-                        Text("Reportar incidencia", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.detalle_reportar_incidencia), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -1121,11 +1142,10 @@ private fun ExternalNavigationDialog(
         },
         title = {
             Text(
-                text = if (activeRole == RolMapa.COORDINADOR) {
-                    "Inspeccionar en Mapa Externo"
-                } else {
-                    "Iniciar Navegación Externa"
-                },
+                text = stringResource(
+                    if (activeRole == RolMapa.COORDINADOR) R.string.ruta_nav_inspeccionar
+                    else R.string.ruta_nav_iniciar
+                ),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -1134,7 +1154,11 @@ private fun ExternalNavigationDialog(
         text = {
             Column {
                 Text(
-                    text = "Destino: $targetName\nCoordenadas: ${formatCoord(targetPoint)}",
+                    text = stringResource(
+                        R.string.ruta_nav_destino_coords,
+                        targetName,
+                        formatCoord(targetPoint)
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1153,13 +1177,13 @@ private fun ExternalNavigationDialog(
                         )
                         Column {
                             Text(
-                                text = option.label,
+                                text = option.labelLocalizado(),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = option.subtitle,
+                                text = option.subtituloLocalizado(),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -1175,7 +1199,7 @@ private fun ExternalNavigationDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
             ) {
                 Text(
-                    text = "ABRIR NAVEGACIÓN",
+                    text = stringResource(R.string.ruta_nav_abrir),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSecondary
@@ -1185,13 +1209,26 @@ private fun ExternalNavigationDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(
-                    text = "CANCELAR",
+                    text = stringResource(R.string.accion_cancelar),
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
             }
         }
     )
+}
+
+@Composable
+private fun AppNavegacionExterna.labelLocalizado(): String = when (this) {
+    AppNavegacionExterna.SELECTOR_SISTEMA -> stringResource(R.string.ruta_nav_otro)
+    else -> label
+}
+
+@Composable
+private fun AppNavegacionExterna.subtituloLocalizado(): String = when (this) {
+    AppNavegacionExterna.GOOGLE_MAPS -> stringResource(R.string.ruta_nav_gmaps_desc)
+    AppNavegacionExterna.WAZE -> stringResource(R.string.ruta_nav_waze_desc)
+    AppNavegacionExterna.SELECTOR_SISTEMA -> stringResource(R.string.ruta_nav_otro_desc)
 }
 
 @Composable
@@ -1254,7 +1291,7 @@ private fun launchExternalMapApp(
                     context.startActivity(wazeIntent)
                 } else {
                     LinceLogger.w("NAV", "Waze no instalado; abriendo ruta web", wazeUri.toString())
-                    onFallbackMessage("Waze no instalado en este dispositivo; abriendo ruta web")
+                    onFallbackMessage(context.getString(R.string.ruta_nav_waze_fallback))
                     context.startActivity(Intent(Intent.ACTION_VIEW, wazeUri))
                 }
             }
@@ -1263,14 +1300,14 @@ private fun launchExternalMapApp(
                 LinceLogger.i("NAV", "Abriendo selector nativo geo: hacia $targetLabel", geoUri.toString())
                 val chooser = Intent.createChooser(
                     Intent(Intent.ACTION_VIEW, geoUri),
-                    "Navegar con:"
+                    context.getString(R.string.ruta_nav_con)
                 )
                 context.startActivity(chooser)
             }
         }
     } catch (ex: Exception) {
         LinceLogger.e("NAV", "Error al lanzar aplicación de mapas externa (${option.label})", ex)
-        onFallbackMessage("No se encontró una aplicación de mapas compatible")
+        onFallbackMessage(context.getString(R.string.ruta_nav_sin_app))
     }
 }
 

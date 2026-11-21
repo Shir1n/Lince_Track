@@ -34,8 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.lince_track.R
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.util.abrirWhatsApp
 
@@ -57,6 +59,7 @@ private const val SOPORTE_EMAIL = "soporte@lincetrack.cl"
 fun SoporteDialog(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val rol by AuthRepository.rolActual.collectAsState()
+    val whatsappMensaje = stringResource(R.string.soporte_whatsapp_mensaje)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -71,14 +74,14 @@ fun SoporteDialog(onDismiss: () -> Unit) {
         },
         title = {
             Text(
-                text = "Soporte TI / Mesa de Ayuda",
+                text = stringResource(R.string.soporte_titulo),
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Línea directa operativa 24/7. Elige cómo quieres contactarnos:",
+                    text = stringResource(R.string.soporte_subtitulo),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -86,13 +89,13 @@ fun SoporteDialog(onDismiss: () -> Unit) {
 
                 OpcionContacto(
                     icono = Icons.Outlined.Chat,
-                    titulo = "WhatsApp",
-                    descripcion = "Chat directo con mesa de ayuda",
+                    titulo = stringResource(R.string.soporte_whatsapp_titulo),
+                    descripcion = stringResource(R.string.soporte_whatsapp_desc),
                     onClick = {
                         abrirWhatsApp(
                             context = context,
                             telefono = SOPORTE_FONO,
-                            mensaje = "Hola, necesito ayuda con la app Lince Track: "
+                            mensaje = whatsappMensaje
                         )
                         onDismiss()
                     }
@@ -100,7 +103,7 @@ fun SoporteDialog(onDismiss: () -> Unit) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 OpcionContacto(
                     icono = Icons.Outlined.Call,
-                    titulo = "Llamada directa",
+                    titulo = stringResource(R.string.soporte_llamada_titulo),
                     descripcion = SOPORTE_FONO,
                     onClick = {
                         context.startActivity(
@@ -112,7 +115,7 @@ fun SoporteDialog(onDismiss: () -> Unit) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 OpcionContacto(
                     icono = Icons.Outlined.Email,
-                    titulo = "Correo",
+                    titulo = stringResource(R.string.soporte_correo_titulo),
                     descripcion = SOPORTE_EMAIL,
                     onClick = {
                         enviarCorreoSoporte(context, rol?.name)
@@ -123,7 +126,7 @@ fun SoporteDialog(onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cerrar")
+                Text(stringResource(R.string.soporte_cerrar))
             }
         }
     )
@@ -189,12 +192,12 @@ private fun enviarCorreoSoporte(context: Context, rol: String?) {
     """.trimIndent()
 
     val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$SOPORTE_EMAIL")).apply {
-        putExtra(Intent.EXTRA_SUBJECT, "Soporte Lince Track")
+        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.soporte_correo_asunto))
         putExtra(Intent.EXTRA_TEXT, cuerpo)
     }
     try {
         context.startActivity(intent)
     } catch (e: ActivityNotFoundException) {
-        Toast.makeText(context, "No hay una app de correo instalada", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.soporte_correo_sin_app), Toast.LENGTH_SHORT).show()
     }
 }

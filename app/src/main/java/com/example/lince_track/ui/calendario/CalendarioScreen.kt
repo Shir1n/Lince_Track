@@ -59,12 +59,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.lince_track.R
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.Bloqueo
 import com.example.lince_track.data.EstadoServicio
@@ -83,13 +86,21 @@ import java.time.LocalDate
 import java.time.YearMonth
 import com.example.lince_track.ui.theme.BarraSuperior
 
-private val weekDayLabels = listOf("L", "M", "X", "J", "V", "S", "D")
+private val weekDayLabelRes = listOf(
+    R.string.agenda_dia_l,
+    R.string.agenda_dia_m,
+    R.string.agenda_dia_x,
+    R.string.agenda_dia_j,
+    R.string.agenda_dia_v,
+    R.string.agenda_dia_s,
+    R.string.agenda_dia_d
+)
 
-private enum class FiltroAgenda(val label: String) {
-    TODOS("Todos"),
-    PENDIENTES("Pendientes"),
-    ACEPTADAS("Aceptadas"),
-    RECHAZADAS("Rechazadas")
+private enum class FiltroAgenda(@param:androidx.annotation.StringRes val labelRes: Int) {
+    TODOS(R.string.agenda_filtro_todos),
+    PENDIENTES(R.string.agenda_filtro_pendientes),
+    ACEPTADAS(R.string.agenda_filtro_aceptadas),
+    RECHAZADAS(R.string.agenda_filtro_rechazadas)
 }
 
 @Composable
@@ -292,16 +303,27 @@ private fun TarjetaDisponibilidad(
                     )
                     Column {
                         Text(
-                            text = if (bloqueo != null) "Día bloqueado" else "Disponibilidad",
+                            text = stringResource(
+                                if (bloqueo != null) R.string.bloqueo_dia_bloqueado
+                                else R.string.bloqueo_disponibilidad
+                            ),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = if (bloqueo != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                         )
                         val subtitulo = when {
-                            bloqueo != null -> if (!bloqueo.motivo.isNullOrBlank()) "Motivo: ${bloqueo.motivo}" else "No disponible para servicios"
-                            tieneServicios -> "Tiene servicios asignados este día"
-                            esBloqueable -> "Día libre disponible para bloquear"
-                            else -> "Mínimo $diasAnticipacion días de anticipación (desde ${formatFecha(primerDiaBloqueable)})"
+                            bloqueo != null -> if (!bloqueo.motivo.isNullOrBlank()) {
+                                stringResource(R.string.bloqueo_motivo_prefijo, bloqueo.motivo)
+                            } else {
+                                stringResource(R.string.bloqueo_no_disponible)
+                            }
+                            tieneServicios -> stringResource(R.string.bloqueo_tiene_servicios)
+                            esBloqueable -> stringResource(R.string.bloqueo_libre_disponible)
+                            else -> stringResource(
+                                R.string.bloqueo_anticipacion_min,
+                                diasAnticipacion,
+                                formatFecha(primerDiaBloqueable, LocalConfiguration.current.locales[0])
+                            )
                         }
                         Text(
                             text = subtitulo,
@@ -317,7 +339,7 @@ private fun TarjetaDisponibilidad(
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         contentPadding = ButtonDefaults.ContentPadding
                     ) {
-                        Text("Desbloquear día", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.bloqueo_btn_desbloquear_dia), style = MaterialTheme.typography.labelMedium)
                     }
                 } else if (!tieneServicios) {
                     Button(
@@ -329,7 +351,7 @@ private fun TarjetaDisponibilidad(
                         ),
                         modifier = Modifier.testTag("btn_bloquear_dia")
                     ) {
-                        Text("Bloquear día", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.bloqueo_btn_bloquear_dia), style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
@@ -350,21 +372,24 @@ fun BloquearDiaDialog(
         onDismissRequest = { if (!procesando) onDismiss() },
         title = {
             Text(
-                text = "Bloquear día",
+                text = stringResource(R.string.bloqueo_dialogo_bloquear_titulo),
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "¿Deseas bloquear el ${formatFecha(fecha)}? Durante este día no recibirás servicios ni traslados.",
+                    text = stringResource(
+                        R.string.bloqueo_dialogo_bloquear_desc,
+                        formatFecha(fecha, LocalConfiguration.current.locales[0])
+                    ),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 OutlinedTextField(
                     value = motivo,
                     onValueChange = { if (it.length <= 200) motivo = it },
-                    label = { Text("Motivo (opcional)") },
-                    placeholder = { Text("Ej. Trámite personal o descanso") },
+                    label = { Text(stringResource(R.string.bloqueo_motivo_label)) },
+                    placeholder = { Text(stringResource(R.string.bloqueo_motivo_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = false,
                     maxLines = 3,
@@ -391,7 +416,7 @@ fun BloquearDiaDialog(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Text("Bloquear")
+                    Text(stringResource(R.string.bloqueo_btn_bloquear))
                 }
             }
         },
@@ -400,7 +425,7 @@ fun BloquearDiaDialog(
                 onClick = onDismiss,
                 enabled = !procesando
             ) {
-                Text("Cancelar")
+                Text(stringResource(R.string.accion_cancelar_normal))
             }
         }
     )
@@ -417,19 +442,22 @@ fun DesbloquearDiaDialog(
         onDismissRequest = { if (!procesando) onDismiss() },
         title = {
             Text(
-                text = "Desbloquear día",
+                text = stringResource(R.string.bloqueo_dialogo_desbloquear_titulo),
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "¿Deseas desbloquear el día ${formatFecha(bloqueo.fecha)}? Volverás a estar disponible para recibir servicios.",
+                    text = stringResource(
+                        R.string.bloqueo_dialogo_desbloquear_desc,
+                        formatFecha(bloqueo.fecha, LocalConfiguration.current.locales[0])
+                    ),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 if (!bloqueo.motivo.isNullOrBlank()) {
                     Text(
-                        text = "Motivo registrado: \"${bloqueo.motivo}\"",
+                        text = stringResource(R.string.bloqueo_motivo_registrado, bloqueo.motivo),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -449,7 +477,7 @@ fun DesbloquearDiaDialog(
                         color = MaterialTheme.colorScheme.onError
                     )
                 } else {
-                    Text("Desbloquear")
+                    Text(stringResource(R.string.bloqueo_btn_desbloquear))
                 }
             }
         },
@@ -458,7 +486,7 @@ fun DesbloquearDiaDialog(
                 onClick = onDismiss,
                 enabled = !procesando
             ) {
-                Text("Cancelar")
+                Text(stringResource(R.string.accion_cancelar_normal))
             }
         }
     )
@@ -474,7 +502,7 @@ private fun AgendaTopBar() {
         contentAlignment = Alignment.CenterStart
     ) {
         Text(
-            text = "Agenda",
+            text = stringResource(R.string.agenda_titulo),
             color = BarraSuperior.contenido,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
@@ -512,7 +540,7 @@ private fun CalendarioSection(
                 IconButton(onClick = onMesAnterior) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "Mes anterior",
+                        contentDescription = stringResource(R.string.cd_mes_anterior),
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -521,7 +549,7 @@ private fun CalendarioSection(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = formatNombreMes(month.month),
+                        text = formatNombreMes(month.month, LocalConfiguration.current.locales[0]),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -535,7 +563,7 @@ private fun CalendarioSection(
                 IconButton(onClick = onMesSiguiente) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Mes siguiente",
+                        contentDescription = stringResource(R.string.cd_mes_siguiente),
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -546,7 +574,7 @@ private fun CalendarioSection(
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
                 Text(
-                    text = "Hoy",
+                    text = stringResource(R.string.agenda_hoy),
                     color = MaterialTheme.colorScheme.secondary,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -555,9 +583,9 @@ private fun CalendarioSection(
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(modifier = Modifier.fillMaxWidth()) {
-                weekDayLabels.forEach { label ->
+                weekDayLabelRes.forEach { labelRes ->
                     Text(
-                        text = label,
+                        text = stringResource(labelRes),
                         modifier = Modifier.weight(1f),
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.labelMedium,
@@ -662,7 +690,7 @@ private fun RowScope.DayCell(
                 ) {
                     if (isBlocked) {
                         Text(
-                            text = "BLOQ",
+                            text = stringResource(R.string.bloqueo_badge_corto),
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 7.sp,
                             fontWeight = FontWeight.Bold,
@@ -725,7 +753,7 @@ private fun FiltroChips(filtro: FiltroAgenda, onFiltro: (FiltroAgenda) -> Unit) 
                 onClick = { onFiltro(opcion) },
                 label = {
                     Text(
-                        text = opcion.label,
+                        text = stringResource(opcion.labelRes),
                         maxLines = 1,
                         style = MaterialTheme.typography.labelMedium
                     )
@@ -761,7 +789,7 @@ private fun AgendaDelDia(
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = formatFecha(fecha),
+            text = formatFecha(fecha, LocalConfiguration.current.locales[0]),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -786,7 +814,7 @@ private fun AgendaDelDia(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Sin trabajos para este día",
+                        text = stringResource(R.string.agenda_sin_trabajos),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -851,7 +879,7 @@ private fun AgendaCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "${servicio.pasajeros} pasajeros",
+                    text = stringResource(R.string.agenda_pasajeros, servicio.pasajeros),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -878,7 +906,7 @@ private fun AgendaCard(
 
             if (servicio.guia != ServicioMapper.SIN_GUIA) {
                 Text(
-                    text = "Guía: ${servicio.guia}",
+                    text = stringResource(R.string.chip_guia, servicio.guia),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -895,7 +923,7 @@ private fun AgendaCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Conflicto de horario con otro trabajo aceptado",
+                        text = stringResource(R.string.agenda_conflicto),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.tertiary
@@ -938,7 +966,7 @@ private fun AgendaCard(
                                     containerColor = MaterialTheme.colorScheme.secondary
                                 )
                             ) {
-                                Text("Aceptar", fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.accion_aceptar), fontWeight = FontWeight.Bold)
                             }
                             OutlinedButton(
                                 onClick = onRechazar,
@@ -948,7 +976,7 @@ private fun AgendaCard(
                                     contentColor = MaterialTheme.colorScheme.error
                                 )
                             ) {
-                                Text("Rechazar", fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.accion_rechazar), fontWeight = FontWeight.Bold)
                             }
                         }
                     }

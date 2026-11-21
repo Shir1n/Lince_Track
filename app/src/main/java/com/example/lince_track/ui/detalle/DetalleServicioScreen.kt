@@ -52,9 +52,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lince_track.R
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.EstadoServicio
@@ -81,6 +83,7 @@ fun DetalleServicioScreen(
     onBack: () -> Unit = {},
     onOpenRoute: (String) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val servicios by ServicioRepository.servicios.collectAsState()
     val servicio = remember(servicios, servicioId) { servicios.find { it.id == servicioId } }
     val checkins by ServicioRepository.checkins.collectAsState()
@@ -107,10 +110,10 @@ fun DetalleServicioScreen(
                     if (aviso != null) snackbarHostState.showSnackbar(aviso)
                     onBack()
                 } else {
-                    snackbarHostState.showSnackbar(aviso ?: "Asignación confirmada")
+                    snackbarHostState.showSnackbar(aviso ?: context.getString(R.string.detalle_confirmada))
                 }
             }.onFailure { e ->
-                snackbarHostState.showSnackbar(e.message ?: "No se pudo completar la operación")
+                snackbarHostState.showSnackbar(e.message ?: context.getString(R.string.error_operacion))
             }
         }
     }
@@ -124,7 +127,7 @@ fun DetalleServicioScreen(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "Asignación no encontrada",
+                    text = stringResource(R.string.detalle_no_encontrado),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -134,7 +137,7 @@ fun DetalleServicioScreen(
                     shape = RoundedCornerShape(50),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Volver")
+                    Text(stringResource(R.string.cd_volver))
                 }
             }
         }
@@ -171,7 +174,11 @@ fun DetalleServicioScreen(
                         scope.launch {
                             ServicioRepository.resolverIncidencia(incidencia)
                                 .onSuccess { aviso -> if (aviso != null) snackbarHostState.showSnackbar(aviso) }
-                                .onFailure { e -> snackbarHostState.showSnackbar(e.message ?: "No se pudo marcar como resuelta") }
+                                .onFailure { e ->
+                                    snackbarHostState.showSnackbar(
+                                        e.message ?: context.getString(R.string.detalle_error_resolver)
+                                    )
+                                }
                         }
                         Unit
                     }.takeIf { rolActual == Rol.ADMINISTRADOR }
@@ -229,12 +236,12 @@ private fun DetalleTopBar(onBack: () -> Unit) {
         IconButton(onClick = onBack) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Volver",
+                contentDescription = stringResource(R.string.cd_volver),
                 tint = BarraSuperior.contenido
             )
         }
         Text(
-            text = "Detalle de Servicio",
+            text = stringResource(R.string.detalle_titulo),
             color = BarraSuperior.contenido,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
@@ -258,7 +265,7 @@ private fun ServiceHeaderCard(servicio: Servicio) {
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "Reserva: ${servicio.reserva}",
+                text = stringResource(R.string.detalle_reserva, servicio.reserva),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp)
@@ -270,12 +277,12 @@ private fun ServiceHeaderCard(servicio: Servicio) {
                 Spacer(modifier = Modifier.height(14.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
-                        text = "Tarifa: ",
+                        text = stringResource(R.string.detalle_tarifa_label),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "${formatPrecioCLP(servicio.tarifa)} CLP",
+                        text = stringResource(R.string.detalle_tarifa_valor, formatPrecioCLP(servicio.tarifa)),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -296,7 +303,7 @@ private fun RouteScheduleCard(servicio: Servicio) {
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "Ruta y Horario",
+                text = stringResource(R.string.detalle_ruta_horario),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -357,7 +364,7 @@ private fun PassengersCard(servicio: Servicio) {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Pasajeros (${servicio.pasajeros})",
+                    text = stringResource(R.string.detalle_pasajeros, servicio.pasajeros),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -375,7 +382,7 @@ private fun PassengersCard(servicio: Servicio) {
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "Idioma del tour: ${servicio.idiomaTour}",
+                    text = stringResource(R.string.detalle_idioma_tour, servicio.idiomaTour),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -385,7 +392,7 @@ private fun PassengersCard(servicio: Servicio) {
             Spacer(modifier = Modifier.height(14.dp))
 
             Text(
-                text = "Lista del grupo",
+                text = stringResource(R.string.detalle_lista_grupo),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -421,7 +428,7 @@ private fun PassengersCard(servicio: Servicio) {
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Líder del grupo",
+                        text = stringResource(R.string.detalle_lider_grupo),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -449,7 +456,7 @@ private fun PassengersCard(servicio: Servicio) {
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Call,
-                            contentDescription = "Llamar al líder del grupo",
+                            contentDescription = stringResource(R.string.cd_llamar_lider),
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -465,7 +472,7 @@ private fun PassengersCard(servicio: Servicio) {
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Chat,
-                            contentDescription = "Abrir WhatsApp del líder del grupo",
+                            contentDescription = stringResource(R.string.cd_whatsapp_lider),
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -514,7 +521,7 @@ private fun IncidenciasSeccion(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (incidencias.isNotEmpty()) {
             Text(
-                text = "Incidencias de ${servicio.reserva}",
+                text = stringResource(R.string.detalle_incidencias_titulo, servicio.reserva),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -538,7 +545,7 @@ private fun IncidenciasSeccion(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Reportar incidencia", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.detalle_reportar_incidencia), fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -548,7 +555,9 @@ private fun IncidenciasSeccion(
 private fun GuideCard(servicio: Servicio) {
     val rolActual by AuthRepository.rolActual.collectAsState()
     val esGuia = rolActual == Rol.GUIA
-    val etiqueta = if (esGuia) "Conductor Asignado" else "Guía Asignado"
+    val etiqueta = stringResource(
+        if (esGuia) R.string.detalle_conductor_asignado else R.string.detalle_guia_asignado
+    )
     val nombre = if (esGuia) servicio.conductor else servicio.guia
     val context = LocalContext.current
 
@@ -584,7 +593,9 @@ private fun GuideCard(servicio: Servicio) {
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Call,
-                        contentDescription = if (esGuia) "Llamar al conductor" else "Llamar al guía",
+                        contentDescription = stringResource(
+                            if (esGuia) R.string.cd_llamar_conductor else R.string.cd_llamar_guia
+                        ),
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -598,7 +609,9 @@ private fun GuideCard(servicio: Servicio) {
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Chat,
-                        contentDescription = if (esGuia) "Abrir WhatsApp del conductor" else "Abrir WhatsApp del guía",
+                        contentDescription = stringResource(
+                            if (esGuia) R.string.cd_whatsapp_conductor else R.string.cd_whatsapp_guia
+                        ),
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -630,7 +643,7 @@ private fun BottomActions(
         // Un servicio terminado ya no se responde ni se vuelve a registrar.
         if (checkin != null && ReglasCheckin.estaTerminado(servicio, checkin)) {
             Text(
-                text = "Servicio terminado: ${ReglasCheckin.horario(checkin)}",
+                text = stringResource(R.string.detalle_servicio_terminado, ReglasCheckin.horario(checkin)),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.secondary
@@ -659,7 +672,7 @@ private fun BottomActions(
                             .weight(1f)
                             .height(50.dp)
                     ) {
-                        Text("CONFIRMAR ASIGNACIÓN", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.detalle_confirmar_asignacion), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                     OutlinedButton(
                         onClick = onReject,
@@ -670,7 +683,7 @@ private fun BottomActions(
                         ),
                         modifier = Modifier.height(50.dp)
                     ) {
-                        Text("Rechazar", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.accion_rechazar), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -692,7 +705,10 @@ private fun BottomActions(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (puedeResponder) "VER RUTA Y CHECK-IN" else "VER RUTA Y CHECK-IN EN MAPA",
+                        text = stringResource(
+                            if (puedeResponder) R.string.detalle_ver_ruta_checkin
+                            else R.string.detalle_ver_ruta_checkin_mapa
+                        ),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -708,7 +724,7 @@ private fun BottomActions(
                         ),
                         modifier = Modifier.height(50.dp)
                     ) {
-                        Text("Rechazar", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.accion_rechazar), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -720,7 +736,7 @@ private fun BottomActions(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Asignación rechazada",
+                    text = stringResource(R.string.detalle_asignacion_rechazada),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

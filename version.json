@@ -1,13 +1,11 @@
 {
-  "versionCode": 2,
-  "versionName": "1.2",
+  "versionCode": 3,
+  "versionName": "1.3",
   "autorUltimoCambio": "Benjamín",
   "apkUrl": "https://github.com/Shir1n/Lince_Track/releases/latest/download/lince-track.apk",
   "novedades": [
-    "Verificador automático de versión y diálogo de novedades al actualizar",
-    "Swipe horizontal global en Conductor, Guía y Administrador",
-    "Pestaña Resumen de operación para dueños en Administrador",
-    "Botón de llamada telefónica junto al de WhatsApp del compañero asignado",
-    "Ubicación GPS en reporte de incidencias y selector de fecha en panel"
+    "Soporte completo de idioma Español / Inglés con selector en Login y Ajustes",
+    "Fechas y meses adaptados automáticamente al idioma elegido",
+    "Bloqueo de días no disponibles en Calendario y aviso de privacidad en Ajustes"
   ]
 }

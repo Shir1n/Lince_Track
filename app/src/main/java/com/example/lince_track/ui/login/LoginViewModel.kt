@@ -2,9 +2,11 @@ package com.example.lince_track.ui.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.lince_track.R
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.Rol
 import com.example.lince_track.data.SinRolException
+import com.example.lince_track.util.UiText
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.FirebaseNetworkException
@@ -15,7 +17,7 @@ import kotlinx.coroutines.launch
 
 data class LoginEstado(
     val cargando: Boolean = false,
-    val error: String? = null,
+    val error: UiText? = null,
     val rol: Rol? = null
 )
 
@@ -46,7 +48,7 @@ class LoginViewModel(
     fun iniciarSesion(email: String, password: String) {
         if (_estado.value.cargando) return
         if (email.isBlank() || password.isBlank()) {
-            _estado.value = LoginEstado(error = "Ingresa tu correo y contraseña")
+            _estado.value = LoginEstado(error = UiText.StringResource(R.string.login_error_campos_vacios))
             return
         }
         viewModelScope.launch {
@@ -63,11 +65,13 @@ class LoginViewModel(
         _estado.value = _estado.value.copy(error = null)
     }
 
-    private fun Throwable.mensajeAmigable(): String = when (this) {
-        is SinRolException -> message ?: "Sin rol asignado"
-        is FirebaseAuthInvalidUserException -> "No existe una cuenta con ese correo."
-        is FirebaseAuthInvalidCredentialsException -> "Correo o contraseña incorrectos."
-        is FirebaseNetworkException -> "Sin conexión. Revisa tu internet."
-        else -> message ?: "No se pudo iniciar sesión. Intenta nuevamente."
+    private fun Throwable.mensajeAmigable(): UiText = when (this) {
+        is SinRolException -> message?.let { UiText.DynamicString(it) }
+            ?: UiText.StringResource(R.string.login_error_sin_rol)
+        is FirebaseAuthInvalidUserException -> UiText.StringResource(R.string.login_error_usuario_no_existe)
+        is FirebaseAuthInvalidCredentialsException -> UiText.StringResource(R.string.login_error_credenciales)
+        is FirebaseNetworkException -> UiText.StringResource(R.string.login_error_red)
+        else -> message?.let { UiText.DynamicString(it) }
+            ?: UiText.StringResource(R.string.login_error_generico)
     }
 }

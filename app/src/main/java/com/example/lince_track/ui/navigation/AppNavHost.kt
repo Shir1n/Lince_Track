@@ -145,28 +145,29 @@ object Routes {
 data class BottomNavItem(
     val route: String,
     val label: String,
-    val icon: ImageVector
+    val icon: ImageVector,
+    @param:androidx.annotation.StringRes val labelRes: Int
 )
 
 internal fun bottomNavItems(rol: Rol?): List<BottomNavItem> = when (rol) {
     Rol.GUIA -> listOf(
-        BottomNavItem(Routes.GUIA_ASIGNACIONES, "Asignaciones", Icons.Outlined.Home),
-        BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth),
-        BottomNavItem(Routes.ALERTAS, "Alertas", Icons.Outlined.Notifications),
-        BottomNavItem(Routes.GUIA_PERFIL, "Perfil", Icons.Outlined.Person)
+        BottomNavItem(Routes.GUIA_ASIGNACIONES, "Asignaciones", Icons.Outlined.Home, com.example.lince_track.R.string.nav_asignaciones),
+        BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth, com.example.lince_track.R.string.nav_calendario),
+        BottomNavItem(Routes.ALERTAS, "Alertas", Icons.Outlined.Notifications, com.example.lince_track.R.string.nav_alertas),
+        BottomNavItem(Routes.GUIA_PERFIL, "Perfil", Icons.Outlined.Person, com.example.lince_track.R.string.nav_perfil)
     )
     Rol.ADMINISTRADOR -> listOf(
-        BottomNavItem(Routes.ADMIN_PANEL, "Panel", Icons.Outlined.Dashboard),
-        BottomNavItem(Routes.ADMIN_RESUMEN, "Resumen", Icons.Outlined.BarChart),
-        BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth),
-        BottomNavItem(Routes.ADMIN_PERFIL, "Perfil", Icons.Outlined.Person)
+        BottomNavItem(Routes.ADMIN_PANEL, "Panel", Icons.Outlined.Dashboard, com.example.lince_track.R.string.nav_panel),
+        BottomNavItem(Routes.ADMIN_RESUMEN, "Resumen", Icons.Outlined.BarChart, com.example.lince_track.R.string.nav_resumen),
+        BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth, com.example.lince_track.R.string.nav_calendario),
+        BottomNavItem(Routes.ADMIN_PERFIL, "Perfil", Icons.Outlined.Person, com.example.lince_track.R.string.nav_perfil)
     )
     // Conductor
     else -> listOf(
-        BottomNavItem(Routes.SERVICIOS, "Servicios", Icons.Outlined.Home),
-        BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth),
-        BottomNavItem(Routes.ALERTAS, "Alertas", Icons.Outlined.Notifications),
-        BottomNavItem(Routes.PERFIL, "Perfil", Icons.Outlined.Person)
+        BottomNavItem(Routes.SERVICIOS, "Servicios", Icons.Outlined.Home, com.example.lince_track.R.string.nav_servicios),
+        BottomNavItem(Routes.CALENDARIO, "Calendario", Icons.Outlined.CalendarMonth, com.example.lince_track.R.string.nav_calendario),
+        BottomNavItem(Routes.ALERTAS, "Alertas", Icons.Outlined.Notifications, com.example.lince_track.R.string.nav_alertas),
+        BottomNavItem(Routes.PERFIL, "Perfil", Icons.Outlined.Person, com.example.lince_track.R.string.nav_perfil)
     )
 }
 
@@ -244,10 +245,15 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                                     scope.launch { pagerState.animateScrollToPage(index) }
                                 }
                             },
-                            icon = { Icon(imageVector = item.icon, contentDescription = item.label) },
+                            icon = {
+                                Icon(
+                                    imageVector = item.icon,
+                                    contentDescription = androidx.compose.ui.res.stringResource(item.labelRes)
+                                )
+                            },
                             label = {
                                 Text(
-                                    text = item.label,
+                                    text = androidx.compose.ui.res.stringResource(item.labelRes),
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = if (seleccionado) FontWeight.Bold else FontWeight.Medium
                                 )
