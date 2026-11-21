@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Solo para la versión debug: el backend propio corre en el computador (http://192.168.x.x:8080/),
+    sin HTTPS, y Android bloquea HTTP por defecto. La versión release no incluye este archivo.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

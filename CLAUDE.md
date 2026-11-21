@@ -35,7 +35,7 @@ Postman y la transcripción de la reunión con Southbound.
   - Room + WorkManager: caché, cola de check-ins sin conexión, sincronización con reintentos e idempotencia.
   - Español e inglés con selector de idioma persistente.
   - JUnit + MockK con cobertura > 90 % en ViewModel/Repository y al menos un Compose UI Test.
-  - APK release firmada con `signingConfigs` seguros; `.jks`, contraseñas y API key fuera del repositorio.
+  - ~~APK release firmada~~ **Hecha el 20-11-2026** (ver "Comandos"); falta instalarla en el celular de la defensa.
   - Usar también `/guias`, `/transportistas`, `/clientes`, `/catalogos` y `/resumen`; mostrar `requestId` en errores.
   - Coordinación: última posición puntual del transportista durante un servicio activo (sin rastreo 24/7).
 - **Pedidos de Southbound en la reunión (11-09-2026) que aún no están:** datos de la agencia (vehículo, polera, letrero),
@@ -103,14 +103,31 @@ Postman y la transcripción de la reunión con Southbound.
 ```powershell
 .\gradlew.bat assembleDebug          # compilar
 .\gradlew.bat testDebugUnitTest      # tests unitarios (incluye LinceApiTest)
+.\gradlew.bat jacocoPautaReport      # cobertura de ViewModel + Repository (la pauta pide > 90 %)
 .\gradlew.bat installDebug           # instalar en dispositivo/emulador
 ```
+- **Tests de repositorios y ViewModel (desde el 20-11-2026, 94,7 % de líneas):**
+  - Los repositorios siguen siendo `object`, pero Firebase y la fuente de servicios se obtienen con `Reemplazable`
+    (`firestoreReemplazable`, `authReemplazable`, `fuenteReemplazable`), que los tests cambian por simulaciones de
+    MockK. La app usa siempre la real. Un repositorio nuevo debe seguir el mismo patrón (o recibir todo por constructor).
+  - Los ViewModel reciben sus dependencias por el constructor con la app real como valor por defecto (Compose los crea
+    con `viewModel()`). En sus tests se pasan lambdas, no mocks de MockK: MockK falla al simular funciones `suspend`.
+  - Ayudas en `app/src/test/.../data/FirebaseSimulado.kt` (tareas, documentos, escuchas) y `Datos.kt` (DTO de prueba).
+  - Al terminar un test, dejar `AuthRepository` con `FirebaseSimulado.authSinSesion()`, nunca con `null`: en la JVM no
+    hay Firebase real y `ServicioRepository` (que sigue vivo entre tests) dejaría de escuchar.
+  - `ControlVersionRepository` se prueba con un DataStore en un archivo temporal y un servidor HTTP local.
 - Se prueba en celulares reales por USB: no crear emuladores de Android. `adb` está en `Android\Sdk\platform-tools`, y si
   Java no está en el PATH se puede usar el `jbr` de Android Studio (`C:\Program Files\Android\Android Studio\jbr` o
   `D:\Android\AndroidStudio\jbr`, según el computador).
 - Desde el PR 36 todos firman con `app/debug.keystore` (versionada, solo para debug: el repositorio es público). Un
   celular con una versión firmada antes con otra clave rechaza instalar (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`) y hay que
   desinstalar una vez. Se pierde la sesión y lo no enviado: confirmarlo antes con quien usa ese celular.
+- **APK release:** `.\gradlew.bat assembleRelease` firma con la keystore `D:\IA\Fire\lince-release.jks` (de Shir1n,
+  fuera del repo); la ruta y las contraseñas están en su `local.properties` (`LINCE_RELEASE_*`). Sin esos datos sale
+  sin firmar. Instrucciones en el README. Un celular con la versión debug instalada no acepta la release encima
+  (firma distinta): hay que desinstalar primero. `androidx.fragment` va fijo en 1.8.9 porque Play Services trae la
+  1.1.0 y el lint de release lo rechaza. En `res/` las imágenes deben tener la extensión de su formato real (un JPEG
+  llamado `.png` rompe la compilación de release).
 - La versión sale de `version.json` (raíz). La app compara con el de `master` en GitHub al abrir; si el APK de
   `releases/latest` no existe, el aviso de versión desactualizada no ofrece descargar.
 - `gh` puede no estar instalado.
@@ -205,8 +222,10 @@ Postman y la transcripción de la reunión con Southbound.
 
 ## Backend propio (`backend/`, Spring Boot)
 - El docente aceptó Firebase, pero igual se necesitan microservicios. `backend/` es un proyecto Gradle aparte
-  (Spring Boot 4.1, Java 21) con geocercas, hitos (check-in, check-out y posición validados en el servidor) y bloqueos
-  de disponibilidad. Detalle y comandos en `backend/README.md`.
+  (Spring Boot 4.1, Java 21) con geocercas, hitos (check-in, check-out y posición validados en el servidor), bloqueos
+  de disponibilidad y parámetros que coordinación cambia sin reiniciar (`/api/parametros`: anticipación, precisión
+  máxima, radio por defecto y días para bloquear). `GET /api/hitos/resumen` da la puntualidad por persona para el
+  panel de coordinación. Detalle y comandos en `backend/README.md`.
 - No tiene login propio: valida el token de Firebase Auth. Rol e IDs de la API vienen de custom claims que copia
   `backend/scripts/sincronizar-claims.mjs` desde `usuarios/{uid}` (necesita una cuenta de servicio guardada fuera del
   repo).
@@ -215,6 +234,17 @@ Postman y la transcripción de la reunión con Southbound.
 - Lee los reemplazos (`asignaciones/{servicioId}`) con Firebase Admin si `GOOGLE_APPLICATION_CREDENTIALS` apunta a la
   cuenta de servicio (la de Shir1n está en `D:\IA\Fire`, fuera del repo); sin ella arranca igual y no los ve.
 - Falta: que la app lo use (Retrofit + Room + WorkManager).
+
+## Privacidad (Ley 21.719, vigente desde el 01-12-2026)
+- Aviso "Tus datos en Lince Track" (`ui/components/Privacidad.kt`): se muestra al abrir la app hasta pulsar
+  "Entendido" y se relee en Ajustes. Si cambia lo que dice (qué datos, para qué, quién los ve), subir
+  `PrivacidadRepository.VERSION_AVISO` para que se vuelva a mostrar.
+- La ubicación se pide con `rememberPermisoUbicacion`, que explica el motivo antes del permiso de Android.
+- El mapa lee el GPS cada 2-3 s solo mientras está abierto (velocímetro y distancia) y eso **no se envía**; solo se
+  guardan las coordenadas de check-in, check-out e incidencias. **Nunca** poner coordenadas en `LinceLogger` (la
+  consola se puede compartir). A Open-Meteo se envía la zona con 2 decimales, no la posición exacta.
+- Sin Firebase Analytics (se quitó el 20-11-2026: no se usaba). Pendiente antes de datos reales: contraseñas de
+  prueba fuera del repo, teléfono visible solo para el compañero del tour, plazos de borrado, `allowBackup`.
 
 ## Convenciones del equipo
 - Una rama por tarea (`feature/...`, `fix/...`) y PR chico a `master`. Nada directo a `master`.

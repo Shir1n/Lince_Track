@@ -1,5 +1,6 @@
 package com.example.lince_track.ui.ruta
 
+import com.example.lince_track.ui.components.rememberPermisoUbicacion
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
@@ -244,12 +245,10 @@ private fun RutaMapaContenido(
                 currentSpeedKmh = speed
                 userGeoPoint = GeoPoint(loc.latitude, loc.longitude)
                 isUsingRealGps = true
+                // Sin coordenadas en el registro: la consola de logs se puede compartir y no debe guardar el
+                // recorrido de la persona (aviso de privacidad).
                 if (speed > 5f) {
-                    LinceLogger.i(
-                        "GPS",
-                        "Tracking continuo: ${speed.roundToInt()} km/h",
-                        "lat=${loc.latitude}, lon=${loc.longitude}"
-                    )
+                    LinceLogger.i("GPS", "Velocímetro: ${speed.roundToInt()} km/h")
                 }
             }
         }
@@ -271,11 +270,11 @@ private fun RutaMapaContenido(
         }
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+    // Antes del permiso de Android se explica para qué se usa la ubicación (aviso de privacidad).
+    val pedirUbicacion = rememberPermisoUbicacion(
+        motivo = "Mientras el mapa está abierto, el GPS muestra tu posición, la distancia al punto de encuentro y tu " +
+            "velocidad (eso no se envía). En el check-in y el check-out se registra dónde estás."
+    ) { granted ->
         hasLocationPermission = granted
         LinceLogger.i("GPS", "Respuesta de permisos de ubicación: granted=$granted")
         if (granted) {
@@ -311,12 +310,7 @@ private fun RutaMapaContenido(
             )
         } else {
             LinceLogger.w("GPS", "Sin permiso de ubicación activo; solicitando al usuario")
-            permissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                )
-            )
+            pedirUbicacion()
         }
     }
 
@@ -541,12 +535,7 @@ private fun RutaMapaContenido(
                                         }
                                     )
                                 } else {
-                                    permissionLauncher.launch(
-                                        arrayOf(
-                                            Manifest.permission.ACCESS_FINE_LOCATION,
-                                            Manifest.permission.ACCESS_COARSE_LOCATION
-                                        )
-                                    )
+                                    pedirUbicacion()
                                 }
                             },
                             containerColor = MaterialTheme.colorScheme.primary,

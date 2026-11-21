@@ -6,7 +6,9 @@ Microservicio Spring Boot que guarda lo que la API de Southbound (solo lectura) 
 |---|---|---|
 | `/api/geocercas` | Hoteles y puntos de pickup/dropoff con coordenadas (ficticias) y radio (150 m por defecto) | Administrador |
 | `/api/hitos` | Check-in, check-out y posición puntual, validados en el servidor | Conductor y guía |
+| `/api/hitos/resumen` | Resumen por recurso: puntualidad y resultados de check-in por persona | Solo lectura, administrador |
 | `/api/bloqueos` | Días no disponibles: con 7 días de anticipación y nunca sobre un servicio | Conductor y guía |
+| `/api/parametros` | Reglas vigentes: anticipación del check-in, precisión máxima del GPS, radio por defecto y días para bloquear | Administrador (todos leen) |
 
 El login, las respuestas (aceptar/rechazar), los reemplazos y las incidencias siguen en Firebase.
 
@@ -35,8 +37,38 @@ Repository (JPA) → H2 (local) o PostgreSQL (Docker)
   recuperar conexión (WorkManager), el backend responde 200 con el hito ya guardado en vez de duplicarlo.
 - **Errores** con el mismo formato que la API de Southbound: `{ "error": { code, message, details, requestId } }`.
 
-Las reglas se cambian en `src/main/resources/application.yml` (`lince.reglas`): radio por defecto, anticipación,
-precisión máxima y días de anticipación para bloquear. El radio de cada hotel se cambia con `PUT /api/geocercas/{id}`.
+### Cambiar las reglas
+
+Coordinación las cambia con `PUT /api/parametros` (solo administrador) y valen desde la siguiente solicitud, sin
+reiniciar. Se guardan en la tabla `parametros` (una sola fila); `application.yml` (`lince.reglas`) solo trae los
+valores con que se crea esa fila la primera vez.
+
+| Parámetro | Al partir | Rango permitido | Lo usa |
+|---|---|---|---|
+| `anticipacionMinutos` | 15 | 0 a 240 | Check-in: después de pickup − N minutos queda `TARDE` |
+| `precisionMaximaMetros` | 50 | 5 a 500 | Check-in y check-out: sobre esto queda `GPS_IMPRECISO` |
+| `radioPorDefectoMetros` | 150 | 10 a 5000 | Geocercas nuevas sin radio (las existentes conservan el suyo) |
+| `diasAnticipacionBloqueo` | 7 | 0 a 60 | Bloqueos: primer día que se puede bloquear |
+
+El radio de **cada hotel** se cambia con `PUT /api/geocercas/{id}` (ese es el que usa el check-in).
+
+## Resumen por recurso
+
+`GET /api/hitos/resumen?desde=2026-11-01&hasta=2026-11-30` (administrador; sin fechas, los últimos 30 días; máximo 366)
+devuelve el `total` y una fila por persona en `recursos`, la menos puntual primero:
+
+| Campo | Qué es |
+|---|---|
+| `uid`, `rol` | Cuenta de Firebase y rol (la app pone el nombre desde `usuarios/{uid}`) |
+| `servicios` | Servicios con al menos un check-in en el rango |
+| `aTiempo`, `tarde`, `fueraDeZona`, `gpsImpreciso`, `sinGeocerca` | Resultado del **último** check-in de cada servicio (si reintentó, vale el último) |
+| `intentosCheckIn` | Todos los check-in, contando reintentos |
+| `conCheckOut` | Servicios que además tienen check-out |
+| `puntualidad` | Porcentaje a tiempo (`aTiempo / servicios`) |
+| `minutosAnticipacionPromedio` | Cuántos minutos antes del pickup llegó en promedio (negativo = después) |
+
+El rango se aplica a la hora en que se **registró** el hito (hora de Chile). Cada hito guarda el rol y la hora de pickup
+del servicio desde esta versión; los hitos anteriores no aportan a los minutos de anticipación.
 
 ## Correr en el computador (sin Docker)
 
@@ -68,8 +100,17 @@ docker compose up --build
 .\gradlew.bat test        # reporte de cobertura en build/reports/jacoco/test/html/index.html
 ```
 
-`ApiIntegracionTest` levanta la aplicación con H2 en memoria, la API de Southbound simulada (Mockito), la hora fija y
-tokens simulados con los mismos claims que Firebase.
+Cobertura al 16-11-2026: 95 % de líneas y 83 % de ramas (87 tests). Qué prueba cada grupo:
+
+| Tests | Cómo |
+|---|---|
+| `ReglasHitoTest`, `ReglasBloqueoTest`, `ReglasDuenoTest`, `ReglasResumenTest`, `DistanciaTest` | Las reglas solas, sin Spring ni base de datos |
+| `ApiIntegracionTest` | La aplicación completa con H2 en memoria, la API de Southbound y Firestore simulados (Mockito), la hora fija y tokens simulados con los mismos claims que Firebase |
+| `LinceRestClientTest` | El cliente HTTP contra una API simulada (`MockRestServiceServer`): header, paginación, 404, 401, 429 y sin clave |
+| `FirestoreAsignacionesTest` | La lectura de reemplazos con Firestore simulado, incluido un fallo de red |
+| `ServicioLinceJsonTest` | Que el JSON real de la API se lea bien |
+| `UsuarioYSeguridadTest` | Los claims del token: rol, IDs como número o texto |
+| `FirestoreAsignacionesRealTest` | Opcional: lee el Firestore real (ver "Reemplazos") |
 
 ## Claims de Firebase (una vez, y cada vez que cambie un rol o un ID)
 
@@ -82,6 +123,16 @@ npm run sincronizar -- --aplicar
 ```
 
 Después cada persona debe cerrar sesión y volver a entrar para que su token traiga los claims.
+
+## Token de prueba para Swagger o curl
+
+```powershell
+cd backend\scripts
+node token-de-prueba.mjs "Carlos" > $env:TEMP\token-carlos.txt   # o "Admin", "Patricio", o el uid
+```
+
+Usa la misma cuenta de servicio (`GOOGLE_APPLICATION_CREDENTIALS`) y no necesita contraseñas. El token vale 1 hora y
+trae los claims; no compartirlo ni subirlo. La guía para la defensa está en `DEFENSA.md`.
 
 ## Reemplazos (asignaciones en Firestore)
 

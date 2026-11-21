@@ -39,11 +39,6 @@ object NotificadorLocal {
     )
 
     private const val CANAL = "servicios"
-    /**
-     * Al abrir la app, Firestore entrega primero lo guardado en el teléfono y después lo del
-     * servidor. Lo que cambia en ese lapso ya había pasado: se toma como base, sin avisar.
-     */
-    private const val ESPERA_BASE_MS = 10_000L
     private var iniciado = false
 
     fun iniciar(context: Context) {
@@ -54,7 +49,6 @@ object NotificadorLocal {
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             var anterior: List<Servicio>? = null
             var incidenciasAnteriores: List<IncidenciaServicio> = emptyList()
-            var listosDesde = 0L
             combine(
                 ServicioRepository.datosListos,
                 ServicioRepository.servicios,
@@ -66,10 +60,8 @@ object NotificadorLocal {
                         anterior = null
                         return@collect
                     }
-                    if (anterior == null) listosDesde = System.currentTimeMillis()
-                    val poniendoseAlDia = System.currentTimeMillis() - listosDesde < ESPERA_BASE_MS
                     // La primera lista completa es la base: lo que ya estaba no es novedad.
-                    anterior?.takeUnless { poniendoseAlDia }?.let { previa ->
+                    anterior?.let { previa ->
                         CambiosServicios.detectar(previa, servicios, perfil.rol).forEach { mostrar(app, it) }
                         CambiosServicios.incidencias(incidenciasAnteriores, incidencias, perfil.rol)
                             .forEach { mostrar(app, it) }
@@ -99,7 +91,7 @@ object NotificadorLocal {
             PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         }
         val notificacion = NotificationCompat.Builder(context, CANAL)
-            .setSmallIcon(R.drawable.ic_notificacion)
+            .setSmallIcon(R.drawable.ic_notificacion_small_icon)
             .setContentTitle(aviso.titulo)
             .setContentText(aviso.texto)
             .setStyle(NotificationCompat.BigTextStyle().bigText(aviso.texto))

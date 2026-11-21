@@ -1,6 +1,6 @@
 package cl.duoc.lince.backend.geocerca;
 
-import cl.duoc.lince.backend.config.LinceProperties;
+import cl.duoc.lince.backend.parametro.ParametrosService;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
@@ -13,17 +13,17 @@ import org.springframework.stereotype.Component;
 public class CargaInicialGeocercas implements ApplicationRunner {
 
     private final GeocercaRepository repositorio;
-    private final LinceProperties propiedades;
+    private final ParametrosService parametros;
 
-    public CargaInicialGeocercas(GeocercaRepository repositorio, LinceProperties propiedades) {
+    public CargaInicialGeocercas(GeocercaRepository repositorio, ParametrosService parametros) {
         this.repositorio = repositorio;
-        this.propiedades = propiedades;
+        this.parametros = parametros;
     }
 
     @Override
     public void run(ApplicationArguments args) {
         if (repositorio.count() > 0) return;
-        int radio = propiedades.reglas().radioPorDefectoMetros();
+        int radio = parametros.actuales().getRadioPorDefectoMetros();
         repositorio.save(new Geocerca("Hotel Costanera Puerto Varas", -41.3176, -72.9822, radio));
         repositorio.save(new Geocerca("Hotel Centro Puerto Varas", -41.3192, -72.9858, radio));
         repositorio.save(new Geocerca("Hostería Lago Llanquihue", -41.3090, -72.9665, radio));

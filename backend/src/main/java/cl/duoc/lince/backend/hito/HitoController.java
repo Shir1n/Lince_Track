@@ -4,6 +4,7 @@ import cl.duoc.lince.backend.comun.UsuarioActual;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -43,6 +45,18 @@ public class HitoController {
     @Operation(summary = "Hitos de un servicio (el administrador ve los de todos; el resto, solo los suyos)")
     List<Hito> listar(@AuthenticationPrincipal Jwt jwt, @RequestParam long servicioId) {
         return servicio.listar(UsuarioActual.desde(jwt), servicioId);
+    }
+
+    @GetMapping("/resumen")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @Operation(summary = "Resumen por recurso (administrador)",
+            description = "Por persona: servicios con check-in, a tiempo, tarde, fuera de zona, GPS impreciso, "
+                    + "puntualidad (%) y minutos de anticipación promedio. Fechas AAAA-MM-DD, ambas incluidas; "
+                    + "sin fechas, los últimos 30 días.")
+    ResumenHitos resumen(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+        return servicio.resumen(desde, hasta);
     }
 
     @GetMapping("/ultima-posicion")

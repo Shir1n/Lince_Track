@@ -121,13 +121,15 @@ enum class PresetClima(val label: String, val clima: ClimaInfo) {
 object ClimaService {
 
     suspend fun consultarOpenMeteo(lat: Double, lon: Double): Result<ClimaInfo> = withContext(Dispatchers.IO) {
+        // Open-Meteo es un servicio externo: para el clima basta la zona, así que se envían solo 2 decimales
+        // (unos 1 km) y no la posición exacta de la persona. Tampoco se anota en el registro.
         val urlStr = String.format(
             Locale.US,
-            "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&current=temperature_2m,precipitation,weather_code,wind_speed_10m",
+            "https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f&current=temperature_2m,precipitation,weather_code,wind_speed_10m",
             lat,
             lon
         )
-        LinceLogger.i("CLIMA", "Consultando Open-Meteo", "coords=($lat, $lon)")
+        LinceLogger.i("CLIMA", "Consultando Open-Meteo")
 
         try {
             val url = URL(urlStr)

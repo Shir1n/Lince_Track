@@ -43,6 +43,18 @@ android {
                 keyPassword = "android"
             }
         }
+        // Firma de la APK release. La keystore (.jks) y sus contraseñas nunca van al repositorio: se leen de
+        // local.properties (LINCE_RELEASE_STORE_FILE, ..._STORE_PASSWORD, ..._KEY_ALIAS, ..._KEY_PASSWORD).
+        // Sin esos datos, assembleRelease igual compila, pero la APK sale sin firmar.
+        val keystoreRelease = localProps.getProperty("LINCE_RELEASE_STORE_FILE")?.trim()?.takeIf { it.isNotEmpty() }
+        if (keystoreRelease != null && file(keystoreRelease).exists()) {
+            create("release") {
+                storeFile = file(keystoreRelease)
+                storePassword = localProps.getProperty("LINCE_RELEASE_STORE_PASSWORD")
+                keyAlias = localProps.getProperty("LINCE_RELEASE_KEY_ALIAS")
+                keyPassword = localProps.getProperty("LINCE_RELEASE_KEY_PASSWORD")
+            }
+        }
     }
 
     defaultConfig {
@@ -58,6 +70,11 @@ android {
         buildConfigField("String", "LINCE_API_BASE_URL", "\"https://ws.southbound.travel/lince-api/\"")
         buildConfigField("String", "LINCE_API_KEY", "\"${localProps.getProperty("LINCE_API_KEY", "").trim()}\"")
         buildConfigField("String", "LOCAL_VERSION_JSON_B64", "\"$versionJsonB64\"")
+
+        // Backend propio de Lince (bloqueo de días, parámetros, etc.)
+        val backendUrl = localProps.getProperty("LINCE_BACKEND_URL", "http://10.0.2.2:8080/").trim()
+            .let { if (it.endsWith("/")) it else "$it/" }
+        buildConfigField("String", "LINCE_BACKEND_URL", "\"$backendUrl\"")
     }
 
     buildTypes {
@@ -65,6 +82,7 @@ android {
             optimization {
                 enable = false
             }
+            signingConfig = signingConfigs.findByName("release")
         }
         debug {
             enableUnitTestCoverage = true
@@ -77,6 +95,10 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    testOptions {
+        // En los tests de JVM, android.util.Log (que usa LinceLogger) devuelve valores por defecto en vez de fallar.
+        unitTests.isReturnDefaultValues = true
     }
 }
 
@@ -92,6 +114,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.datastore.preferences)
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -102,11 +126,11 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.osmdroid.android)
     implementation(libs.play.services.location)
+    implementation(libs.androidx.fragment.ktx)
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
-    implementation(libs.firebase.analytics)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.kotlinx.serialization.json)
@@ -142,6 +166,25 @@ tasks.register<JacocoReport>("jacocoTestReport") {
 
     sourceDirectories.setFrom(files("src/main/java"))
     classDirectories.setFrom(kotlinClasses)
+    executionData.setFrom(fileTree(buildDir) {
+        include("outputs/unit_test_code_coverage/debugUnitTest/*.exec")
+        include("jacoco/*.exec")
+    })
+}
+// Cobertura que exige la pauta (>90 %): solo ViewModel y Repository.
+// .\gradlew.bat jacocoPautaReport → app/build/reports/jacoco/jacocoPautaReport/html/index.html
+tasks.register<JacocoReport>("jacocoPautaReport") {
+    dependsOn("testDebugUnitTest")
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+    val buildDir = layout.buildDirectory.get().asFile
+    val clases = fileTree("$buildDir/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes") {
+        include("**/*Repository.class", "**/*Repository\$*.class", "**/*ViewModel.class", "**/*ViewModel\$*.class")
+    }
+    sourceDirectories.setFrom(files("src/main/java"))
+    classDirectories.setFrom(clases)
     executionData.setFrom(fileTree(buildDir) {
         include("outputs/unit_test_code_coverage/debugUnitTest/*.exec")
         include("jacoco/*.exec")

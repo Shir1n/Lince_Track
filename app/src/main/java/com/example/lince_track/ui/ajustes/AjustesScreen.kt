@@ -21,6 +21,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import com.example.lince_track.R
 import com.example.lince_track.data.version.ControlVersionRepository
 import com.example.lince_track.data.version.InfoVersion
+import com.example.lince_track.ui.components.AvisoPrivacidadDialog
 import com.example.lince_track.ui.components.LanguageSwitcherButton
 import com.example.lince_track.ui.components.VersionActualizadaDialog
 import com.example.lince_track.ui.components.VersionDesactualizadaDialog
@@ -68,6 +70,7 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
     var mostrarNovedadesLocales by remember { mutableStateOf(false) }
     var versionRemotaPendiente by remember { mutableStateOf<InfoVersion?>(null) }
     var verificandoVersion by remember { mutableStateOf(false) }
+    var mostrarPrivacidad by remember { mutableStateOf(false) }
     val versionLocal = ControlVersionRepository.versionLocal
     val scope = rememberCoroutineScope()
 
@@ -146,6 +149,44 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
                         )
                     }
                     LanguageSwitcherButton()
+                }
+            }
+
+            Text(
+                text = "Privacidad",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Tus datos en Lince Track",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Qué datos usa la app, para qué, quién los ve y cómo pedir que se corrijan o eliminen.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedButton(
+                        onClick = { mostrarPrivacidad = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(text = "VER AVISO DE PRIVACIDAD", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
@@ -284,6 +325,10 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
                 }
             }
         }
+    }
+
+    if (mostrarPrivacidad) {
+        AvisoPrivacidadDialog(primeraVez = false, onCerrar = { mostrarPrivacidad = false })
     }
 
     if (showLogConsole) {

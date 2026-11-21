@@ -1,7 +1,5 @@
 package com.example.lince_track.ui.components
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,8 +42,6 @@ import com.example.lince_track.data.IncidenciaServicio
 import com.example.lince_track.data.ReglasIncidencia
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.TipoIncidencia
-import com.example.lince_track.util.PERMISOS_UBICACION
-import com.example.lince_track.util.tienePermisoUbicacion
 import com.example.lince_track.util.ubicacionActual
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.cancelAndJoin
@@ -93,18 +89,17 @@ fun rememberEnviarIncidencia(
         }
     }
 
-    val pedirPermiso = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+    // Con o sin permiso la incidencia se envía; sin permiso, va sin ubicación.
+    val pedirUbicacion = rememberPermisoUbicacion(
+        motivo = "Para que Coordinación sepa dónde estás, la incidencia lleva tu ubicación de este momento."
+    ) {
         pendiente?.let { (tipo, detalle) -> enviar(tipo, detalle) }
         pendiente = null
     }
 
     return { tipo, detalle ->
-        if (tienePermisoUbicacion(appContext)) {
-            enviar(tipo, detalle)
-        } else {
-            pendiente = tipo to detalle
-            pedirPermiso.launch(PERMISOS_UBICACION)
-        }
+        pendiente = tipo to detalle
+        pedirUbicacion()
     }
 }
 

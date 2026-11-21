@@ -29,7 +29,9 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -41,6 +43,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -56,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -64,7 +68,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.lince_track.R
 import com.example.lince_track.data.AuthRepository
+import com.example.lince_track.data.Bloqueo
 import com.example.lince_track.data.EstadoServicio
+import com.example.lince_track.data.ReglasBloqueo
 import com.example.lince_track.data.Rol
 import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.formatFecha
@@ -97,13 +103,25 @@ private enum class FiltroAgenda(@param:androidx.annotation.StringRes val labelRe
 }
 
 @Composable
-fun CalendarioScreen(onServiceClick: (String) -> Unit = {}) {
-    val viewModel: AgendaViewModel = viewModel()
+fun CalendarioScreen(
+    onServiceClick: (String) -> Unit = {},
+    // Los tests de Compose pasan uno con datos fijos (y el rol); la app usa el de siempre y el rol de la sesión.
+    viewModel: AgendaViewModel = viewModel(),
+    rol: Rol? = null
+) {
     val servicios by viewModel.servicios.collectAsState()
     val selectedDate by viewModel.selectedDate.collectAsState()
     val month by viewModel.month.collectAsState()
     val processingIds by viewModel.processingIds.collectAsState()
     val message by viewModel.message.collectAsState()
+
+    val bloqueos by viewModel.bloqueos.collectAsState()
+    val diasAnticipacion by viewModel.diasAnticipacion.collectAsState()
+    val operandoBloqueo by viewModel.operandoBloqueo.collectAsState()
+    val bloqueosPorFecha = remember(bloqueos) { bloqueos.associateBy { it.fecha } }
+
+    var dialogoBloquearFecha by remember { mutableStateOf<LocalDate?>(null) }
+    var dialogoDesbloquear by remember { mutableStateOf<Bloqueo?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(message) {
@@ -115,7 +133,11 @@ fun CalendarioScreen(onServiceClick: (String) -> Unit = {}) {
 
     val serviciosPorFecha = remember(servicios) { servicios.groupBy { it.fecha } }
     // El administrador ve servicios de varias personas: que coincidan en hora no es un conflicto.
-    val rolActual by AuthRepository.rolActual.collectAsState()
+    val rolSesion by AuthRepository.rolActual.collectAsState()
+    val rolActual = rol ?: rolSesion
+    // Solo conductores y guías bloquean sus días: el administrador recibiría un 403 y vería los de todos como propios.
+    val gestionaDisponibilidad = rolActual == Rol.CONDUCTOR || rolActual == Rol.GUIA
+    val bloqueosVisibles = if (gestionaDisponibilidad) bloqueosPorFecha else emptyMap()
     val conflictos = remember(servicios, rolActual) {
         if (rolActual == Rol.ADMINISTRADOR) emptySet() else detectarConflictos(servicios)
     }
@@ -142,11 +164,38 @@ fun CalendarioScreen(onServiceClick: (String) -> Unit = {}) {
                     month = month,
                     selectedDate = selectedDate,
                     serviciosPorFecha = serviciosPorFecha,
+                    bloqueosPorFecha = bloqueosVisibles,
+                    diasAnticipacion = diasAnticipacion,
+                    mostrarDisponibilidad = gestionaDisponibilidad,
                     onMesAnterior = viewModel::mesAnterior,
                     onMesSiguiente = viewModel::mesSiguiente,
                     onHoy = viewModel::irHoy,
-                    onSeleccionar = viewModel::seleccionarFecha
+                    onSeleccionar = { date ->
+                        if (date == selectedDate && gestionaDisponibilidad) {
+                            val b = bloqueosPorFecha[date]
+                            if (b != null) {
+                                dialogoDesbloquear = b
+                            } else if (viewModel.esDiaBloqueable(date)) {
+                                dialogoBloquearFecha = date
+                            }
+                        } else {
+                            viewModel.seleccionarFecha(date)
+                        }
+                    }
                 )
+
+                if (gestionaDisponibilidad) {
+                    TarjetaDisponibilidad(
+                        fecha = selectedDate,
+                        bloqueo = bloqueosPorFecha[selectedDate],
+                        esBloqueable = viewModel.esDiaBloqueable(selectedDate),
+                        tieneServicios = ReglasBloqueo.tieneServicioAsignado(servicios, selectedDate),
+                        diasAnticipacion = diasAnticipacion,
+                        primerDiaBloqueable = viewModel.primerDiaBloqueable(),
+                        onBloquear = { dialogoBloquearFecha = selectedDate },
+                        onDesbloquear = { bloqueosPorFecha[selectedDate]?.let { dialogoDesbloquear = it } }
+                    )
+                }
 
                 FiltroChips(filtro = filtro, onFiltro = { filtro = it })
 
@@ -179,6 +228,250 @@ fun CalendarioScreen(onServiceClick: (String) -> Unit = {}) {
             }
         )
     }
+
+    dialogoBloquearFecha?.let { fecha ->
+        BloquearDiaDialog(
+            fecha = fecha,
+            procesando = operandoBloqueo,
+            onDismiss = { dialogoBloquearFecha = null },
+            onConfirm = { motivo ->
+                viewModel.bloquearDia(fecha, motivo) { exito ->
+                    if (exito) dialogoBloquearFecha = null
+                }
+            }
+        )
+    }
+
+    dialogoDesbloquear?.let { bloqueo ->
+        DesbloquearDiaDialog(
+            bloqueo = bloqueo,
+            procesando = operandoBloqueo,
+            onDismiss = { dialogoDesbloquear = null },
+            onConfirm = {
+                viewModel.desbloquearDia(bloqueo.id) { exito ->
+                    if (exito) dialogoDesbloquear = null
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun TarjetaDisponibilidad(
+    fecha: LocalDate,
+    bloqueo: Bloqueo?,
+    esBloqueable: Boolean,
+    tieneServicios: Boolean,
+    diasAnticipacion: Int,
+    primerDiaBloqueable: LocalDate,
+    onBloquear: () -> Unit,
+    onDesbloquear: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (bloqueo != null) {
+                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f)
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = if (bloqueo != null) Icons.Outlined.Lock else Icons.Outlined.CalendarMonth,
+                        contentDescription = null,
+                        tint = if (bloqueo != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary
+                    )
+                    Column {
+                        Text(
+                            text = if (bloqueo != null) "Día bloqueado" else "Disponibilidad",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (bloqueo != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                        )
+                        val subtitulo = when {
+                            bloqueo != null -> if (!bloqueo.motivo.isNullOrBlank()) "Motivo: ${bloqueo.motivo}" else "No disponible para servicios"
+                            tieneServicios -> "Tiene servicios asignados este día"
+                            esBloqueable -> "Día libre disponible para bloquear"
+                            else -> "Mínimo $diasAnticipacion días de anticipación (desde ${formatFecha(primerDiaBloqueable)})"
+                        }
+                        Text(
+                            text = subtitulo,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                if (bloqueo != null) {
+                    Button(
+                        onClick = onDesbloquear,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                        contentPadding = ButtonDefaults.ContentPadding
+                    ) {
+                        Text("Desbloquear día", style = MaterialTheme.typography.labelMedium)
+                    }
+                } else if (!tieneServicios) {
+                    Button(
+                        onClick = onBloquear,
+                        enabled = esBloqueable,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                        ),
+                        modifier = Modifier.testTag("btn_bloquear_dia")
+                    ) {
+                        Text("Bloquear día", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BloquearDiaDialog(
+    fecha: LocalDate,
+    procesando: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (String?) -> Unit
+) {
+    var motivo by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = { if (!procesando) onDismiss() },
+        title = {
+            Text(
+                text = "Bloquear día",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "¿Deseas bloquear el ${formatFecha(fecha)}? Durante este día no recibirás servicios ni traslados.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                OutlinedTextField(
+                    value = motivo,
+                    onValueChange = { if (it.length <= 200) motivo = it },
+                    label = { Text("Motivo (opcional)") },
+                    placeholder = { Text("Ej. Trámite personal o descanso") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = false,
+                    maxLines = 3,
+                    supportingText = {
+                        Text(
+                            text = "${motivo.length}/200",
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.End,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(motivo.ifBlank { null }) },
+                enabled = !procesando
+            ) {
+                if (procesando) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Bloquear")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !procesando
+            ) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+@Composable
+fun DesbloquearDiaDialog(
+    bloqueo: Bloqueo,
+    procesando: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { if (!procesando) onDismiss() },
+        title = {
+            Text(
+                text = "Desbloquear día",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "¿Deseas desbloquear el día ${formatFecha(bloqueo.fecha)}? Volverás a estar disponible para recibir servicios.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                if (!bloqueo.motivo.isNullOrBlank()) {
+                    Text(
+                        text = "Motivo registrado: \"${bloqueo.motivo}\"",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = !procesando,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                if (procesando) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onError
+                    )
+                } else {
+                    Text("Desbloquear")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !procesando
+            ) {
+                Text("Cancelar")
+            }
+        }
+    )
 }
 
 @Composable
@@ -205,6 +498,9 @@ private fun CalendarioSection(
     month: YearMonth,
     selectedDate: LocalDate,
     serviciosPorFecha: Map<LocalDate, List<Servicio>>,
+    bloqueosPorFecha: Map<LocalDate, Bloqueo> = emptyMap(),
+    diasAnticipacion: Int = 7,
+    mostrarDisponibilidad: Boolean = true,
     onMesAnterior: () -> Unit,
     onMesSiguiente: () -> Unit,
     onHoy: () -> Unit,
@@ -287,12 +583,18 @@ private fun CalendarioSection(
             cells.chunked(7).forEach { week ->
                 Row(modifier = Modifier.fillMaxWidth()) {
                     week.forEach { date ->
+                        val bloqueo = date?.let { bloqueosPorFecha[it] }
+                        // Sin gestión de disponibilidad (administrador) ningún día se atenúa.
+                        val esAnticipacionValida = !mostrarDisponibilidad ||
+                            (date?.let { ReglasBloqueo.tieneAnticipacion(it, hoy, diasAnticipacion) } ?: false)
                         DayCell(
                             date = date,
                             selected = date == selectedDate,
                             isToday = date == hoy,
                             statuses = date?.let { estadosPresentes(serviciosPorFecha[it]) } ?: emptyList(),
                             serviciosPorFecha = serviciosPorFecha,
+                            bloqueo = bloqueo,
+                            esAnticipacionValida = esAnticipacionValida,
                             onClick = { if (date != null) onSeleccionar(date) }
                         )
                     }
@@ -309,11 +611,16 @@ private fun RowScope.DayCell(
     isToday: Boolean,
     statuses: List<EstadoServicio>,
     serviciosPorFecha: Map<LocalDate, List<Servicio>>,
+    bloqueo: Bloqueo? = null,
+    esAnticipacionValida: Boolean = false,
     onClick: () -> Unit
 ) {
+    val isBlocked = bloqueo != null
     val shape = RoundedCornerShape(12.dp)
     val background = when {
+        selected && isBlocked -> MaterialTheme.colorScheme.error
         selected -> MaterialTheme.colorScheme.secondary
+        isBlocked -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f)
         isToday && !selected -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
         else -> Color.Transparent
     }
@@ -324,13 +631,19 @@ private fun RowScope.DayCell(
             .aspectRatio(1f)
             .padding(2.dp)
             .clip(shape)
-            .then(if (date != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(
+                if (date != null) {
+                    Modifier
+                        .testTag("day_cell_$date")
+                        .clickable(onClick = onClick)
+                } else Modifier
+            )
             .background(background)
             .then(
-                if (isToday && !selected) {
-                    Modifier.border(1.5.dp, MaterialTheme.colorScheme.secondary, shape)
-                } else {
-                    Modifier
+                when {
+                    isBlocked && !selected -> Modifier.border(1.5.dp, MaterialTheme.colorScheme.error, shape)
+                    isToday && !selected -> Modifier.border(1.5.dp, MaterialTheme.colorScheme.secondary, shape)
+                    else -> Modifier
                 }
             ),
         contentAlignment = Alignment.Center
@@ -344,20 +657,32 @@ private fun RowScope.DayCell(
                 Text(
                     text = date.dayOfMonth.toString(),
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (selected || isToday) FontWeight.Bold else FontWeight.Medium,
-                    color = if (selected) {
-                        MaterialTheme.colorScheme.onSecondary
-                    } else if (isToday) {
-                        MaterialTheme.colorScheme.secondary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
+                    fontWeight = if (selected || isToday || isBlocked) FontWeight.Bold else FontWeight.Medium,
+                    color = when {
+                        selected -> MaterialTheme.colorScheme.onSecondary
+                        isBlocked -> MaterialTheme.colorScheme.error
+                        isToday -> MaterialTheme.colorScheme.secondary
+                        !esAnticipacionValida && statuses.isEmpty() -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        else -> MaterialTheme.colorScheme.onSurface
                     }
                 )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                     modifier = Modifier.padding(top = 2.dp)
                 ) {
-                    if (statuses.isNotEmpty()) {
+                    if (isBlocked) {
+                        Text(
+                            text = "BLOQ",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 7.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (selected) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.error,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(if (selected) Color.White.copy(alpha = 0.25f) else MaterialTheme.colorScheme.error.copy(alpha = 0.15f))
+                                .padding(horizontal = 3.dp, vertical = 0.5.dp)
+                        )
+                    } else if (statuses.isNotEmpty()) {
                         val cantidad = serviciosPorFecha[date]?.size ?: statuses.size
                         val primerEstado = statuses.first()
                         val color = when (primerEstado) {

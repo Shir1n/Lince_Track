@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="app/src/main/res/drawable/logo_solo.png" width="240" alt="Lince Track logo">
+<img src="app/src/main/res/drawable-nodpi/logo_solo.png" width="240" alt="Lince Track logo">
 
 #  Lince Track
 
@@ -89,6 +89,35 @@ Para instalarlo directamente en un dispositivo conectado:
 ```powershell
 .\gradlew.bat installDebug
 ```
+
+### APK release firmada
+
+La firma de release usa una keystore (`.jks`) que **no está en el repositorio**. Sus datos se leen de
+`local.properties`, que también está fuera de Git:
+
+```properties
+LINCE_RELEASE_STORE_FILE=D:/ruta/fuera/del/repo/lince-release.jks
+LINCE_RELEASE_STORE_PASSWORD=...
+LINCE_RELEASE_KEY_ALIAS=lince-release
+LINCE_RELEASE_KEY_PASSWORD=...
+```
+
+```powershell
+.\gradlew.bat assembleRelease
+```
+
+La APK queda en `app/build/outputs/apk/release/app-release.apk`. Para comprobar la firma (con las build-tools del SDK):
+
+```powershell
+& "$env:LOCALAPPDATA\Android\Sdk\build-tools\36.0.0\apksigner.bat" verify --print-certs app\build\outputs\apk\release\app-release.apk
+```
+
+Debe decir `Signer #1 certificate DN: CN=Lince Track, OU=DSY1105, ...`. Sin esos datos en `local.properties`,
+`assembleRelease` igual compila, pero la APK sale sin firmar. La keystore y sus contraseñas deben respaldarse: si se
+pierden, una versión nueva no se puede instalar encima de la anterior.
+
+Para que la APK use datos reales, `local.properties` también debe tener `LINCE_API_KEY` (la clave del curso, que
+nunca se sube al repositorio); sin ella, la app muestra datos de ejemplo.
 
 ##  Identidad visual
 

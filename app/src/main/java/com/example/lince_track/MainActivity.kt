@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import com.example.lince_track.ui.components.AvisoPrivacidadAlIniciar
 import com.example.lince_track.ui.navigation.AppNavHost
 import com.example.lince_track.ui.theme.AppLanguage
 import com.example.lince_track.ui.theme.Lince_TrackTheme
@@ -78,6 +79,8 @@ class MainActivity : ComponentActivity() {
             ) {
                 Lince_TrackTheme(themeMode = themeMode) {
                     AppNavHost()
+                    // Encima de todo: la primera vez que se abre la app (o si cambia el aviso).
+                    AvisoPrivacidadAlIniciar()
                 }
             }
         }
