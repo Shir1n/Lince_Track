@@ -278,7 +278,8 @@ internal fun PerfilRealContenido(
                         Spacer(Modifier.height(10.dp))
                         Text(servicio.titulo, style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                        Text("${formatFecha(servicio.fecha)} • ${formatHora(servicio.horaInicio)}",
+                        Text(
+                            "${formatFecha(servicio.fecha, androidx.compose.ui.platform.LocalConfiguration.current.locales[0])} • ${formatHora(servicio.horaInicio)}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

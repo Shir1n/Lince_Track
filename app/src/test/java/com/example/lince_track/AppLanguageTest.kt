@@ -1,9 +1,14 @@
 package com.example.lince_track
 
+import com.example.lince_track.data.formatFecha
+import com.example.lince_track.data.formatFechaCorta
+import com.example.lince_track.data.formatNombreMes
 import com.example.lince_track.ui.theme.AppLanguage
 import com.example.lince_track.util.UiText
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.time.LocalDate
+import java.time.Month
 import java.util.Locale
 
 class AppLanguageTest {
@@ -33,5 +38,14 @@ class AppLanguageTest {
     fun `UiText DynamicString conserva el texto`() {
         val uiText = UiText.DynamicString("Hola")
         assertEquals("Hola", uiText.value)
+    }
+
+    @Test
+    fun `formatos de fecha respetan el idioma seleccionado`() {
+        val fecha = LocalDate.of(2026, 11, 21)
+        assertEquals("November", formatNombreMes(Month.NOVEMBER, Locale.ENGLISH))
+        assertEquals("November 21", formatFechaCorta(fecha, Locale.ENGLISH))
+        assertEquals("Saturday, November 21", formatFecha(fecha, Locale.ENGLISH))
+        assertEquals("Noviembre", formatNombreMes(Month.NOVEMBER))
     }
 }

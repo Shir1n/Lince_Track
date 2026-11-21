@@ -48,11 +48,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lince_track.BuildConfig
+import com.example.lince_track.R
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.IncidenciaServicio
@@ -116,6 +118,11 @@ internal fun AdminPerfilContenido(
     val serviciosHoy = remember(servicios, hoy) { servicios.filter { it.fecha == hoy } }
     val totales = remember(serviciosHoy, checkins) { PanelAdmin.totales(serviciosHoy, checkins) }
     val abiertas = remember(incidencias) { ReglasIncidencia.abiertas(incidencias).size }
+    val rolLabel = when (rol) {
+        Rol.ADMINISTRADOR, null -> stringResource(R.string.rol_administrador)
+        Rol.CONDUCTOR -> stringResource(R.string.rol_conductor)
+        Rol.GUIA -> stringResource(R.string.rol_guia)
+    }
 
     Column(
         modifier = Modifier
@@ -141,14 +148,14 @@ internal fun AdminPerfilContenido(
                 }
                 Spacer(Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Mi Perfil", color = BarraSuperior.contenido,
+                    Text(stringResource(R.string.perfil_mi_perfil), color = BarraSuperior.contenido,
                         style = MaterialTheme.typography.titleSmall, fontSize = 15.sp,
                         fontWeight = FontWeight.Bold)
-                    Text("Operaciones Southbound", color = BarraSuperior.contenido.copy(alpha = .8f),
+                    Text(stringResource(R.string.login_subtitulo), color = BarraSuperior.contenido.copy(alpha = .8f),
                         style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, maxLines = 1)
                 }
                 Surface(color = MaterialTheme.colorScheme.secondary, shape = RoundedCornerShape(16.dp)) {
-                    Text("ADMINISTRADOR", color = MaterialTheme.colorScheme.onSecondary,
+                    Text(stringResource(R.string.admin_perfil_badge), color = MaterialTheme.colorScheme.onSecondary,
                         style = MaterialTheme.typography.labelSmall, fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
@@ -173,7 +180,7 @@ internal fun AdminPerfilContenido(
                     Spacer(Modifier.height(8.dp))
                     Text(nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
-                    Text("Coordinación de Operaciones", style = MaterialTheme.typography.bodyMedium,
+                    Text(stringResource(R.string.admin_perfil_cargo), style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(14.dp))
                     Row(
@@ -182,8 +189,8 @@ internal fun AdminPerfilContenido(
                             .padding(vertical = 10.dp, horizontal = 4.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        MiniDatoPerfil("Cuenta", rol?.etiqueta ?: "Administrador")
-                        MiniDatoPerfil("Oficina", "Puerto Varas")
+                        MiniDatoPerfil(stringResource(R.string.perfil_cuenta), rolLabel)
+                        MiniDatoPerfil(stringResource(R.string.perfil_oficina), "Puerto Varas")
                     }
                 }
             }
@@ -192,28 +199,28 @@ internal fun AdminPerfilContenido(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.Today, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(9.dp))
-                    TituloSeccion("Operación de Hoy")
+                    TituloSeccion(stringResource(R.string.admin_perfil_operacion_hoy))
                 }
-                Text("Servicios del día y lo que requiere atención", style = MaterialTheme.typography.labelSmall,
+                Text(stringResource(R.string.admin_perfil_operacion_desc), style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    EstadisticaPerfil(Icons.Outlined.Event, serviciosHoy.size.toString(), "Servicios",
+                    EstadisticaPerfil(Icons.Outlined.Event, serviciosHoy.size.toString(), stringResource(R.string.admin_perfil_servicios),
                         MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.secondary,
                         MaterialTheme.colorScheme.onSecondary, Modifier.weight(1f))
-                    EstadisticaPerfil(Icons.Outlined.Warning, abiertas.toString(), "Incidencias",
+                    EstadisticaPerfil(Icons.Outlined.Warning, abiertas.toString(), stringResource(R.string.admin_perfil_incidencias),
                         MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.tertiary,
                         MaterialTheme.colorScheme.onTertiary, Modifier.weight(1f),
                         MaterialTheme.colorScheme.onTertiaryContainer)
-                    EstadisticaPerfil(Icons.Outlined.Cancel, totales.rechazados.toString(), "Rechazos",
+                    EstadisticaPerfil(Icons.Outlined.Cancel, totales.rechazados.toString(), stringResource(R.string.admin_perfil_rechazos),
                         MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.secondary,
                         MaterialTheme.colorScheme.onSecondary, Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MiniDatoVehiculo(Icons.Outlined.ThumbUp, "Aceptados",
+                    MiniDatoVehiculo(Icons.Outlined.ThumbUp, stringResource(R.string.admin_total_aceptados),
                         totales.aceptados.toString(), Modifier.weight(1f))
-                    MiniDatoVehiculo(Icons.Outlined.CheckCircle, "Terminados",
+                    MiniDatoVehiculo(Icons.Outlined.CheckCircle, stringResource(R.string.admin_total_terminados),
                         totales.terminados.toString(), Modifier.weight(1f))
                 }
             }
@@ -226,37 +233,37 @@ internal fun AdminPerfilContenido(
                             tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                     }
                     Spacer(Modifier.width(9.dp))
-                    Text("Datos de la Cuenta", style = MaterialTheme.typography.titleMedium,
+                    Text(stringResource(R.string.admin_perfil_datos_cuenta), style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f))
-                    EtiquetaPerfil("Verificado")
+                    EtiquetaPerfil(stringResource(R.string.perfil_verificado))
                 }
                 Spacer(Modifier.height(16.dp))
-                FilaDatoPersonal("Nombre Completo", nombre, Icons.Outlined.Person)
-                FilaDatoPersonal("Correo Institucional", email.ifBlank { "Sin información" },
+                FilaDatoPersonal(stringResource(R.string.perfil_nombre_completo), nombre, Icons.Outlined.Person)
+                FilaDatoPersonal(stringResource(R.string.perfil_correo_institucional), email.ifBlank { stringResource(R.string.perfil_sin_dato) },
                     Icons.Outlined.Email, subrayado = true)
                 telefono?.takeIf { it.isNotBlank() }?.let { telefonoActual ->
-                    FilaDatoPersonal("Teléfono", telefonoActual, Icons.Outlined.Phone)
+                    FilaDatoPersonal(stringResource(R.string.perfil_telefono), telefonoActual, Icons.Outlined.Phone)
                 }
-                FilaDatoPersonal("Rol", rol?.etiqueta ?: "Administrador", Icons.Outlined.Badge)
+                FilaDatoPersonal(stringResource(R.string.perfil_rol), rolLabel, Icons.Outlined.Badge)
             }
 
             TarjetaAdmin {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(9.dp))
-                    TituloSeccion("Ajustes y Soporte")
+                    TituloSeccion(stringResource(R.string.perfil_ajustes_soporte))
                 }
                 AjusteNavegacionPerfil(
                     icono = Icons.Outlined.Palette,
-                    titulo = "Ajustes de apariencia",
-                    descripcion = "Tema claro, oscuro o del sistema",
+                    titulo = stringResource(R.string.perfil_ajustes_apariencia),
+                    descripcion = stringResource(R.string.perfil_ajustes_apariencia_desc),
                     onClick = onOpenSettings
                 )
                 AjusteNavegacionPerfil(
                     icono = Icons.Outlined.SupportAgent,
-                    titulo = "Contactar Soporte TI / Mesa de Ayuda",
-                    descripcion = "Línea directa operativa 24/7",
+                    titulo = stringResource(R.string.perfil_contactar_soporte),
+                    descripcion = stringResource(R.string.perfil_contactar_soporte_desc),
                     onClick = { mostrarSoporte = true }
                 )
             }
@@ -267,7 +274,7 @@ internal fun AdminPerfilContenido(
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                 modifier = Modifier.fillMaxWidth().height(54.dp)
             ) {
-                Text("Cerrar Sesión", style = MaterialTheme.typography.titleMedium,
+                Text(stringResource(R.string.perfil_cerrar_sesion), style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
             }
 

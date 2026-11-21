@@ -61,8 +61,10 @@ data class VehiculoServicio(
 
 private val LOCALE_CHILE = Locale.forLanguageTag("es-CL")
 private val horaFormatter = DateTimeFormatter.ofPattern("HH:mm", LOCALE_CHILE)
-private val fechaFormatter = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", LOCALE_CHILE)
-private val fechaCortaFormatter = DateTimeFormatter.ofPattern("d 'de' MMMM", LOCALE_CHILE)
+private val fechaFormatterEs = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", LOCALE_CHILE)
+private val fechaCortaFormatterEs = DateTimeFormatter.ofPattern("d 'de' MMMM", LOCALE_CHILE)
+private val fechaFormatterEn = DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.ENGLISH)
+private val fechaCortaFormatterEn = DateTimeFormatter.ofPattern("MMMM d", Locale.ENGLISH)
 
 /** Quién atiende el servicio: los guiados llevan solo guía; el resto, solo transportista. */
 val Servicio.responsable: String
@@ -73,13 +75,15 @@ val Servicio.esGuiado: Boolean
 
 fun formatHora(hora: LocalTime): String = hora.format(horaFormatter)
 
-fun formatFecha(fecha: LocalDate): String = fecha.format(fechaFormatter)
+fun formatFecha(fecha: LocalDate, locale: Locale = LOCALE_CHILE): String =
+    fecha.format(if (locale.language == "en") fechaFormatterEn else fechaFormatterEs)
 
-fun formatFechaCorta(fecha: LocalDate): String = fecha.format(fechaCortaFormatter)
+fun formatFechaCorta(fecha: LocalDate, locale: Locale = LOCALE_CHILE): String =
+    fecha.format(if (locale.language == "en") fechaCortaFormatterEn else fechaCortaFormatterEs)
 
-/** Nombre del mes con mayúscula inicial, por ejemplo "Noviembre". */
-fun formatNombreMes(mes: Month): String =
-    mes.getDisplayName(TextStyle.FULL, LOCALE_CHILE).replaceFirstChar { it.titlecase(LOCALE_CHILE) }
+/** Nombre del mes con mayúscula inicial, por ejemplo "Noviembre" o "November". */
+fun formatNombreMes(mes: Month, locale: Locale = LOCALE_CHILE): String =
+    mes.getDisplayName(TextStyle.FULL, locale).replaceFirstChar { it.titlecase(locale) }
 
 fun formatPrecioCLP(monto: Int): String =
     "$" + monto.toString().reversed().chunked(3).joinToString(".").reversed()

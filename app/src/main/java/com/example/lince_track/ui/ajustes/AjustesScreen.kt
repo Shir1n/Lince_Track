@@ -153,7 +153,7 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
             }
 
             Text(
-                text = "Privacidad",
+                text = stringResource(R.string.ajustes_privacidad),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -170,13 +170,13 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Tus datos en Lince Track",
+                        text = stringResource(R.string.privacidad_titulo),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Qué datos usa la app, para qué, quién los ve y cómo pedir que se corrijan o eliminen.",
+                        text = stringResource(R.string.privacidad_ajustes_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -185,7 +185,7 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(text = "VER AVISO DE PRIVACIDAD", fontWeight = FontWeight.Bold)
+                        Text(text = stringResource(R.string.privacidad_ver_aviso), fontWeight = FontWeight.Bold)
                     }
                 }
             }

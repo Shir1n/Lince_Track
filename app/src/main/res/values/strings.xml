@@ -316,4 +316,151 @@
     <string name="rol_administrador">Administrador</string>
     <string name="rol_conductor">Conductor</string>
     <string name="rol_guia">Guía</string>
+
+    <!-- Panel Admin -->
+    <string name="admin_panel_titulo">Panel de Coordinación</string>
+    <string name="admin_total_pendientes">Pendientes</string>
+    <string name="admin_total_aceptados">Aceptados</string>
+    <string name="admin_total_terminados">Terminados</string>
+    <string name="admin_total_rechazados">Rechazados</string>
+    <string name="admin_incidencias_abiertas">Incidencias abiertas (%1$d)</string>
+    <string name="admin_actualizar_respuesta">Actualizar respuesta</string>
+    <string name="admin_responder">Responder</string>
+    <string name="admin_ver_ubicacion">Ver ubicación</string>
+    <string name="admin_sin_ubicacion">Sin ubicación</string>
+    <string name="admin_enviar_reemplazo">Enviar reemplazo</string>
+    <string name="admin_llamar">Llamar</string>
+    <string name="admin_whatsapp">WhatsApp</string>
+    <string name="admin_ocultar_resueltas">Ocultar incidencias resueltas</string>
+    <string name="admin_ver_resueltas">Ver incidencias resueltas (%1$d)</string>
+    <string name="admin_filtro_todos">Todos</string>
+    <string name="admin_filtro_pendientes">Pendientes</string>
+    <string name="admin_filtro_aceptados">Aceptados</string>
+    <string name="admin_filtro_terminados">Terminados</string>
+    <string name="admin_filtro_rechazados">Rechazados</string>
+    <string name="admin_sin_servicios">No hay servicios para mostrar</string>
+    <string name="admin_rechazados_proximos">Rechazados en próximos días</string>
+    <string name="admin_asignado_a">Asignado a %1$s</string>
+    <string name="admin_reemplazo_enviado">Se envió a %1$s como reemplazo</string>
+    <string name="admin_responder_a">Responder a %1$s</string>
+    <string name="admin_respuesta_enviada">Respuesta enviada</string>
+    <string name="admin_marcar_resuelta_titulo">Marcar como resuelta</string>
+    <string name="admin_incidencia_resuelta">Incidencia resuelta</string>
+    <string name="cd_dia_anterior">Día anterior</string>
+    <string name="cd_dia_siguiente">Día siguiente</string>
+    <string name="admin_servicios_hoy">Servicios de Hoy</string>
+    <string name="admin_servicios_ayer">Servicios de Ayer</string>
+    <string name="admin_servicios_manana">Servicios de Mañana</string>
+    <string name="admin_servicios_dia">Servicios del día</string>
+    <string name="admin_volver_hoy">Volver a hoy</string>
+    <string name="accion_elegir">Elegir</string>
+    <string name="accion_cancelar_normal">Cancelar</string>
+    <string name="admin_reasignar_titulo">Reasignar servicio</string>
+    <string name="admin_sin_candidatos">No hay otra persona disponible para este servicio.</string>
+    <string name="admin_sufijo_reemplazo"> (reemplazo)</string>
+    <string name="admin_una_incidencia_abierta">1 incidencia abierta</string>
+    <string name="admin_n_incidencias_abiertas">%1$d incidencias abiertas</string>
+    <string name="admin_motivo_prefijo">Motivo: %1$s</string>
+    <string name="admin_reasignar">Reasignar</string>
+
+    <!-- Admin Resumen -->
+    <string name="admin_resumen_titulo">Resumen de la Operación</string>
+    <string name="admin_periodo_hoy">Hoy</string>
+    <string name="admin_periodo_7dias">Últimos 7 días</string>
+    <string name="admin_demo_titulo">Incluye datos de demostración</string>
+    <string name="admin_demo_desc">Las cifras de días anteriores son de ejemplo y no corresponden a la operación real.</string>
+    <string name="admin_resumen_puntualidad">Puntualidad</string>
+    <string name="admin_resumen_a_tiempo">%1$d %% a tiempo</string>
+    <string name="admin_resumen_puntualidad_detalle">%1$d de %2$d check-ins, con %3$d minutos de margen</string>
+    <string name="admin_resumen_un_sin_checkin">1 servicio sin check-in</string>
+    <string name="admin_resumen_n_sin_checkin">%1$d servicios sin check-in</string>
+    <string name="admin_resumen_terminados">Servicios terminados</string>
+    <string name="admin_resumen_de">%1$d de %2$d</string>
+    <string name="admin_resumen_checkout_pct">%1$d %% de los aceptados tiene check-out</string>
+    <string name="admin_resumen_rechazos">Rechazos por motivo</string>
+    <string name="admin_resumen_sin_rechazos">Sin rechazos en este periodo</string>
+    <string name="admin_resumen_distancia">Distancia del check-in</string>
+    <string name="admin_resumen_distancia_prom">%1$s en promedio</string>
+    <string name="admin_resumen_distancia_cerca">%1$d %% a menos de %2$d m del punto de inicio</string>
+    <string name="admin_resumen_incidencias">Incidencias</string>
+    <string name="admin_resumen_sin_incidencias">Sin incidencias en este periodo</string>
+    <string name="admin_resumen_incidencias_conteo">%1$d abiertas • %2$d resueltas</string>
+    <string name="admin_resumen_reemplazos">Reemplazos</string>
+    <string name="admin_resumen_un_reemplazo">servicio reasignado</string>
+    <string name="admin_resumen_n_reemplazos">servicios reasignados</string>
+    <string name="admin_resumen_sin_datos">Sin datos en este periodo</string>
+
+    <!-- Admin Perfil -->
+    <string name="admin_perfil_badge">ADMINISTRADOR</string>
+    <string name="admin_perfil_cargo">Coordinación de Operaciones</string>
+    <string name="admin_perfil_operacion_hoy">Operación de Hoy</string>
+    <string name="admin_perfil_operacion_desc">Servicios del día y lo que requiere atención</string>
+    <string name="admin_perfil_servicios">Servicios</string>
+    <string name="admin_perfil_incidencias">Incidencias</string>
+    <string name="admin_perfil_rechazos">Rechazos</string>
+    <string name="admin_perfil_datos_cuenta">Datos de la Cuenta</string>
+
+    <!-- Alertas -->
+    <string name="alertas_titulo">Centro de Alertas</string>
+    <string name="alertas_filtro_todas">Todas</string>
+    <string name="alertas_filtro_atrasos">Atrasos</string>
+    <string name="alertas_filtro_servicios">Servicios</string>
+    <string name="alertas_vacio">No tienes alertas en esta categoría</string>
+    <string name="alerta_clase_atrasado">Check-in atrasado</string>
+    <string name="alerta_clase_por_responder">Por responder</string>
+    <string name="alerta_clase_en_ruta">En ruta</string>
+    <string name="alerta_clase_cancelado">Cancelado</string>
+
+    <!-- Privacidad -->
+    <string name="ajustes_privacidad">Privacidad</string>
+    <string name="privacidad_titulo">Tus datos en Lince Track</string>
+    <string name="privacidad_ajustes_desc">Qué datos usa la app, para qué, quién los ve y cómo pedir que se corrijan o eliminen.</string>
+    <string name="privacidad_ver_aviso">VER AVISO DE PRIVACIDAD</string>
+    <string name="privacidad_sec1_titulo">Qué datos usamos</string>
+    <string name="privacidad_sec1_texto">Tu nombre, correo y teléfono de la cuenta; los servicios que te asigna Southbound; tus respuestas (aceptar o rechazar, con su motivo), tus incidencias y la ubicación de tu check-in, check-out e incidencias.</string>
+    <string name="privacidad_sec2_titulo">Para qué</string>
+    <string name="privacidad_sec2_texto">Para coordinar los servicios, comprobar la llegada al punto de encuentro y la puntualidad, y atender las incidencias.</string>
+    <string name="privacidad_sec3_titulo">Quién los ve</string>
+    <string name="privacidad_sec3_texto">Coordinación (administración) ve todo lo anterior. La otra persona de tu tour ve tu nombre, tu teléfono y si aceptaste. Tu ubicación, tus motivos de rechazo y tus incidencias solo los ve Coordinación.</string>
+    <string name="privacidad_sec4_titulo">Tu ubicación</string>
+    <string name="privacidad_sec4_texto">Mientras tienes abierto el mapa de un servicio, el GPS se lee cada pocos segundos para mostrarte tu posición, la distancia al punto de encuentro y tu velocidad. Eso queda solo en tu teléfono y no se guarda ni se envía. Solo se envía la ubicación del momento del check-in, el check-out o una incidencia. Al salir del mapa el GPS se detiene: no te seguimos en segundo plano ni fuera de un servicio.</string>
+    <string name="privacidad_sec5_titulo">Dónde se guardan</string>
+    <string name="privacidad_sec5_texto">En Firebase (Google), cuyos servidores pueden estar fuera de Chile, y en el servidor del proyecto. Se guardan mientras dure el proyecto. Para mostrar el clima del mapa se consulta a Open-Meteo solo la zona aproximada (unos 1 km), no tu posición exacta.</string>
+    <string name="privacidad_sec6_titulo">Tus derechos</string>
+    <string name="privacidad_sec6_texto">Puedes pedir a Coordinación ver, corregir o eliminar tus datos, u oponerte a su uso.</string>
+    <string name="privacidad_sec7_titulo">Proyecto académico</string>
+    <string name="privacidad_sec7_texto">Lince Track es un prototipo académico (Duoc UC, DSY1105). Los servicios, pasajeros y agencias que muestra son ficticios.</string>
+    <string name="privacidad_ubicacion_titulo">Permiso de ubicación</string>
+    <string name="privacidad_ubicacion_cuerpo">%1$s\n\nSolo con la app abierta: no te seguimos en segundo plano. Lo que se envía (check-in, check-out e incidencias) solo lo ve Coordinación.</string>
+    <string name="accion_continuar">Continuar</string>
+    <string name="accion_ahora_no">Ahora no</string>
+
+    <!-- Bloqueo de días en Calendario -->
+    <string name="bloqueo_dia_bloqueado">Día bloqueado</string>
+    <string name="bloqueo_disponibilidad">Disponibilidad</string>
+    <string name="bloqueo_motivo_prefijo">Motivo: %1$s</string>
+    <string name="bloqueo_no_disponible">No disponible para servicios</string>
+    <string name="bloqueo_tiene_servicios">Tiene servicios asignados este día</string>
+    <string name="bloqueo_libre_disponible">Día libre disponible para bloquear</string>
+    <string name="bloqueo_anticipacion_min">Mínimo %1$d días de anticipación (desde %2$s)</string>
+    <string name="bloqueo_btn_desbloquear_dia">Desbloquear día</string>
+    <string name="bloqueo_btn_bloquear_dia">Bloquear día</string>
+    <string name="bloqueo_dialogo_bloquear_titulo">Bloquear día</string>
+    <string name="bloqueo_dialogo_bloquear_desc">¿Deseas bloquear el %1$s? Durante este día no recibirás servicios ni traslados.</string>
+    <string name="bloqueo_motivo_label">Motivo (opcional)</string>
+    <string name="bloqueo_motivo_placeholder">Ej. Trámite personal o descanso</string>
+    <string name="bloqueo_btn_bloquear">Bloquear</string>
+    <string name="bloqueo_dialogo_desbloquear_titulo">Desbloquear día</string>
+    <string name="bloqueo_dialogo_desbloquear_desc">¿Deseas desbloquear el día %1$s? Volverás a estar disponible para recibir servicios.</string>
+    <string name="bloqueo_motivo_registrado">Motivo registrado: \"%1$s\"</string>
+    <string name="bloqueo_btn_desbloquear">Desbloquear</string>
+    <string name="bloqueo_badge_corto">BLOQ</string>
+
+    <!-- Descripciones de alertas y motivos admin -->
+    <string name="alerta_desc_atrasado">Ya pasó la hora de inicio y aún no registras el check-in.</string>
+    <string name="alerta_desc_por_responder">Confirma o rechaza esta asignación.</string>
+    <string name="alerta_desc_en_ruta">Recuerda registrar el check-out al terminar.</string>
+    <string name="alerta_desc_cancelado">Este servicio fue rechazado o cancelado en Southbound.</string>
+    <string name="admin_motivo_rechazado_api">Rechazado en Southbound</string>
+    <string name="admin_motivo_desconocido">Motivo no indicado</string>
 </resources>

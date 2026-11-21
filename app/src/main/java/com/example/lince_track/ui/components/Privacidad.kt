@@ -25,9 +25,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import com.example.lince_track.R
 import com.example.lince_track.data.privacidad.PrivacidadRepository
 import com.example.lince_track.util.PERMISOS_UBICACION
 import com.example.lince_track.util.tienePermisoUbicacion
@@ -61,24 +63,36 @@ internal val SECCIONES_AVISO_PRIVACIDAD = listOf(
         "muestra son ficticios."
 )
 
+@Composable
+private fun seccionesAvisoPrivacidad(): List<Pair<String, String>> = listOf(
+    stringResource(R.string.privacidad_sec1_titulo) to stringResource(R.string.privacidad_sec1_texto),
+    stringResource(R.string.privacidad_sec2_titulo) to stringResource(R.string.privacidad_sec2_texto),
+    stringResource(R.string.privacidad_sec3_titulo) to stringResource(R.string.privacidad_sec3_texto),
+    stringResource(R.string.privacidad_sec4_titulo) to stringResource(R.string.privacidad_sec4_texto),
+    stringResource(R.string.privacidad_sec5_titulo) to stringResource(R.string.privacidad_sec5_texto),
+    stringResource(R.string.privacidad_sec6_titulo) to stringResource(R.string.privacidad_sec6_texto),
+    stringResource(R.string.privacidad_sec7_titulo) to stringResource(R.string.privacidad_sec7_texto)
+)
+
 /**
  * Aviso de privacidad. [primeraVez] lo muestra al abrir la app hasta que la persona pulsa "Entendido"; desde
  * Ajustes se puede volver a leer y cerrar tocando fuera.
  */
 @Composable
 fun AvisoPrivacidadDialog(primeraVez: Boolean, onCerrar: () -> Unit) {
+    val secciones = seccionesAvisoPrivacidad()
     AlertDialog(
         onDismissRequest = { if (!primeraVez) onCerrar() },
         properties = DialogProperties(dismissOnBackPress = !primeraVez, dismissOnClickOutside = !primeraVez),
         shape = RoundedCornerShape(28.dp),
         icon = { Icon(Icons.Outlined.PrivacyTip, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = { Text("Tus datos en Lince Track", fontWeight = FontWeight.Bold) },
+        title = { Text(stringResource(R.string.privacidad_titulo), fontWeight = FontWeight.Bold) },
         text = {
             Column(
                 modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                SECCIONES_AVISO_PRIVACIDAD.forEach { (titulo, texto) ->
+                secciones.forEach { (titulo, texto) ->
                     Column {
                         Text(titulo, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                         Text(texto, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -86,7 +100,7 @@ fun AvisoPrivacidadDialog(primeraVez: Boolean, onCerrar: () -> Unit) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onCerrar) { Text("Entendido") } }
+        confirmButton = { TextButton(onClick = onCerrar) { Text(stringResource(R.string.version_entendido)) } }
     )
 }
 
@@ -110,15 +124,12 @@ fun ExplicacionUbicacionDialog(motivo: String, onContinuar: () -> Unit, onCancel
         onDismissRequest = onCancelar,
         shape = RoundedCornerShape(28.dp),
         icon = { Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = { Text("Permiso de ubicación", fontWeight = FontWeight.Bold) },
+        title = { Text(stringResource(R.string.privacidad_ubicacion_titulo), fontWeight = FontWeight.Bold) },
         text = {
-            Text(
-                "$motivo\n\nSolo con la app abierta: no te seguimos en segundo plano. Lo que se envía (check-in, " +
-                    "check-out e incidencias) solo lo ve Coordinación."
-            )
+            Text(stringResource(R.string.privacidad_ubicacion_cuerpo, motivo))
         },
-        confirmButton = { TextButton(onClick = onContinuar) { Text("Continuar") } },
-        dismissButton = { TextButton(onClick = onCancelar) { Text("Ahora no") } }
+        confirmButton = { TextButton(onClick = onContinuar) { Text(stringResource(R.string.accion_continuar)) } },
+        dismissButton = { TextButton(onClick = onCancelar) { Text(stringResource(R.string.accion_ahora_no)) } }
     )
 }
 

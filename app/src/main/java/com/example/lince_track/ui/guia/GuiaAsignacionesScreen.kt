@@ -123,7 +123,10 @@ fun GuiaAsignacionesScreen(
                 SummaryKpiCard(serviciosHoy, ReglasCheckin.terminados(servicios, checkins).size, onVerTerminados)
 
                 Text(
-                    text = stringResource(R.string.guia_asignaciones_titulo, formatFechaCorta(hoy)),
+                    text = stringResource(
+                        R.string.guia_asignaciones_titulo,
+                        formatFechaCorta(hoy, androidx.compose.ui.platform.LocalConfiguration.current.locales[0])
+                    ),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface

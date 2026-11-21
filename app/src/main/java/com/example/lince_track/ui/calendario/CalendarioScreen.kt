@@ -59,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -302,16 +303,27 @@ private fun TarjetaDisponibilidad(
                     )
                     Column {
                         Text(
-                            text = if (bloqueo != null) "Día bloqueado" else "Disponibilidad",
+                            text = stringResource(
+                                if (bloqueo != null) R.string.bloqueo_dia_bloqueado
+                                else R.string.bloqueo_disponibilidad
+                            ),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = if (bloqueo != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                         )
                         val subtitulo = when {
-                            bloqueo != null -> if (!bloqueo.motivo.isNullOrBlank()) "Motivo: ${bloqueo.motivo}" else "No disponible para servicios"
-                            tieneServicios -> "Tiene servicios asignados este día"
-                            esBloqueable -> "Día libre disponible para bloquear"
-                            else -> "Mínimo $diasAnticipacion días de anticipación (desde ${formatFecha(primerDiaBloqueable)})"
+                            bloqueo != null -> if (!bloqueo.motivo.isNullOrBlank()) {
+                                stringResource(R.string.bloqueo_motivo_prefijo, bloqueo.motivo)
+                            } else {
+                                stringResource(R.string.bloqueo_no_disponible)
+                            }
+                            tieneServicios -> stringResource(R.string.bloqueo_tiene_servicios)
+                            esBloqueable -> stringResource(R.string.bloqueo_libre_disponible)
+                            else -> stringResource(
+                                R.string.bloqueo_anticipacion_min,
+                                diasAnticipacion,
+                                formatFecha(primerDiaBloqueable, LocalConfiguration.current.locales[0])
+                            )
                         }
                         Text(
                             text = subtitulo,
@@ -327,7 +339,7 @@ private fun TarjetaDisponibilidad(
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         contentPadding = ButtonDefaults.ContentPadding
                     ) {
-                        Text("Desbloquear día", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.bloqueo_btn_desbloquear_dia), style = MaterialTheme.typography.labelMedium)
                     }
                 } else if (!tieneServicios) {
                     Button(
@@ -339,7 +351,7 @@ private fun TarjetaDisponibilidad(
                         ),
                         modifier = Modifier.testTag("btn_bloquear_dia")
                     ) {
-                        Text("Bloquear día", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.bloqueo_btn_bloquear_dia), style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
@@ -360,21 +372,24 @@ fun BloquearDiaDialog(
         onDismissRequest = { if (!procesando) onDismiss() },
         title = {
             Text(
-                text = "Bloquear día",
+                text = stringResource(R.string.bloqueo_dialogo_bloquear_titulo),
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "¿Deseas bloquear el ${formatFecha(fecha)}? Durante este día no recibirás servicios ni traslados.",
+                    text = stringResource(
+                        R.string.bloqueo_dialogo_bloquear_desc,
+                        formatFecha(fecha, LocalConfiguration.current.locales[0])
+                    ),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 OutlinedTextField(
                     value = motivo,
                     onValueChange = { if (it.length <= 200) motivo = it },
-                    label = { Text("Motivo (opcional)") },
-                    placeholder = { Text("Ej. Trámite personal o descanso") },
+                    label = { Text(stringResource(R.string.bloqueo_motivo_label)) },
+                    placeholder = { Text(stringResource(R.string.bloqueo_motivo_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = false,
                     maxLines = 3,
@@ -401,7 +416,7 @@ fun BloquearDiaDialog(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Text("Bloquear")
+                    Text(stringResource(R.string.bloqueo_btn_bloquear))
                 }
             }
         },
@@ -410,7 +425,7 @@ fun BloquearDiaDialog(
                 onClick = onDismiss,
                 enabled = !procesando
             ) {
-                Text("Cancelar")
+                Text(stringResource(R.string.accion_cancelar_normal))
             }
         }
     )
@@ -427,19 +442,22 @@ fun DesbloquearDiaDialog(
         onDismissRequest = { if (!procesando) onDismiss() },
         title = {
             Text(
-                text = "Desbloquear día",
+                text = stringResource(R.string.bloqueo_dialogo_desbloquear_titulo),
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "¿Deseas desbloquear el día ${formatFecha(bloqueo.fecha)}? Volverás a estar disponible para recibir servicios.",
+                    text = stringResource(
+                        R.string.bloqueo_dialogo_desbloquear_desc,
+                        formatFecha(bloqueo.fecha, LocalConfiguration.current.locales[0])
+                    ),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 if (!bloqueo.motivo.isNullOrBlank()) {
                     Text(
-                        text = "Motivo registrado: \"${bloqueo.motivo}\"",
+                        text = stringResource(R.string.bloqueo_motivo_registrado, bloqueo.motivo),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -459,7 +477,7 @@ fun DesbloquearDiaDialog(
                         color = MaterialTheme.colorScheme.onError
                     )
                 } else {
-                    Text("Desbloquear")
+                    Text(stringResource(R.string.bloqueo_btn_desbloquear))
                 }
             }
         },
@@ -468,7 +486,7 @@ fun DesbloquearDiaDialog(
                 onClick = onDismiss,
                 enabled = !procesando
             ) {
-                Text("Cancelar")
+                Text(stringResource(R.string.accion_cancelar_normal))
             }
         }
     )
@@ -531,7 +549,7 @@ private fun CalendarioSection(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = formatNombreMes(month.month),
+                        text = formatNombreMes(month.month, LocalConfiguration.current.locales[0]),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -672,7 +690,7 @@ private fun RowScope.DayCell(
                 ) {
                     if (isBlocked) {
                         Text(
-                            text = "BLOQ",
+                            text = stringResource(R.string.bloqueo_badge_corto),
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 7.sp,
                             fontWeight = FontWeight.Bold,
@@ -771,7 +789,7 @@ private fun AgendaDelDia(
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = formatFecha(fecha),
+            text = formatFecha(fecha, LocalConfiguration.current.locales[0]),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface

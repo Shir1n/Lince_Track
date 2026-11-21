@@ -56,10 +56,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.lince_track.R
+import com.example.lince_track.data.MotivoRechazo
 import com.example.lince_track.data.PersonaDisponible
 import com.example.lince_track.data.IncidenciaServicio
 import com.example.lince_track.data.ReglasAsignacion
@@ -121,7 +125,7 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
         scope.launch {
             resultado
                 .onSuccess { aviso -> (aviso ?: exito)?.let { snackbarHostState.showSnackbar(it) } }
-                .onFailure { e -> snackbarHostState.showSnackbar(e.message ?: "No se pudo completar la operación") }
+                .onFailure { e -> snackbarHostState.showSnackbar(e.message ?: context.getString(R.string.error_operacion)) }
         }
     }
     // Un rechazo de otro día también hay que resolverlo: no puede quedar escondido hasta esa fecha.
@@ -142,7 +146,7 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
                 .padding(horizontal = 16.dp, vertical = 11.dp)
         ) {
             Text(
-                text = "Panel de Coordinación",
+                text = stringResource(R.string.admin_panel_titulo),
                 color = BarraSuperior.contenido,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
@@ -166,15 +170,15 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                TotalCard("Pendientes", totales.pendientes, MaterialTheme.colorScheme.tertiary, Modifier.weight(1f))
-                TotalCard("Aceptados", totales.aceptados, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
-                TotalCard("Terminados", totales.terminados, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-                TotalCard("Rechazados", totales.rechazados, MaterialTheme.colorScheme.error, Modifier.weight(1f))
+                TotalCard(stringResource(R.string.admin_total_pendientes), totales.pendientes, MaterialTheme.colorScheme.tertiary, Modifier.weight(1f))
+                TotalCard(stringResource(R.string.admin_total_aceptados), totales.aceptados, MaterialTheme.colorScheme.secondary, Modifier.weight(1f))
+                TotalCard(stringResource(R.string.admin_total_terminados), totales.terminados, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+                TotalCard(stringResource(R.string.admin_total_rechazados), totales.rechazados, MaterialTheme.colorScheme.error, Modifier.weight(1f))
             }
 
             if (incidenciasAbiertas.isNotEmpty()) {
                 Text(
-                    text = "Incidencias abiertas (${incidenciasAbiertas.size})",
+                    text = stringResource(R.string.admin_incidencias_abiertas, incidenciasAbiertas.size),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.error
@@ -190,31 +194,41 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
                             val telefono = telefonos[incidencia.uid]
                             FlowRow {
                                 TextButton(onClick = { porResponder = incidencia }) {
-                                    Text(if (incidencia.enGestion) "Actualizar respuesta" else "Responder")
+                                    Text(
+                                        stringResource(
+                                            if (incidencia.enGestion) R.string.admin_actualizar_respuesta
+                                            else R.string.admin_responder
+                                        )
+                                    )
                                 }
                                 val ubicacion = incidencia.ubicacion
                                 TextButton(
                                     onClick = { ubicacion?.let { abrirEnMapa(context, it) } },
                                     enabled = ubicacion != null
                                 ) {
-                                    Text(if (ubicacion != null) "Ver ubicación" else "Sin ubicación")
+                                    Text(
+                                        stringResource(
+                                            if (ubicacion != null) R.string.admin_ver_ubicacion
+                                            else R.string.admin_sin_ubicacion
+                                        )
+                                    )
                                 }
                                 if (servicio != null && ReglasAsignacion.puedeReemplazar(servicio, checkins[servicio.id])) {
                                     TextButton(onClick = {
                                         incidenciaDelReemplazo = incidencia
                                         porReasignar = servicio
                                     }) {
-                                        Text("Enviar reemplazo")
+                                        Text(stringResource(R.string.admin_enviar_reemplazo))
                                     }
                                 }
                                 if (telefono != null) {
                                     TextButton(onClick = {
                                         context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$telefono")))
                                     }) {
-                                        Text("Llamar")
+                                        Text(stringResource(R.string.admin_llamar))
                                     }
                                     TextButton(onClick = { abrirWhatsApp(context, telefono) }) {
-                                        Text("WhatsApp")
+                                        Text(stringResource(R.string.admin_whatsapp))
                                     }
                                 }
                             }
@@ -226,7 +240,8 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
             if (incidenciasResueltas.isNotEmpty()) {
                 TextButton(onClick = { verResueltas = !verResueltas }) {
                     Text(
-                        if (verResueltas) "Ocultar incidencias resueltas" else "Ver incidencias resueltas (${incidenciasResueltas.size})"
+                        if (verResueltas) stringResource(R.string.admin_ocultar_resueltas)
+                        else stringResource(R.string.admin_ver_resueltas, incidenciasResueltas.size)
                     )
                 }
                 if (verResueltas) {
@@ -245,10 +260,17 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 FiltroPanel.entries.forEach { opcion ->
+                    val labelRes = when (opcion) {
+                        FiltroPanel.TODOS -> R.string.admin_filtro_todos
+                        FiltroPanel.PENDIENTES -> R.string.admin_filtro_pendientes
+                        FiltroPanel.ACEPTADOS -> R.string.admin_filtro_aceptados
+                        FiltroPanel.TERMINADOS -> R.string.admin_filtro_terminados
+                        FiltroPanel.RECHAZADOS -> R.string.admin_filtro_rechazados
+                    }
                     FilterChip(
                         selected = filtro == opcion,
                         onClick = { filtro = opcion },
-                        label = { Text(opcion.etiqueta) },
+                        label = { Text(stringResource(labelRes)) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.secondary,
                             selectedLabelColor = MaterialTheme.colorScheme.onSecondary
@@ -261,7 +283,7 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
 
             if (filas.isEmpty() && error == null) {
                 Text(
-                    text = "No hay servicios para mostrar",
+                    text = stringResource(R.string.admin_sin_servicios),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -281,7 +303,7 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
 
             if (rechazadosProximos.isNotEmpty()) {
                 Text(
-                    text = "Rechazados en próximos días",
+                    text = stringResource(R.string.admin_rechazados_proximos),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -291,7 +313,7 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
                         fila = fila,
                         onClick = { onServiceClick(fila.servicio.id) },
                         onReasignar = { porReasignar = fila.servicio },
-                        fecha = formatFechaCorta(fila.servicio.fecha)
+                        fecha = formatFechaCorta(fila.servicio.fecha, LocalConfiguration.current.locales[0])
                     )
                 }
             }
@@ -316,10 +338,13 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
                 incidenciaDelReemplazo = null
                 scope.launch {
                     val resultado = ServicioRepository.reasignar(servicio, persona)
-                    mostrarResultado(resultado, "Asignado a ${persona.nombre}")
+                    mostrarResultado(resultado, context.getString(R.string.admin_asignado_a, persona.nombre))
                     // Quien reportó deja de ver el servicio: hay que contarle quién lo reemplaza.
                     if (resultado.isSuccess && incidencia != null) {
-                        ServicioRepository.responderIncidencia(incidencia, "Se envió a ${persona.nombre} como reemplazo")
+                        ServicioRepository.responderIncidencia(
+                            incidencia,
+                            context.getString(R.string.admin_reemplazo_enviado, persona.nombre)
+                        )
                     }
                 }
             }
@@ -328,25 +353,35 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
 
     porResponder?.let { incidencia ->
         MensajeIncidenciaDialog(
-            titulo = "Responder a ${incidencia.nombre}",
+            titulo = stringResource(R.string.admin_responder_a, incidencia.nombre),
             obligatorio = true,
             textoInicial = incidencia.respuesta,
             onDismiss = { porResponder = null },
             onConfirm = { mensaje ->
                 porResponder = null
-                scope.launch { mostrarResultado(ServicioRepository.responderIncidencia(incidencia, mensaje), "Respuesta enviada") }
+                scope.launch {
+                    mostrarResultado(
+                        ServicioRepository.responderIncidencia(incidencia, mensaje),
+                        context.getString(R.string.admin_respuesta_enviada)
+                    )
+                }
             }
         )
     }
 
     porResolver?.let { incidencia ->
         MensajeIncidenciaDialog(
-            titulo = "Marcar como resuelta",
+            titulo = stringResource(R.string.admin_marcar_resuelta_titulo),
             obligatorio = false,
             onDismiss = { porResolver = null },
             onConfirm = { mensaje ->
                 porResolver = null
-                scope.launch { mostrarResultado(ServicioRepository.resolverIncidencia(incidencia, mensaje), "Incidencia resuelta") }
+                scope.launch {
+                    mostrarResultado(
+                        ServicioRepository.resolverIncidencia(incidencia, mensaje),
+                        context.getString(R.string.admin_incidencia_resuelta)
+                    )
+                }
             }
         )
     }
@@ -364,7 +399,7 @@ private fun SelectorFecha(fecha: LocalDate, hoy: LocalDate, onElegir: (LocalDate
                 onClick = { onElegir(fecha.minusDays(1)) },
                 enabled = fecha.minusDays(1) in rango
             ) {
-                Icon(Icons.Outlined.ChevronLeft, contentDescription = "Día anterior")
+                Icon(Icons.Outlined.ChevronLeft, contentDescription = stringResource(R.string.cd_dia_anterior))
             }
             Column(
                 modifier = Modifier
@@ -374,12 +409,14 @@ private fun SelectorFecha(fecha: LocalDate, hoy: LocalDate, onElegir: (LocalDate
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = when (fecha) {
-                        hoy -> "Servicios de Hoy"
-                        hoy.minusDays(1) -> "Servicios de Ayer"
-                        hoy.plusDays(1) -> "Servicios de Mañana"
-                        else -> "Servicios del día"
-                    },
+                    text = stringResource(
+                        when (fecha) {
+                            hoy -> R.string.admin_servicios_hoy
+                            hoy.minusDays(1) -> R.string.admin_servicios_ayer
+                            hoy.plusDays(1) -> R.string.admin_servicios_manana
+                            else -> R.string.admin_servicios_dia
+                        }
+                    ),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -393,7 +430,7 @@ private fun SelectorFecha(fecha: LocalDate, hoy: LocalDate, onElegir: (LocalDate
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = formatFechaCorta(fecha),
+                        text = formatFechaCorta(fecha, LocalConfiguration.current.locales[0]),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -403,7 +440,7 @@ private fun SelectorFecha(fecha: LocalDate, hoy: LocalDate, onElegir: (LocalDate
                 onClick = { onElegir(fecha.plusDays(1)) },
                 enabled = fecha.plusDays(1) in rango
             ) {
-                Icon(Icons.Outlined.ChevronRight, contentDescription = "Día siguiente")
+                Icon(Icons.Outlined.ChevronRight, contentDescription = stringResource(R.string.cd_dia_siguiente))
             }
         }
         if (fecha != hoy) {
@@ -411,7 +448,7 @@ private fun SelectorFecha(fecha: LocalDate, hoy: LocalDate, onElegir: (LocalDate
                 onClick = { onElegir(hoy) },
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
-                Text("Volver a hoy")
+                Text(stringResource(R.string.admin_volver_hoy))
             }
         }
     }
@@ -436,11 +473,11 @@ private fun SelectorFecha(fecha: LocalDate, hoy: LocalDate, onElegir: (LocalDate
                         verCalendario = false
                     }
                 ) {
-                    Text("Elegir")
+                    Text(stringResource(R.string.accion_elegir))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { verCalendario = false }) { Text("Cancelar") }
+                TextButton(onClick = { verCalendario = false }) { Text(stringResource(R.string.accion_cancelar_normal)) }
             }
         ) {
             DatePicker(state = estado)
@@ -465,7 +502,7 @@ private fun ReasignarDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Reasignar servicio") },
+        title = { Text(stringResource(R.string.admin_reasignar_titulo)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
@@ -478,7 +515,7 @@ private fun ReasignarDialog(
                 when {
                     error != null -> Text(error.orEmpty(), color = MaterialTheme.colorScheme.error)
                     lista == null -> CircularProgressIndicator()
-                    lista.isEmpty() -> Text("No hay otra persona disponible para este servicio.")
+                    lista.isEmpty() -> Text(stringResource(R.string.admin_sin_candidatos))
                     else -> lista.forEach { persona ->
                         Text(
                             text = persona.nombre,
@@ -495,7 +532,7 @@ private fun ReasignarDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.accion_cancelar_normal)) }
         }
     )
 }
@@ -559,7 +596,7 @@ private fun FilaCard(
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = listOfNotNull(fecha, formatHora(servicio.horaInicio), fila.responsable).joinToString(" • ") +
-                    if (servicio.reasignado) " (reemplazo)" else "",
+                    if (servicio.reasignado) stringResource(R.string.admin_sufijo_reemplazo) else "",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -575,16 +612,26 @@ private fun FilaCard(
             if (fila.incidenciasAbiertas > 0) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = if (fila.incidenciasAbiertas == 1) "1 incidencia abierta" else "${fila.incidenciasAbiertas} incidencias abiertas",
+                    text = if (fila.incidenciasAbiertas == 1) stringResource(R.string.admin_una_incidencia_abierta)
+                    else stringResource(R.string.admin_n_incidencias_abiertas, fila.incidenciasAbiertas),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.error
                 )
             }
             fila.motivo?.let { motivo ->
+                val motivoLocalizado = when (motivo) {
+                    PanelAdmin.RECHAZADO_EN_API -> stringResource(R.string.admin_motivo_rechazado_api)
+                    PanelAdmin.MOTIVO_DESCONOCIDO -> stringResource(R.string.admin_motivo_desconocido)
+                    MotivoRechazo.FALLA_MECANICA.etiqueta -> stringResource(R.string.motivo_falla_mecanica)
+                    MotivoRechazo.FUERZA_MAYOR.etiqueta -> stringResource(R.string.motivo_fuerza_mayor)
+                    MotivoRechazo.CRUCE_HORARIO.etiqueta -> stringResource(R.string.motivo_cruce_horario)
+                    MotivoRechazo.OTRO.etiqueta -> stringResource(R.string.motivo_otro)
+                    else -> motivo
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Motivo: $motivo",
+                    text = stringResource(R.string.admin_motivo_prefijo, motivoLocalizado),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.error
@@ -601,7 +648,7 @@ private fun FilaCard(
             if (fila.puedeReasignar) {
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedButton(onClick = onReasignar, shape = RoundedCornerShape(50)) {
-                    Text("Reasignar", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.admin_reasignar), fontWeight = FontWeight.Bold)
                 }
             }
         }

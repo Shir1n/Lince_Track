@@ -33,8 +33,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.lince_track.R
 import com.example.lince_track.data.ReglasCheckin
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.remote.LinceApiClient
@@ -77,7 +79,7 @@ fun AdminResumenScreen() {
                 .padding(horizontal = 16.dp, vertical = 11.dp)
         ) {
             Text(
-                text = "Resumen de la Operación",
+                text = stringResource(R.string.admin_resumen_titulo),
                 color = BarraSuperior.contenido,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
@@ -93,10 +95,14 @@ fun AdminResumenScreen() {
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PeriodoResumen.entries.forEach { opcion ->
+                    val labelRes = when (opcion) {
+                        PeriodoResumen.HOY -> R.string.admin_periodo_hoy
+                        PeriodoResumen.SIETE_DIAS -> R.string.admin_periodo_7dias
+                    }
                     FilterChip(
                         selected = periodo == opcion,
                         onClick = { periodo = opcion },
-                        label = { Text(opcion.etiqueta) },
+                        label = { Text(stringResource(labelRes)) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.secondary,
                             selectedLabelColor = MaterialTheme.colorScheme.onSecondary
@@ -128,13 +134,13 @@ private fun AvisoDemostracion() {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Incluye datos de demostración",
+                text = stringResource(R.string.admin_demo_titulo),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onTertiaryContainer
             )
             Text(
-                text = "Las cifras de días anteriores son de ejemplo y no corresponden a la operación real.",
+                text = stringResource(R.string.admin_demo_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onTertiaryContainer
             )
@@ -144,39 +150,49 @@ private fun AvisoDemostracion() {
 
 @Composable
 private fun Puntualidad(resumen: Resumen) {
-    TarjetaResumen("Puntualidad") {
+    TarjetaResumen(stringResource(R.string.admin_resumen_puntualidad)) {
         val porcentaje = ResumenOperacion.porcentaje(resumen.aTiempo, resumen.conCheckIn)
         if (porcentaje == null) {
             SinDatos()
         } else {
-            CifraPrincipal("$porcentaje % a tiempo")
-            Detalle("${resumen.aTiempo} de ${resumen.conCheckIn} check-ins, con ${ResumenOperacion.MARGEN_PUNTUALIDAD_MIN} minutos de margen")
+            CifraPrincipal(stringResource(R.string.admin_resumen_a_tiempo, porcentaje))
+            Detalle(
+                stringResource(
+                    R.string.admin_resumen_puntualidad_detalle,
+                    resumen.aTiempo,
+                    resumen.conCheckIn,
+                    ResumenOperacion.MARGEN_PUNTUALIDAD_MIN
+                )
+            )
         }
         if (resumen.sinCheckIn > 0) {
-            Detalle(if (resumen.sinCheckIn == 1) "1 servicio sin check-in" else "${resumen.sinCheckIn} servicios sin check-in")
+            Detalle(
+                if (resumen.sinCheckIn == 1) stringResource(R.string.admin_resumen_un_sin_checkin)
+                else stringResource(R.string.admin_resumen_n_sin_checkin, resumen.sinCheckIn)
+            )
         }
     }
 }
 
 @Composable
 private fun Terminados(resumen: Resumen) {
-    TarjetaResumen("Servicios terminados") {
+    TarjetaResumen(stringResource(R.string.admin_resumen_terminados)) {
         val porcentaje = ResumenOperacion.porcentaje(resumen.terminados, resumen.aceptados)
         if (porcentaje == null) {
             SinDatos()
         } else {
-            CifraPrincipal("${resumen.terminados} de ${resumen.aceptados}")
+            CifraPrincipal(stringResource(R.string.admin_resumen_de, resumen.terminados, resumen.aceptados))
             Barra(porcentaje / 100f, MaterialTheme.colorScheme.secondary)
-            Detalle("$porcentaje % de los aceptados tiene check-out")
+            Detalle(stringResource(R.string.admin_resumen_checkout_pct, porcentaje))
         }
     }
 }
 
 @Composable
 private fun Rechazos(resumen: Resumen) {
-    TarjetaResumen("Rechazos por motivo") {
+    TarjetaResumen(stringResource(R.string.admin_resumen_rechazos)) {
         if (resumen.rechazos.isEmpty()) {
-            Detalle("Sin rechazos en este periodo")
+            Detalle(stringResource(R.string.admin_resumen_sin_rechazos))
         } else {
             CifraPrincipal(resumen.totalRechazos.toString())
             ListaCantidades(resumen.rechazos, MaterialTheme.colorScheme.error)
@@ -186,25 +202,39 @@ private fun Rechazos(resumen: Resumen) {
 
 @Composable
 private fun Distancia(resumen: Resumen) {
-    TarjetaResumen("Distancia del check-in") {
+    TarjetaResumen(stringResource(R.string.admin_resumen_distancia)) {
         val promedio = resumen.distanciaPromedioM
         val porcentaje = ResumenOperacion.porcentaje(resumen.cercanos, resumen.conGpsReal)
         if (promedio == null || porcentaje == null) {
             SinDatos()
         } else {
-            CifraPrincipal("${ReglasCheckin.formatoDistancia(promedio)} en promedio")
-            Detalle("$porcentaje % a menos de ${ResumenOperacion.DISTANCIA_CERCANA_M} m del punto de inicio")
+            CifraPrincipal(
+                stringResource(R.string.admin_resumen_distancia_prom, ReglasCheckin.formatoDistancia(promedio))
+            )
+            Detalle(
+                stringResource(
+                    R.string.admin_resumen_distancia_cerca,
+                    porcentaje,
+                    ResumenOperacion.DISTANCIA_CERCANA_M
+                )
+            )
         }
     }
 }
 
 @Composable
 private fun Incidencias(resumen: Resumen) {
-    TarjetaResumen("Incidencias") {
+    TarjetaResumen(stringResource(R.string.admin_resumen_incidencias)) {
         if (resumen.incidenciasPorTipo.isEmpty()) {
-            Detalle("Sin incidencias en este periodo")
+            Detalle(stringResource(R.string.admin_resumen_sin_incidencias))
         } else {
-            CifraPrincipal("${resumen.incidenciasAbiertas} abiertas • ${resumen.incidenciasResueltas} resueltas")
+            CifraPrincipal(
+                stringResource(
+                    R.string.admin_resumen_incidencias_conteo,
+                    resumen.incidenciasAbiertas,
+                    resumen.incidenciasResueltas
+                )
+            )
             ListaCantidades(resumen.incidenciasPorTipo, MaterialTheme.colorScheme.tertiary)
         }
     }
@@ -212,9 +242,12 @@ private fun Incidencias(resumen: Resumen) {
 
 @Composable
 private fun Reemplazos(resumen: Resumen) {
-    TarjetaResumen("Reemplazos") {
+    TarjetaResumen(stringResource(R.string.admin_resumen_reemplazos)) {
         CifraPrincipal(resumen.reemplazos.toString())
-        Detalle(if (resumen.reemplazos == 1) "servicio reasignado" else "servicios reasignados")
+        Detalle(
+            if (resumen.reemplazos == 1) stringResource(R.string.admin_resumen_un_reemplazo)
+            else stringResource(R.string.admin_resumen_n_reemplazos)
+        )
     }
 }
 
@@ -260,7 +293,7 @@ private fun Detalle(texto: String) {
 }
 
 @Composable
-private fun SinDatos() = Detalle("Sin datos en este periodo")
+private fun SinDatos() = Detalle(stringResource(R.string.admin_resumen_sin_datos))
 
 /** El largo de cada barra es relativo a la cantidad mayor de la lista. */
 @Composable

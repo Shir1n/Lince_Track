@@ -168,7 +168,7 @@ private fun TerminadoCard(servicio: Servicio, checkin: CheckinServicio, onClick:
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "${formatFechaCorta(servicio.fecha)} • ${ReglasCheckin.horario(checkin)}",
+                text = "${formatFechaCorta(servicio.fecha, androidx.compose.ui.platform.LocalConfiguration.current.locales[0])} • ${ReglasCheckin.horario(checkin)}",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.secondary
