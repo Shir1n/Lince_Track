@@ -711,4 +711,15 @@
     <string name="sync_texto_rechazos">%1$d records were sent; %2$d check-in was not accepted and Coordination was notified.</string>
     <string name="ruta_checkin_sin_conexion">Offline: the record was saved and will be sent automatically when the signal returns.</string>
     <string name="ruta_pendiente_sincronizar">Pending sync (offline)</string>
+    <string name="resumen_southbound_error">Southbound data could not be loaded.</string>
+    <string name="southbound_titulo">Southbound data</string>
+    <string name="southbound_totales">%1$d services · %2$d passengers</string>
+    <string name="southbound_detalle">%1$s office, by assignment status (statusPL).</string>
+    <string name="southbound_cargando">Loading Southbound data…</string>
+    <string name="southbound_fila">%1$s (%2$d pax)</string>
+    <string name="southbound_cf">Confirmed</string>
+    <string name="southbound_rq">Pending</string>
+    <string name="southbound_dl">Rejected</string>
+    <string name="southbound_cx">Cancelled</string>
+    <string name="southbound_sin_asignar">Unassigned</string>
 </resources>

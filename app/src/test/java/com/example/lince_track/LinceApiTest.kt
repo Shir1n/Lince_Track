@@ -1,9 +1,12 @@
 package com.example.lince_track
 
 import com.example.lince_track.data.EstadoServicio
+import com.example.lince_track.data.remote.dto.ConteoPorClaveDto
 import com.example.lince_track.data.remote.dto.ErrorRespuestaDto
 import com.example.lince_track.data.remote.dto.LinceJson
 import com.example.lince_track.data.remote.dto.PaginaDto
+import com.example.lince_track.data.remote.dto.RespuestaDto
+import com.example.lince_track.data.remote.dto.ResumenDto
 import com.example.lince_track.data.remote.dto.ServicioDto
 import com.example.lince_track.data.servicios.FakeServiciosDataSource
 import com.example.lince_track.data.servicios.FiltroServicios
@@ -79,6 +82,25 @@ class LinceApiTest {
         assertEquals("UNAUTHORIZED", error.code)
         assertEquals("abc-123", error.requestId)
         assertTrue(error.details.isEmpty())
+    }
+
+    @Test
+    fun leeElResumenDeLaApi() {
+        // Recorte del JSON real de /api/v1/resumen (oficina PUX), con un campo nuevo que se debe ignorar.
+        val json = """
+            {"data":{"fechaDesde":"2026-11-15","fechaHasta":"2026-11-22","totalServicios":102,"totalPax":525,
+             "porEstadoServicio":[{"clave":"CF","servicios":70,"pax":337},{"clave":"XX","servicios":19,"pax":157}],
+             "porStatusPL":[{"clave":"CF","servicios":7,"pax":21},{"clave":"SIN_ASIGNAR","servicios":62,"pax":288}],
+             "porOficina":[{"clave":"PUX","servicios":102,"pax":525}],"campoNuevo":true}}
+        """.trimIndent()
+        val resumen = LinceJson.decodeFromString<RespuestaDto<ResumenDto>>(json).data
+
+        assertEquals(102, resumen.totalServicios)
+        assertEquals(525, resumen.totalPax)
+        assertEquals("2026-11-15", resumen.fechaDesde)
+        assertEquals(ConteoPorClaveDto("SIN_ASIGNAR", 62, 288), resumen.porStatusPL.last())
+        assertEquals(listOf("CF", "XX"), resumen.porEstadoServicio.map { it.clave })
+        assertEquals("PUX", resumen.porOficina.single().clave)
     }
 
     @Test

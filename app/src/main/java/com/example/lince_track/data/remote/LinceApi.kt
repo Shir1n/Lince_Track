@@ -4,6 +4,7 @@ import com.example.lince_track.data.remote.dto.GuiaDto
 import com.example.lince_track.data.remote.dto.HealthDto
 import com.example.lince_track.data.remote.dto.PaginaDto
 import com.example.lince_track.data.remote.dto.RespuestaDto
+import com.example.lince_track.data.remote.dto.ResumenDto
 import com.example.lince_track.data.remote.dto.ServicioDto
 import com.example.lince_track.data.remote.dto.TransportistaDto
 import retrofit2.http.GET
@@ -43,6 +44,14 @@ interface LinceApi {
 
     @GET("api/v1/transportistas/{id}")
     suspend fun transportista(@Path("id") id: Long): RespuestaDto<TransportistaDto>
+
+    /** Totales de servicios y pasajeros, por estado y por statusPL. Fechas en formato YYYY-MM-DD. */
+    @GET("api/v1/resumen")
+    suspend fun resumen(
+        @Query("oficina") oficina: String? = null,
+        @Query("fechaDesde") fechaDesde: String? = null,
+        @Query("fechaHasta") fechaHasta: String? = null
+    ): RespuestaDto<ResumenDto>
 
     companion object {
         /** Máximo permitido por la API para pageSize. */
