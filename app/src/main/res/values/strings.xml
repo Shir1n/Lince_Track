@@ -701,4 +701,6 @@
     <string name="ruta_marcador_geocerca">Geocerca: %1$s (%2$d m)</string>
     <string name="ruta_marcador_tu_ubicacion">Tu ubicación</string>
     <string name="ruta_marcador_tu_vehiculo">Tu vehículo</string>
+    <string name="ruta_panel_ocultar">Ocultar detalles del check-in</string>
+    <string name="ruta_panel_mostrar">Mostrar detalles del check-in</string>
 </resources>
