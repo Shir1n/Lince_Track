@@ -3,6 +3,7 @@ package com.example.lince_track
 import android.Manifest
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -17,7 +18,12 @@ import com.example.lince_track.ui.theme.Lince_TrackTheme
 import com.example.lince_track.ui.theme.ThemeMode
 import com.example.lince_track.ui.theme.themeModeFlow
 import com.example.lince_track.util.LinceLogger
+import com.example.lince_track.data.TokenFcmRepository
+import com.example.lince_track.util.AperturaNotificacion
 import com.example.lince_track.util.NotificadorLocal
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import com.google.firebase.FirebaseApp
 import org.osmdroid.config.Configuration
 
@@ -42,6 +48,9 @@ class MainActivity : AppCompatActivity() {
         )
 
         NotificadorLocal.iniciar(this)
+        TokenFcmRepository.iniciar(CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        // Si se abrió tocando una notificación, queda pendiente abrir ese servicio.
+        AperturaNotificacion.desde(intent)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
                 .launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -58,5 +67,12 @@ class MainActivity : AppCompatActivity() {
                 AvisoPrivacidadAlIniciar()
             }
         }
+    }
+
+    /** Con la app ya abierta (singleTask), tocar una notificación llega aquí. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        AperturaNotificacion.desde(intent)
     }
 }
