@@ -703,4 +703,10 @@
     <string name="ruta_marcador_tu_vehiculo">Tu vehículo</string>
     <string name="ruta_panel_ocultar">Ocultar detalles del check-in</string>
     <string name="ruta_panel_mostrar">Mostrar detalles del check-in</string>
+    <!-- Check-in sin conexión (Room + WorkManager) -->
+    <string name="sync_titulo">Registros sin conexión enviados</string>
+    <string name="sync_texto">Se enviaron %1$d registros guardados sin conexión.</string>
+    <string name="sync_texto_rechazos">Se enviaron %1$d registros; %2$d check-in no fue aceptado y se avisó a Coordinación.</string>
+    <string name="ruta_checkin_sin_conexion">Sin conexión: el registro quedó guardado y se enviará solo cuando vuelva la señal.</string>
+    <string name="ruta_pendiente_sincronizar">Pendiente de sincronizar (sin conexión)</string>
 </resources>

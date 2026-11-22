@@ -19,6 +19,9 @@ import com.example.lince_track.ui.theme.ThemeMode
 import com.example.lince_track.ui.theme.themeModeFlow
 import com.example.lince_track.util.LinceLogger
 import com.example.lince_track.data.TokenFcmRepository
+import com.example.lince_track.data.local.BaseLocal
+import com.example.lince_track.util.SincronizarHitosWorker
+import kotlinx.coroutines.launch
 import com.example.lince_track.util.AperturaNotificacion
 import com.example.lince_track.util.NotificadorLocal
 import kotlinx.coroutines.CoroutineScope
@@ -49,6 +52,11 @@ class MainActivity : AppCompatActivity() {
 
         NotificadorLocal.iniciar(this)
         TokenFcmRepository.iniciar(CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        // Base local (Room): si quedó algo marcado sin conexión, se vuelve a programar el envío.
+        val baseLocal = BaseLocal.iniciar(this)
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            if (baseLocal.hitosPendientes().isNotEmpty()) SincronizarHitosWorker.programar(applicationContext)
+        }
         // Si se abrió tocando una notificación, queda pendiente abrir ese servicio.
         AperturaNotificacion.desde(intent)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

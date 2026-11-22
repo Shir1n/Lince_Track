@@ -72,6 +72,12 @@ object NotificadorLocal {
         }
     }
 
+    /** Aviso que no sale de comparar servicios (por ejemplo, la sincronización de check-ins sin conexión). */
+    fun avisar(context: Context, aviso: AvisoLocal) {
+        crearCanal(context)
+        mostrar(context, aviso)
+    }
+
     /** Misma etiqueta que usan las Cloud Functions (`android.notification.tag`). */
     fun etiqueta(servicioId: String): String = "servicio|$servicioId"
 
