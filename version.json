@@ -1,11 +1,11 @@
 {
-  "versionCode": 3,
-  "versionName": "1.3",
-  "autorUltimoCambio": "Benjamín",
+  "versionCode": 4,
+  "versionName": "1.4",
+  "autorUltimoCambio": "Luciano",
   "apkUrl": "https://github.com/Shir1n/Lince_Track/releases/latest/download/lince-track.apk",
   "novedades": [
-    "Soporte completo de idioma Español / Inglés con selector en Login y Ajustes",
-    "Fechas y meses adaptados automáticamente al idioma elegido",
-    "Bloqueo de días no disponibles en Calendario y aviso de privacidad en Ajustes"
+    "El idioma elegido ahora se aplica en toda la app: perfil, alertas, clima, avisos, errores y notificaciones",
+    "El idioma cambia solo en la app, sin tocar el del teléfono (en Android 13 o más nuevo, también desde Ajustes del teléfono)",
+    "Al bloquear un día, el motivo ahora es obligatorio"
   ]
 }

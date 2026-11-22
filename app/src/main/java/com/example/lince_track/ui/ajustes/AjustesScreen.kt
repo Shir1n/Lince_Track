@@ -50,7 +50,7 @@ import com.example.lince_track.ui.components.VersionDesactualizadaDialog
 import com.example.lince_track.ui.components.label
 import com.example.lince_track.ui.theme.AppLanguage
 import com.example.lince_track.ui.theme.ThemeMode
-import com.example.lince_track.ui.theme.appLanguageFlow
+import com.example.lince_track.ui.theme.idiomaActual
 import com.example.lince_track.ui.theme.setThemeMode
 import com.example.lince_track.ui.theme.themeModeFlow
 import com.example.lince_track.util.LinceLogConsoleDialog
@@ -62,7 +62,7 @@ import com.example.lince_track.ui.theme.BarraSuperior
 fun AjustesScreen(onBack: () -> Unit = {}) {
     val context = LocalContext.current
     val themeMode by context.themeModeFlow.collectAsState(initial = ThemeMode.SYSTEM)
-    val appLanguage by context.appLanguageFlow.collectAsState(initial = AppLanguage.SYSTEM)
+    val appLanguage = remember { idiomaActual() }
     val avisosVersionActivos by ControlVersionRepository.avisosActivosFlow(context)
         .collectAsState(initial = true)
     val logs by LinceLogger.logs.collectAsState()

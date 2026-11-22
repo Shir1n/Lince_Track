@@ -76,6 +76,7 @@ import com.example.lince_track.ui.components.rememberEnviarIncidencia
 import com.example.lince_track.util.abrirWhatsApp
 import kotlinx.coroutines.launch
 import com.example.lince_track.ui.theme.BarraSuperior
+import com.example.lince_track.util.textoUi
 
 @Composable
 fun DetalleServicioScreen(
@@ -107,13 +108,16 @@ fun DetalleServicioScreen(
             procesando = false
             resultado.onSuccess { aviso ->
                 if (volverAlTerminar) {
-                    if (aviso != null) snackbarHostState.showSnackbar(aviso)
+                    if (aviso != null) snackbarHostState.showSnackbar(ServicioRepository.textoAviso(aviso).asString(context))
                     onBack()
                 } else {
-                    snackbarHostState.showSnackbar(aviso ?: context.getString(R.string.detalle_confirmada))
+                    snackbarHostState.showSnackbar(
+                        aviso?.let { ServicioRepository.textoAviso(it).asString(context) }
+                            ?: context.getString(R.string.detalle_confirmada)
+                    )
                 }
             }.onFailure { e ->
-                snackbarHostState.showSnackbar(e.message ?: context.getString(R.string.error_operacion))
+                snackbarHostState.showSnackbar(e.textoUi(R.string.error_operacion).asString(context))
             }
         }
     }
@@ -173,10 +177,10 @@ fun DetalleServicioScreen(
                     onResolver = { incidencia: IncidenciaServicio ->
                         scope.launch {
                             ServicioRepository.resolverIncidencia(incidencia)
-                                .onSuccess { aviso -> if (aviso != null) snackbarHostState.showSnackbar(aviso) }
+                                .onSuccess { aviso -> if (aviso != null) snackbarHostState.showSnackbar(ServicioRepository.textoAviso(aviso).asString(context)) }
                                 .onFailure { e ->
                                     snackbarHostState.showSnackbar(
-                                        e.message ?: context.getString(R.string.detalle_error_resolver)
+                                        e.textoUi(R.string.detalle_error_resolver).asString(context)
                                     )
                                 }
                         }

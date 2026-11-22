@@ -53,7 +53,8 @@ fun AdminResumenScreen() {
     val checkins by ServicioRepository.checkins.collectAsState()
     val incidencias by ServicioRepository.incidencias.collectAsState()
     val asignaciones by ServicioRepository.asignaciones.collectAsState()
-    val error by ServicioRepository.error.collectAsState()
+    // En el idioma de la app (el error del repositorio viene como UiText).
+    val error = ServicioRepository.errorTexto.collectAsState().value?.asString()
     var periodo by rememberSaveable { mutableStateOf(PeriodoResumen.SIETE_DIAS) }
 
     val hoy = LocalDate.now()

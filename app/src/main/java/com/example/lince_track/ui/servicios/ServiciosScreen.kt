@@ -66,6 +66,7 @@ import com.example.lince_track.ui.historial.VerTerminadosBoton
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import com.example.lince_track.ui.theme.BarraSuperior
+import com.example.lince_track.util.textoUi
 
 @Composable
 fun ServiciosScreen(
@@ -75,7 +76,8 @@ fun ServiciosScreen(
 ) {
     val context = LocalContext.current
     val servicios by ServicioRepository.servicios.collectAsState()
-    val error by ServicioRepository.error.collectAsState()
+    // En el idioma de la app (el error del repositorio viene como UiText).
+    val error = ServicioRepository.errorTexto.collectAsState().value?.asString()
     val hoy = LocalDate.now()
     val checkins by ServicioRepository.checkins.collectAsState()
     val serviciosHoy = remember(servicios, checkins, hoy) {
@@ -94,9 +96,9 @@ fun ServiciosScreen(
             val resultado = op(servicio.id)
             procesandoIds = procesandoIds - servicio.id
             resultado.onSuccess { aviso ->
-                if (aviso != null) snackbarHostState.showSnackbar(aviso)
+                if (aviso != null) snackbarHostState.showSnackbar(ServicioRepository.textoAviso(aviso).asString(context))
             }.onFailure { e ->
-                snackbarHostState.showSnackbar(e.message ?: context.getString(R.string.error_operacion))
+                snackbarHostState.showSnackbar(e.textoUi(R.string.error_operacion).asString(context))
             }
         }
     }

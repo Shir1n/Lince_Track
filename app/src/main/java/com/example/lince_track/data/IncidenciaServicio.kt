@@ -1,5 +1,7 @@
 package com.example.lince_track.data
 
+import com.example.lince_track.R
+import com.example.lince_track.util.UiText
 import java.time.Instant
 import java.time.ZoneId
 
@@ -14,6 +16,18 @@ enum class TipoIncidencia(val codigo: String, val etiqueta: String, val requiere
     companion object {
         fun desde(codigo: String?): TipoIncidencia? = entries.firstOrNull { it.codigo == codigo }
     }
+
+    /** Nombre del tipo en el idioma de la app (la `etiqueta` queda en español para Firestore y los registros). */
+    val texto: UiText
+        get() = UiText.StringResource(
+            when (this) {
+                ATRASO -> R.string.incidencia_tipo_retraso
+                FALLA_MECANICA -> R.string.incidencia_tipo_falla_mecanica
+                PASAJEROS -> R.string.incidencia_tipo_pasajero
+                CAMINO -> R.string.incidencia_tipo_emergencia
+                OTRO -> R.string.incidencia_tipo_otro
+            }
+        )
 }
 
 data class Ubicacion(val lat: Double, val lon: Double) {

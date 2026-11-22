@@ -55,7 +55,8 @@ fun ServiciosTerminadosScreen(
 ) {
     val servicios by ServicioRepository.servicios.collectAsState()
     val checkins by ServicioRepository.checkins.collectAsState()
-    val error by ServicioRepository.error.collectAsState()
+    // En el idioma de la app (el error del repositorio viene como UiText).
+    val error = ServicioRepository.errorTexto.collectAsState().value?.asString()
     val terminados = remember(servicios, checkins) { ReglasCheckin.terminados(servicios, checkins) }
 
     Column(

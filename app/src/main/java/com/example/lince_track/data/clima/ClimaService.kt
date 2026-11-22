@@ -1,6 +1,8 @@
 package com.example.lince_track.data.clima
 
+import com.example.lince_track.R
 import com.example.lince_track.util.LinceLogger
+import com.example.lince_track.util.UiText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -11,23 +13,30 @@ import java.net.URL
 import java.util.Locale
 import kotlin.math.roundToInt
 
-enum class TipoClima(val label: String) {
-    DESPEJADO("Despejado"),
-    PARCIALMENTE_NUBLADO("Parcialmente nublado"),
-    NUBLADO("Nublado"),
-    NIEBLA("Niebla / Neblina"),
-    LLUVIA_LIGERA("Llovizna / Lluvia ligera"),
-    LLUVIA_MODERADA("Lluvia moderada"),
-    LLUVIA_FUERTE("Lluvia torrencial"),
-    TORMENTA("Tormenta eléctrica"),
-    NIEVE("Nieve / Aguanieve"),
-    VIENTO_FUERTE("Ráfagas de viento fuerte")
+/*
+ * Los textos que ve la persona (tipo de clima, alertas, consejos y vestimenta) van como UiText: la tarjeta del mapa los
+ * traduce al idioma elegido en la app. Las `label` en español quedan solo para el registro (LinceLogger).
+ */
+
+private fun texto(resId: Int, vararg args: Any): UiText = UiText.StringResource(resId, *args)
+
+enum class TipoClima(val label: String, val texto: UiText) {
+    DESPEJADO("Despejado", texto(R.string.clima_tipo_despejado)),
+    PARCIALMENTE_NUBLADO("Parcialmente nublado", texto(R.string.clima_tipo_parcial)),
+    NUBLADO("Nublado", texto(R.string.clima_tipo_nublado)),
+    NIEBLA("Niebla / Neblina", texto(R.string.clima_tipo_niebla)),
+    LLUVIA_LIGERA("Llovizna / Lluvia ligera", texto(R.string.clima_tipo_lluvia_ligera)),
+    LLUVIA_MODERADA("Lluvia moderada", texto(R.string.clima_tipo_lluvia_moderada)),
+    LLUVIA_FUERTE("Lluvia torrencial", texto(R.string.clima_tipo_lluvia_fuerte)),
+    TORMENTA("Tormenta eléctrica", texto(R.string.clima_tipo_tormenta)),
+    NIEVE("Nieve / Aguanieve", texto(R.string.clima_tipo_nieve)),
+    VIENTO_FUERTE("Ráfagas de viento fuerte", texto(R.string.clima_tipo_viento))
 }
 
-enum class NivelRiesgo(val label: String) {
-    OPTIMO("Condiciones óptimas"),
-    PRECAUCION("Precaución en ruta"),
-    PELIGRO("Alerta meteorológica en ruta")
+enum class NivelRiesgo(val texto: UiText) {
+    OPTIMO(texto(R.string.clima_nivel_optimo)),
+    PRECAUCION(texto(R.string.clima_nivel_precaucion)),
+    PELIGRO(texto(R.string.clima_nivel_peligro))
 }
 
 data class ClimaInfo(
@@ -36,83 +45,83 @@ data class ClimaInfo(
     val windSpeedKmH: Double,
     val precipitationMm: Double,
     val tipo: TipoClima,
-    val descripcionCorta: String,
+    val descripcionCorta: UiText,
     val esSimulado: Boolean = false
 )
 
 data class RecomendacionConduccion(
     val nivel: NivelRiesgo,
-    val alertaCorta: String,
-    val mensajePersonalizado: String,
-    val consejos: List<String>
+    val alertaCorta: UiText,
+    val mensajePersonalizado: UiText,
+    val consejos: List<UiText>
 )
 
 data class RecomendacionVestimenta(
     val nivel: NivelRiesgo,
-    val alertaCorta: String,
-    val mensajePersonalizado: String,
-    val vestimentaSugerida: List<String>,
-    val consejosGrupo: List<String>
+    val alertaCorta: UiText,
+    val mensajePersonalizado: UiText,
+    val vestimentaSugerida: List<UiText>,
+    val consejosGrupo: List<UiText>
 )
 
-enum class PresetClima(val label: String, val clima: ClimaInfo) {
+enum class PresetClima(val texto: UiText, val clima: ClimaInfo) {
     REAL(
-        "Tiempo Real (GPS)",
+        texto(R.string.clima_preset_real),
         ClimaInfo(
             tempC = 18.0,
             weatherCode = 0,
             windSpeedKmH = 10.0,
             precipitationMm = 0.0,
             tipo = TipoClima.DESPEJADO,
-            descripcionCorta = "Tiempo real",
+            descripcionCorta = texto(R.string.clima_desc_tiempo_real),
             esSimulado = false
         )
     ),
     LLUVIA_TORRENCIAL(
-        "Simular: Lluvia Torrencial (11°C, 35 km/h)",
+        texto(R.string.clima_preset_lluvia),
         ClimaInfo(
             tempC = 11.2,
             weatherCode = 65,
             windSpeedKmH = 34.5,
             precipitationMm = 9.8,
             tipo = TipoClima.LLUVIA_FUERTE,
-            descripcionCorta = "Lluvia torrencial con calzada inundada",
+            descripcionCorta = texto(R.string.clima_desc_lluvia_inundada),
             esSimulado = true
         )
     ),
     NEBLINA_DENSA(
-        "Simular: Neblina Densa (7°C, visibilidad <50m)",
+        texto(R.string.clima_preset_neblina),
         ClimaInfo(
             tempC = 7.4,
             weatherCode = 45,
             windSpeedKmH = 5.2,
             precipitationMm = 0.0,
             tipo = TipoClima.NIEBLA,
-            descripcionCorta = "Neblina densa en tramos de ruta",
+            descripcionCorta = texto(R.string.clima_desc_neblina_densa),
             esSimulado = true
         )
     ),
     VIENTO_FUERTE(
-        "Simular: Viento Extremo (15°C, 65 km/h)",
+        texto(R.string.clima_preset_viento),
         ClimaInfo(
             tempC = 15.0,
             weatherCode = 3,
             windSpeedKmH = 65.0,
             precipitationMm = 0.0,
             tipo = TipoClima.VIENTO_FUERTE,
-            descripcionCorta = "Ráfagas fuertes laterales",
+            descripcionCorta = texto(R.string.clima_desc_rafagas_laterales),
             esSimulado = true
         )
     ),
     DESPEJADO(
-        "Simular: Despejado / Seco (22°C)",
+        texto(R.string.clima_preset_despejado),
         ClimaInfo(
             tempC = 22.5,
             weatherCode = 0,
             windSpeedKmH = 12.0,
             precipitationMm = 0.0,
             tipo = TipoClima.DESPEJADO,
-            descripcionCorta = "Cielo despejado y calzada seca",
+            descripcionCorta = texto(R.string.clima_desc_despejado_seco),
             esSimulado = true
         )
     )
@@ -199,20 +208,20 @@ object ClimaService {
         }
     }
 
-    private fun describeWmo(code: Int, windKmH: Double, precipMm: Double): String {
+    private fun describeWmo(code: Int, windKmH: Double, precipMm: Double): UiText {
         return when {
-            windKmH >= 50.0 -> "Ráfagas fuertes (${windKmH.roundToInt()} km/h)"
-            code == 0 -> "Cielo despejado"
-            code in 1..2 -> "Parcialmente cubierto"
-            code == 3 -> "Nublado"
-            code in listOf(45, 48) -> "Baja visibilidad por niebla"
-            code in listOf(51, 53, 55) -> "Llovizna intermitente"
-            code in listOf(61, 80) -> "Lluvia ligera"
-            code in listOf(63, 81) -> "Lluvia moderada"
-            code in listOf(65, 82) -> "Precipitaciones fuertes (${precipMm} mm)"
-            code in 71..77 -> "Nieve en calzada"
-            code >= 95 -> "Tormenta eléctrica"
-            else -> "Condiciones estándar"
+            windKmH >= 50.0 -> texto(R.string.clima_desc_rafagas_kmh, windKmH.roundToInt())
+            code == 0 -> texto(R.string.clima_desc_cielo_despejado)
+            code in 1..2 -> texto(R.string.clima_desc_parcial)
+            code == 3 -> texto(R.string.clima_desc_nublado)
+            code in listOf(45, 48) -> texto(R.string.clima_desc_niebla)
+            code in listOf(51, 53, 55) -> texto(R.string.clima_desc_llovizna)
+            code in listOf(61, 80) -> texto(R.string.clima_desc_lluvia_ligera)
+            code in listOf(63, 81) -> texto(R.string.clima_desc_lluvia_moderada)
+            code in listOf(65, 82) -> texto(R.string.clima_desc_precipitaciones, precipMm.toString())
+            code in 71..77 -> texto(R.string.clima_desc_nieve)
+            code >= 95 -> texto(R.string.clima_desc_tormenta)
+            else -> texto(R.string.clima_desc_estandar)
         }
     }
 
@@ -221,73 +230,57 @@ object ClimaService {
         nombreConductor: String,
         destino: String
     ): RecomendacionConduccion {
-        val chofer = if (nombreConductor.isBlank()) "conductor" else nombreConductor.trim()
+        val chofer: Any =
+            if (nombreConductor.isBlank()) texto(R.string.clima_conductor_generico) else nombreConductor.trim()
+
+        fun reco(nivel: NivelRiesgo, alerta: UiText, mensaje: Int, vararg consejos: Int) = RecomendacionConduccion(
+            nivel = nivel,
+            alertaCorta = alerta,
+            mensajePersonalizado = texto(mensaje, chofer, destino),
+            consejos = consejos.map { texto(it) }
+        )
 
         return when (clima.tipo) {
-            TipoClima.LLUVIA_FUERTE, TipoClima.TORMENTA -> RecomendacionConduccion(
-                nivel = NivelRiesgo.PELIGRO,
-                alertaCorta = "Calzada muy resbaladiza y riesgo de hidroplaneo",
-                mensajePersonalizado = "Atención $chofer: lluvia intensa hacia $destino. Reduzca la velocidad 25 km/h y mantenga 60 metros de distancia.",
-                consejos = listOf(
-                    "Distancia de frenado duplicada por asfalto mojado",
-                    "Encienda luces bajas de circulación de forma permanente",
-                    "Evite maniobras bruscas y charcos profundos"
-                )
+            TipoClima.LLUVIA_FUERTE, TipoClima.TORMENTA -> reco(
+                NivelRiesgo.PELIGRO,
+                texto(R.string.clima_c_lluvia_fuerte_alerta),
+                R.string.clima_c_lluvia_fuerte_msg,
+                R.string.clima_c_lluvia_fuerte_1, R.string.clima_c_lluvia_fuerte_2, R.string.clima_c_lluvia_fuerte_3
             )
 
-            TipoClima.LLUVIA_MODERADA, TipoClima.LLUVIA_LIGERA -> RecomendacionConduccion(
-                nivel = NivelRiesgo.PRECAUCION,
-                alertaCorta = "Pavimento húmedo con adherencia reducida",
-                mensajePersonalizado = "Precaución en ruta, $chofer: precipitaciones activas rumbo a $destino. Modere su marcha en curvas.",
-                consejos = listOf(
-                    "Aumente distancia de seguridad a 40 metros",
-                    "Encienda limpiaparabrisas a velocidad adecuada",
-                    "Anticipe las frenadas en cruces y semáforos"
-                )
+            TipoClima.LLUVIA_MODERADA, TipoClima.LLUVIA_LIGERA -> reco(
+                NivelRiesgo.PRECAUCION,
+                texto(R.string.clima_c_lluvia_alerta),
+                R.string.clima_c_lluvia_msg,
+                R.string.clima_c_lluvia_1, R.string.clima_c_lluvia_2, R.string.clima_c_lluvia_3
             )
 
-            TipoClima.NIEBLA -> RecomendacionConduccion(
-                nivel = NivelRiesgo.PELIGRO,
-                alertaCorta = "Visibilidad crítica en carretera",
-                mensajePersonalizado = "Alerta $chofer: bancos de niebla en trayecto hacia $destino. No use luces altas para evitar encandilamiento.",
-                consejos = listOf(
-                    "Encienda neblineros delanteros y traseros",
-                    "Prohibido adelantar en curvas y zonas de baja visibilidad",
-                    "Reduzca velocidad máxima a 50 km/h o según visibilidad"
-                )
+            TipoClima.NIEBLA -> reco(
+                NivelRiesgo.PELIGRO,
+                texto(R.string.clima_c_niebla_alerta),
+                R.string.clima_c_niebla_msg,
+                R.string.clima_c_niebla_1, R.string.clima_c_niebla_2, R.string.clima_c_niebla_3
             )
 
-            TipoClima.VIENTO_FUERTE -> RecomendacionConduccion(
-                nivel = NivelRiesgo.PRECAUCION,
-                alertaCorta = "Ráfagas laterales de viento (${clima.windSpeedKmH.roundToInt()} km/h)",
-                mensajePersonalizado = "Precaución $chofer: viento fuerte en tramos abiertos camino a $destino. Sujete el volante firme con ambas manos.",
-                consejos = listOf(
-                    "Cuidado especial al salir de túneles o cruzar puentes",
-                    "Mantenga mayor distancia lateral con camiones y buses",
-                    "Evite cargas sueltas en portaequipajes"
-                )
+            TipoClima.VIENTO_FUERTE -> reco(
+                NivelRiesgo.PRECAUCION,
+                texto(R.string.clima_c_viento_alerta, clima.windSpeedKmH.roundToInt()),
+                R.string.clima_c_viento_msg,
+                R.string.clima_c_viento_1, R.string.clima_c_viento_2, R.string.clima_c_viento_3
             )
 
-            TipoClima.NIEVE -> RecomendacionConduccion(
-                nivel = NivelRiesgo.PELIGRO,
-                alertaCorta = "Hielo o nieve en calzada",
-                mensajePersonalizado = "Peligro $chofer: calzada congelada hacia $destino. Porte cadenas y circule a marcha suave.",
-                consejos = listOf(
-                    "Velocidad máxima precautoria 30 km/h",
-                    "Acelere y frene progresivamente usando enganche de motor",
-                    "Verifique anticongelante y líquido limpiaparabrisas"
-                )
+            TipoClima.NIEVE -> reco(
+                NivelRiesgo.PELIGRO,
+                texto(R.string.clima_c_nieve_alerta),
+                R.string.clima_c_nieve_msg,
+                R.string.clima_c_nieve_1, R.string.clima_c_nieve_2, R.string.clima_c_nieve_3
             )
 
-            TipoClima.DESPEJADO, TipoClima.PARCIALMENTE_NUBLADO, TipoClima.NUBLADO -> RecomendacionConduccion(
-                nivel = NivelRiesgo.OPTIMO,
-                alertaCorta = "Condiciones de ruta óptimas y secas",
-                mensajePersonalizado = "Buen viaje, $chofer: calzada seca y visibilidad despejada hacia $destino.",
-                consejos = listOf(
-                    "Respete las velocidades reglamentarias de la vía",
-                    "Utilice parasol o gafas ante reflejos solares",
-                    "Mantenga hidratación adecuada en trayectos largos"
-                )
+            TipoClima.DESPEJADO, TipoClima.PARCIALMENTE_NUBLADO, TipoClima.NUBLADO -> reco(
+                NivelRiesgo.OPTIMO,
+                texto(R.string.clima_c_despejado_alerta),
+                R.string.clima_c_despejado_msg,
+                R.string.clima_c_despejado_1, R.string.clima_c_despejado_2, R.string.clima_c_despejado_3
             )
         }
     }
@@ -297,121 +290,83 @@ object ClimaService {
         nombreGuia: String,
         destino: String
     ): RecomendacionVestimenta {
-        val guia = nombreGuia.ifBlank { "Guía" }
+        val guia: Any = nombreGuia.ifBlank { null } ?: texto(R.string.clima_guia_generico)
+
+        fun reco(
+            nivel: NivelRiesgo,
+            alerta: UiText,
+            mensaje: UiText,
+            prendas: List<Int>,
+            consejos: List<Int>
+        ) = RecomendacionVestimenta(
+            nivel = nivel,
+            alertaCorta = alerta,
+            mensajePersonalizado = mensaje,
+            vestimentaSugerida = prendas.map { texto(it) },
+            consejosGrupo = consejos.map { texto(it) }
+        )
 
         return when (clima.tipo) {
-            TipoClima.LLUVIA_FUERTE, TipoClima.TORMENTA -> RecomendacionVestimenta(
-                nivel = NivelRiesgo.PELIGRO,
-                alertaCorta = "Lluvia intensa en destino",
-                mensajePersonalizado = "Atención $guia: precipitaciones fuertes en $destino. Recordar al grupo no separarse de las pasarelas techadas.",
-                vestimentaSugerida = listOf(
-                    "Chaqueta impermeable",
-                    "Calzado antideslizante",
-                    "Capa de lluvia / Poncho",
-                    "Cubre-mochila impermeable"
+            TipoClima.LLUVIA_FUERTE, TipoClima.TORMENTA -> reco(
+                NivelRiesgo.PELIGRO,
+                texto(R.string.clima_v_lluvia_fuerte_alerta),
+                texto(R.string.clima_v_lluvia_fuerte_msg, guia, destino),
+                listOf(
+                    R.string.clima_v_lluvia_fuerte_p1, R.string.clima_v_lluvia_fuerte_p2,
+                    R.string.clima_v_lluvia_fuerte_p3, R.string.clima_v_lluvia_fuerte_p4
                 ),
-                consejosGrupo = listOf(
-                    "Caminar con precaución sobre maderas o piedras húmedas",
-                    "Proteger celulares y cámaras en bolsas impermeables",
-                    "Mantener al grupo compacto en senderos señalizados"
-                )
+                listOf(R.string.clima_v_lluvia_fuerte_c1, R.string.clima_v_lluvia_fuerte_c2, R.string.clima_v_lluvia_fuerte_c3)
             )
 
-            TipoClima.LLUVIA_MODERADA, TipoClima.LLUVIA_LIGERA -> RecomendacionVestimenta(
-                nivel = NivelRiesgo.PRECAUCION,
-                alertaCorta = "Llovizna y senderos húmedos",
-                mensajePersonalizado = "Aviso $guia: llovizna activa rumbo a $destino. Sugerir abrigo impermeable antes de descender del vehículo.",
-                vestimentaSugerida = listOf(
-                    "Cortaviento impermeable",
-                    "Calzado cerrado de trekking",
-                    "Paraguas resistente o gorro impermeable"
-                ),
-                consejosGrupo = listOf(
-                    "Evitar orillas resbalosas en miradores",
-                    "Tener toalla pequeña a mano para secar lentes o cámaras",
-                    "Asegurar calzado bien atado antes de iniciar la caminata"
-                )
+            TipoClima.LLUVIA_MODERADA, TipoClima.LLUVIA_LIGERA -> reco(
+                NivelRiesgo.PRECAUCION,
+                texto(R.string.clima_v_lluvia_alerta),
+                texto(R.string.clima_v_lluvia_msg, guia, destino),
+                listOf(R.string.clima_v_lluvia_p1, R.string.clima_v_lluvia_p2, R.string.clima_v_lluvia_p3),
+                listOf(R.string.clima_v_lluvia_c1, R.string.clima_v_lluvia_c2, R.string.clima_v_lluvia_c3)
             )
 
-            TipoClima.NIEVE -> RecomendacionVestimenta(
-                nivel = NivelRiesgo.PELIGRO,
-                alertaCorta = "Baja sensación térmica y nieve",
-                mensajePersonalizado = "Alerta $guia: condiciones de frío extremo en $destino. Exigir vestimenta por capas a los pasajeros.",
-                vestimentaSugerida = listOf(
-                    "Primera capa térmica",
-                    "Parka o polar grueso",
-                    "Gorro térmico y guantes",
-                    "Calzado de caña alta térmico"
-                ),
-                consejosGrupo = listOf(
-                    "Monitorear a niños y adultos mayores ante el frío",
-                    "Caminar a paso firme sobre nieve para no resbalar",
-                    "Consumir bebidas tibias o agua durante el recorrido"
-                )
+            TipoClima.NIEVE -> reco(
+                NivelRiesgo.PELIGRO,
+                texto(R.string.clima_v_nieve_alerta),
+                texto(R.string.clima_v_nieve_msg, guia, destino),
+                listOf(R.string.clima_v_nieve_p1, R.string.clima_v_nieve_p2, R.string.clima_v_nieve_p3, R.string.clima_v_nieve_p4),
+                listOf(R.string.clima_v_nieve_c1, R.string.clima_v_nieve_c2, R.string.clima_v_nieve_c3)
             )
 
-            TipoClima.NIEBLA -> RecomendacionVestimenta(
-                nivel = NivelRiesgo.PRECAUCION,
-                alertaCorta = "Baja visibilidad en miradores",
-                mensajePersonalizado = "Aviso $guia: bancos de neblina en $destino. Miradores con visibilidad limitada.",
-                vestimentaSugerida = listOf(
-                    "Ropa de colores visibles",
-                    "Cortaviento liviano",
-                    "Calzado cómodo cerrado"
-                ),
-                consejosGrupo = listOf(
-                    "Indicar al grupo permanecer siempre a la vista del guía",
-                    "Cuidado en senderos con desniveles o raíces húmedas",
-                    "Respetar las barandas de seguridad en miradores"
-                )
+            TipoClima.NIEBLA -> reco(
+                NivelRiesgo.PRECAUCION,
+                texto(R.string.clima_v_niebla_alerta),
+                texto(R.string.clima_v_niebla_msg, guia, destino),
+                listOf(R.string.clima_v_niebla_p1, R.string.clima_v_niebla_p2, R.string.clima_v_niebla_p3),
+                listOf(R.string.clima_v_niebla_c1, R.string.clima_v_niebla_c2, R.string.clima_v_niebla_c3)
             )
 
-            TipoClima.VIENTO_FUERTE -> RecomendacionVestimenta(
-                nivel = NivelRiesgo.PRECAUCION,
-                alertaCorta = "Ráfagas fuertes (${clima.windSpeedKmH.roundToInt()} km/h)",
-                mensajePersonalizado = "Aviso $guia: ráfagas intensas en $destino. Cuidado con objetos sueltos en zonas abiertas o lagos.",
-                vestimentaSugerida = listOf(
-                    "Chaqueta cortaviento ajustada",
-                    "Sujetador para lentes o gorros",
-                    "Cuello polar o bandana"
-                ),
-                consejosGrupo = listOf(
-                    "Sujetar firmemente sombreros, jockeys y teléfonos al tomar fotos",
-                    "Cuidado especial en muelles, barcos o zonas expuestas",
-                    "Evitar acercarse al borde de acantilados o miradores altos"
-                )
+            TipoClima.VIENTO_FUERTE -> reco(
+                NivelRiesgo.PRECAUCION,
+                texto(R.string.clima_v_viento_alerta, clima.windSpeedKmH.roundToInt()),
+                texto(R.string.clima_v_viento_msg, guia, destino),
+                listOf(R.string.clima_v_viento_p1, R.string.clima_v_viento_p2, R.string.clima_v_viento_p3),
+                listOf(R.string.clima_v_viento_c1, R.string.clima_v_viento_c2, R.string.clima_v_viento_c3)
             )
 
-            TipoClima.DESPEJADO, TipoClima.PARCIALMENTE_NUBLADO -> RecomendacionVestimenta(
-                nivel = NivelRiesgo.OPTIMO,
-                alertaCorta = "Día despejado con alta radiación solar",
-                mensajePersonalizado = "Excelente jornada, $guia: cielo despejado en $destino. Recordar protección solar e hidratación.",
-                vestimentaSugerida = listOf(
-                    "Protector solar FPS 50+",
-                    "Lentes de sol con filtro UV",
-                    "Jockey o sombrero para el sol",
-                    "Ropa ligera y transpirable"
+            TipoClima.DESPEJADO, TipoClima.PARCIALMENTE_NUBLADO -> reco(
+                NivelRiesgo.OPTIMO,
+                texto(R.string.clima_v_despejado_alerta),
+                texto(R.string.clima_v_despejado_msg, guia, destino),
+                listOf(
+                    R.string.clima_v_despejado_p1, R.string.clima_v_despejado_p2,
+                    R.string.clima_v_despejado_p3, R.string.clima_v_despejado_p4
                 ),
-                consejosGrupo = listOf(
-                    "Reaplicar bloqueador solar a mitad del tour",
-                    "Llevar botella de agua individual para el trayecto",
-                    "Buscar pausas bajo sombra en senderos largos"
-                )
+                listOf(R.string.clima_v_despejado_c1, R.string.clima_v_despejado_c2, R.string.clima_v_despejado_c3)
             )
 
-            TipoClima.NUBLADO -> RecomendacionVestimenta(
-                nivel = NivelRiesgo.OPTIMO,
-                alertaCorta = "Nublado templado sin precipitaciones",
-                mensajePersonalizado = "Buen tiempo para caminata en $destino. Temperatura agradable para el grupo.",
-                vestimentaSugerida = listOf(
-                    "Polerón o chaqueta liviana",
-                    "Calzado cómodo para caminar",
-                    "Botella de agua"
-                ),
-                consejosGrupo = listOf(
-                    "Caminar a ritmo constante disfrutando el entorno",
-                    "Llevar un abrigo liviano en la mochila por si baja la temperatura"
-                )
+            TipoClima.NUBLADO -> reco(
+                NivelRiesgo.OPTIMO,
+                texto(R.string.clima_v_nublado_alerta),
+                texto(R.string.clima_v_nublado_msg, destino),
+                listOf(R.string.clima_v_nublado_p1, R.string.clima_v_nublado_p2, R.string.clima_v_nublado_p3),
+                listOf(R.string.clima_v_nublado_c1, R.string.clima_v_nublado_c2)
             )
         }
     }

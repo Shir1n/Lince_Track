@@ -1,9 +1,11 @@
 package com.example.lince_track.data.remote
 
 import com.example.lince_track.BuildConfig
+import com.example.lince_track.R
 import com.example.lince_track.data.remote.dto.ErrorRespuestaDto
 import com.example.lince_track.data.remote.dto.LinceJson
 import com.example.lince_track.util.LinceLogger
+import com.example.lince_track.util.UiText
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import retrofit2.HttpException
@@ -62,6 +64,7 @@ object LinceApiClient {
  * @property codigoHttp código HTTP (null si no hubo respuesta, por ejemplo sin internet).
  * @property codigoApi código del formato Error de la API (UNAUTHORIZED, RATE_LIMITED...).
  * @property reintentarEnSegundos valor del header Retry-After en respuestas 429.
+ * @property texto el mismo mensaje para la pantalla, en el idioma de la app (el `message` queda en español).
  */
 class LinceApiException(
     mensaje: String,
@@ -69,7 +72,8 @@ class LinceApiException(
     val codigoApi: String? = null,
     val requestId: String? = null,
     val reintentarEnSegundos: Long? = null,
-    causa: Throwable? = null
+    causa: Throwable? = null,
+    val texto: UiText = UiText.DynamicString(mensaje)
 ) : Exception(mensaje, causa)
 
 /** Convierte cualquier error de red o de la API en un LinceApiException con mensaje legible. */
@@ -79,20 +83,36 @@ fun Throwable.aLinceApiException(): LinceApiException = when (this) {
         val cuerpo = runCatching { response()?.errorBody()?.string() }.getOrNull()
         val error = cuerpo?.let { runCatching { LinceJson.decodeFromString<ErrorRespuestaDto>(it) }.getOrNull() }?.error
         val reintento = response()?.headers()?.get("Retry-After")?.toLongOrNull()
-        val mensaje = when (code()) {
+        val detalle = error?.message ?: "parámetros incorrectos"
+        val (mensaje, texto) = when (code()) {
             401 -> if (error?.code == "KEY_EXPIRED") {
-                "La clave de la API expiró. Pide una nueva al docente."
+                "La clave de la API expiró. Pide una nueva al docente." to
+                    UiText.StringResource(R.string.api_clave_expirada)
             } else {
-                "La clave de la API no es válida. Revisa LINCE_API_KEY en local.properties."
+                "La clave de la API no es válida. Revisa LINCE_API_KEY en local.properties." to
+                    UiText.StringResource(R.string.api_clave_invalida)
             }
-            400 -> "Solicitud inválida a la API: ${error?.message ?: "parámetros incorrectos"}"
-            404 -> "No se encontró el recurso en la API."
-            429 -> "Demasiadas solicitudes a la API. Intenta de nuevo en ${reintento ?: 60} segundos."
-            503 -> "La base de datos de la API no está disponible en este momento."
-            else -> "Error ${code()} de la API: ${error?.message ?: message()}"
+            400 -> "Solicitud inválida a la API: $detalle" to UiText.StringResource(R.string.api_solicitud_invalida, detalle)
+            404 -> "No se encontró el recurso en la API." to UiText.StringResource(R.string.api_no_encontrado)
+            429 -> "Demasiadas solicitudes a la API. Intenta de nuevo en ${reintento ?: 60} segundos." to
+                UiText.StringResource(R.string.api_demasiadas_solicitudes, (reintento ?: 60L).toInt())
+            503 -> "La base de datos de la API no está disponible en este momento." to
+                UiText.StringResource(R.string.api_bd_no_disponible)
+            else -> {
+                val causa = error?.message ?: message()
+                "Error ${code()} de la API: $causa" to UiText.StringResource(R.string.api_error_codigo, code(), causa)
+            }
         }
-        LinceApiException(mensaje, code(), error?.code, error?.requestId, reintento, this)
+        LinceApiException(mensaje, code(), error?.code, error?.requestId, reintento, this, texto)
     }
-    is IOException -> LinceApiException("Sin conexión con la API de Southbound. Revisa tu internet.", causa = this)
-    else -> LinceApiException(message ?: "Error inesperado al consultar la API.", causa = this)
+    is IOException -> LinceApiException(
+        "Sin conexión con la API de Southbound. Revisa tu internet.",
+        causa = this,
+        texto = UiText.StringResource(R.string.api_sin_conexion)
+    )
+    else -> LinceApiException(
+        message ?: "Error inesperado al consultar la API.",
+        causa = this,
+        texto = message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.api_error_inesperado)
+    )
 }

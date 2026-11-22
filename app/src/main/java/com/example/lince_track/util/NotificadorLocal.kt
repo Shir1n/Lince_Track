@@ -73,8 +73,12 @@ object NotificadorLocal {
     }
 
     private fun crearCanal(context: Context) {
-        val canal = NotificationChannel(CANAL, "Servicios", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "Asignaciones, confirmaciones, rechazos e incidencias de servicios"
+        val canal = NotificationChannel(
+            CANAL,
+            context.getString(R.string.canal_servicios),
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = context.getString(R.string.canal_servicios_desc)
         }
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(canal)
     }
@@ -84,21 +88,24 @@ object NotificadorLocal {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
         ) {
-            LinceLogger.w("AVISOS", "Sin permiso de notificaciones: ${aviso.titulo}")
+            LinceLogger.w("AVISOS", "Sin permiso de notificaciones: ${aviso.titulo.asString(context)}")
             return
         }
+        // Se traducen aquí, al idioma elegido en la app.
+        val titulo = aviso.titulo.asString(context)
+        val texto = aviso.texto.asString(context)
         val abrirApp = context.packageManager.getLaunchIntentForPackage(context.packageName)?.let {
             PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         }
         val notificacion = NotificationCompat.Builder(context, CANAL)
             .setSmallIcon(R.drawable.ic_notificacion_small_icon)
-            .setContentTitle(aviso.titulo)
-            .setContentText(aviso.texto)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(aviso.texto))
+            .setContentTitle(titulo)
+            .setContentText(texto)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(texto))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(abrirApp)
             .setAutoCancel(true)
             .build()
-        NotificationManagerCompat.from(context).notify("${aviso.servicioId}|${aviso.titulo}".hashCode(), notificacion)
+        NotificationManagerCompat.from(context).notify("${aviso.servicioId}|$titulo".hashCode(), notificacion)
     }
 }

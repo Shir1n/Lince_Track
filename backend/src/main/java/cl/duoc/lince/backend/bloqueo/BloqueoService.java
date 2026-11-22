@@ -40,6 +40,10 @@ public class BloqueoService {
 
     @Transactional
     public Bloqueo crear(UsuarioActual usuario, BloqueoSolicitud s) {
+        // El motivo es obligatorio (la app tampoco deja bloquear sin él): validación doble.
+        if (s.motivo() == null || s.motivo().isBlank()) {
+            throw new ErrorNegocio(HttpStatus.BAD_REQUEST, "MOTIVO_OBLIGATORIO", "Indica el motivo del bloqueo.");
+        }
         int dias = parametros.actuales().getDiasAnticipacionBloqueo();
         LocalDate hoy = LocalDate.now(reloj.withZone(propiedades.reglas().zona()));
         if (!ReglasBloqueo.tieneAnticipacion(s.fecha(), hoy, dias)) {
@@ -61,8 +65,7 @@ public class BloqueoService {
         if (ReglasBloqueo.tieneServicioAsignado(propios, cedidos, recibidos)) {
             throw ErrorNegocio.conflicto("DIA_CON_SERVICIO", "Ese día tienes un servicio asignado.");
         }
-        String motivo = s.motivo() == null || s.motivo().isBlank() ? null : s.motivo().trim();
-        return bloqueos.save(new Bloqueo(usuario.uid(), s.fecha(), motivo, Instant.now(reloj)));
+        return bloqueos.save(new Bloqueo(usuario.uid(), s.fecha(), s.motivo().trim(), Instant.now(reloj)));
     }
 
     public List<Bloqueo> listar(UsuarioActual usuario) {

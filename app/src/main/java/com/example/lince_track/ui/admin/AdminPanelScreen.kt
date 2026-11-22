@@ -83,6 +83,7 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import kotlinx.coroutines.launch
 import com.example.lince_track.ui.theme.BarraSuperior
+import com.example.lince_track.util.textoUi
 
 /**
  * Panel del administrador: estado de los servicios del día elegido y respuestas de conductores
@@ -95,7 +96,8 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
     val respuestas by ServicioRepository.respuestas.collectAsState()
     val checkins by ServicioRepository.checkins.collectAsState()
     val incidencias by ServicioRepository.incidencias.collectAsState()
-    val error by ServicioRepository.error.collectAsState()
+    // En el idioma de la app (el error del repositorio viene como UiText).
+    val error = ServicioRepository.errorTexto.collectAsState().value?.asString()
     var filtro by rememberSaveable { mutableStateOf(FiltroPanel.TODOS) }
     var porReasignar by remember { mutableStateOf<Servicio?>(null) }
     var incidenciaDelReemplazo by remember { mutableStateOf<IncidenciaServicio?>(null) }
@@ -124,8 +126,11 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
     fun mostrarResultado(resultado: Result<String?>, exito: String? = null) {
         scope.launch {
             resultado
-                .onSuccess { aviso -> (aviso ?: exito)?.let { snackbarHostState.showSnackbar(it) } }
-                .onFailure { e -> snackbarHostState.showSnackbar(e.message ?: context.getString(R.string.error_operacion)) }
+                .onSuccess { aviso ->
+                    (aviso?.let { ServicioRepository.textoAviso(it).asString(context) } ?: exito)
+                        ?.let { snackbarHostState.showSnackbar(it) }
+                }
+                .onFailure { e -> snackbarHostState.showSnackbar(e.textoUi(R.string.error_operacion).asString(context)) }
         }
     }
     // Un rechazo de otro día también hay que resolverlo: no puede quedar escondido hasta esa fecha.
@@ -493,11 +498,12 @@ private fun ReasignarDialog(
 ) {
     var candidatos by remember { mutableStateOf<List<PersonaDisponible>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
 
     LaunchedEffect(servicio.id) {
         ServicioRepository.candidatosPara(servicio)
             .onSuccess { candidatos = it }
-            .onFailure { error = it.message }
+            .onFailure { error = it.textoUi(R.string.error_operacion).asString(context) }
     }
 
     AlertDialog(

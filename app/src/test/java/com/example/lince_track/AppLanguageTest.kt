@@ -35,6 +35,22 @@ class AppLanguageTest {
     }
 
     @Test
+    fun `fromLanguageTags traduce el idioma guardado por Android`() {
+        assertEquals(AppLanguage.SYSTEM, AppLanguage.fromLanguageTags(""))
+        assertEquals(AppLanguage.ES, AppLanguage.fromLanguageTags("es-CL"))
+        assertEquals(AppLanguage.ES, AppLanguage.fromLanguageTags("es"))
+        assertEquals(AppLanguage.EN, AppLanguage.fromLanguageTags("en-US,es-CL"))
+        assertEquals(AppLanguage.SYSTEM, AppLanguage.fromLanguageTags("pt-BR"))
+    }
+
+    @Test
+    fun `cada idioma tiene la etiqueta que se guarda en Android`() {
+        assertEquals(null, AppLanguage.SYSTEM.languageTag)
+        assertEquals("es-CL", AppLanguage.ES.languageTag)
+        assertEquals("en", AppLanguage.EN.languageTag)
+    }
+
+    @Test
     fun `UiText DynamicString conserva el texto`() {
         val uiText = UiText.DynamicString("Hola")
         assertEquals("Hola", uiText.value)

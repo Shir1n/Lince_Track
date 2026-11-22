@@ -113,6 +113,7 @@ fun Throwable.aBloqueoApiException(): BloqueoApiException = when (this) {
             codigo == "SIN_ANTICIPACION" -> backendMessage.ifBlank { "Ese día no cumple la anticipación mínima para bloquear." }
             codigo == "DIA_CON_SERVICIO" -> backendMessage.ifBlank { "Ese día tienes un servicio asignado." }
             codigo == "YA_BLOQUEADO" -> backendMessage.ifBlank { "Ese día ya está bloqueado." }
+            codigo == "MOTIVO_OBLIGATORIO" -> backendMessage.ifBlank { "Indica el motivo del bloqueo." }
             codigo == "FORBIDDEN" || code() == 403 -> backendMessage.ifBlank { "Tu cuenta no tiene permisos para bloquear días." }
             code() == 404 -> "No se encontró el bloqueo solicitado."
             backendMessage.isNotBlank() -> backendMessage

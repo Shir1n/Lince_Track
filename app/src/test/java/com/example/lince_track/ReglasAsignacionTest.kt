@@ -1,7 +1,6 @@
 package com.example.lince_track
 
 import com.example.lince_track.data.AsignacionServicio
-import com.example.lince_track.data.AvisoLocal
 import com.example.lince_track.data.CambiosServicios
 import com.example.lince_track.data.EstadoServicio
 import com.example.lince_track.data.PerfilUsuario
@@ -136,7 +135,7 @@ class ReglasAsignacionTest {
         assertEquals(mapOf("8941" to setOf("uid-carlos")), rechazos)
     }
 
-    private fun aviso(id: String, titulo: String, texto: String) = AvisoLocal(id, titulo, texto)
+    private fun aviso(id: String, titulo: String, texto: String) = Triple(id, titulo, texto)
 
     @Test
     fun `avisa al administrador de un rechazo`() {
@@ -145,14 +144,14 @@ class ReglasAsignacionTest {
 
         val avisos = CambiosServicios.detectar(antes, ahora, Rol.ADMINISTRADOR, hoy)
 
-        assertEquals("Servicio rechazado", avisos.single().titulo)
+        assertEquals("Servicio rechazado", TextosEs.de(avisos.single().titulo))
     }
 
     @Test
     fun `avisa al reemplazo de su nuevo servicio`() {
         val avisos = CambiosServicios.detectar(emptyList(), listOf(oficina.conId("8941")), Rol.CONDUCTOR, hoy)
 
-        assertEquals("Nuevo servicio asignado", avisos.single().titulo)
+        assertEquals("Nuevo servicio asignado", TextosEs.de(avisos.single().titulo))
     }
 
     @Test
@@ -164,7 +163,7 @@ class ReglasAsignacionTest {
 
         assertEquals(
             listOf(aviso("8942", "Conductor confirmado", "Miguel Díaz confirmó Guiado Saltos del Petrohué")),
-            avisos
+            avisos.map { TextosEs.de(it) }
         )
     }
 
@@ -172,7 +171,7 @@ class ReglasAsignacionTest {
     fun `avisa cuando un servicio se quita de la lista`() {
         val avisos = CambiosServicios.detectar(listOf(oficina.conId("8941")), emptyList(), Rol.CONDUCTOR, hoy)
 
-        assertEquals("Servicio reasignado", avisos.single().titulo)
+        assertEquals("Servicio reasignado", TextosEs.de(avisos.single().titulo))
     }
 
     @Test

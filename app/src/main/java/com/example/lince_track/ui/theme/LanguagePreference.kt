@@ -1,20 +1,19 @@
 package com.example.lince_track.ui.theme
 
-import android.content.Context
-import android.content.ContextWrapper
-import android.content.res.AssetManager
-import android.content.res.Configuration
-import android.content.res.Resources
-import android.os.LocaleList
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import java.util.Locale
 
+/**
+ * Idioma de la app, independiente del idioma del teléfono.
+ *
+ * Usa la API de idioma por app de Android (AppCompatDelegate.setApplicationLocales): cambia toda la app (pantallas,
+ * mensajes y notificaciones), Android guarda la elección y, desde Android 13, también se puede cambiar en
+ * Ajustes > Apps > Lince Track > Idioma. Al cambiarlo, la pantalla se recarga una vez.
+ */
 enum class AppLanguage(val languageTag: String?) {
     SYSTEM(null),
-    ES("es"),
+    ES("es-CL"),
     EN("en");
 
     fun resolveLocale(systemLocale: Locale = Locale.getDefault()): Locale {
@@ -29,29 +28,26 @@ enum class AppLanguage(val languageTag: String?) {
         fun fromStored(value: String?): AppLanguage {
             return entries.firstOrNull { it.name == value } ?: SYSTEM
         }
+
+        /** Traduce el idioma guardado por Android ("", "es-CL", "en-US"…) a una opción del selector. */
+        fun fromLanguageTags(tags: String): AppLanguage {
+            val idioma = tags.split(',').firstOrNull()?.trim()?.substringBefore('-')?.lowercase().orEmpty()
+            return when (idioma) {
+                "es" -> ES
+                "en" -> EN
+                else -> SYSTEM
+            }
+        }
     }
 }
 
-private val APP_LANGUAGE_KEY = stringPreferencesKey("app_language")
+/** Idioma elegido en la app; SYSTEM si sigue al teléfono. */
+fun idiomaActual(): AppLanguage =
+    AppLanguage.fromLanguageTags(AppCompatDelegate.getApplicationLocales().toLanguageTags())
 
-val Context.appLanguageFlow: Flow<AppLanguage>
-    get() = settingsDataStore.data.map { preferences ->
-        AppLanguage.fromStored(preferences[APP_LANGUAGE_KEY])
-    }
-
-suspend fun Context.setAppLanguage(language: AppLanguage) {
-    settingsDataStore.edit { preferences ->
-        preferences[APP_LANGUAGE_KEY] = language.name
-    }
-}
-
-fun Context.localizedContext(language: AppLanguage, systemLocale: Locale): Context {
-    val targetLocale = language.resolveLocale(systemLocale)
-    val config = Configuration(resources.configuration)
-    config.setLocales(LocaleList(targetLocale))
-    val configContext = createConfigurationContext(config)
-    return object : ContextWrapper(this) {
-        override fun getResources(): Resources = configContext.resources
-        override fun getAssets(): AssetManager = configContext.assets
-    }
+/** Cambia el idioma solo de esta app. SYSTEM vuelve a seguir el idioma del teléfono. */
+fun cambiarIdioma(language: AppLanguage) {
+    val locales = language.languageTag?.let { LocaleListCompat.forLanguageTags(it) }
+        ?: LocaleListCompat.getEmptyLocaleList()
+    AppCompatDelegate.setApplicationLocales(locales)
 }

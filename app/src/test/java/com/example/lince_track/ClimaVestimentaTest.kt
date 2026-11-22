@@ -20,7 +20,7 @@ class ClimaVestimentaTest {
         windSpeedKmH = windKmH,
         precipitationMm = 0.0,
         tipo = tipo,
-        descripcionCorta = tipo.label,
+        descripcionCorta = tipo.texto,
         esSimulado = false
     )
 
@@ -33,9 +33,9 @@ class ClimaVestimentaTest {
         )
 
         assertEquals(NivelRiesgo.PELIGRO, recomendacion.nivel)
-        assertTrue(recomendacion.alertaCorta.contains("Lluvia intensa", ignoreCase = true))
-        assertTrue(recomendacion.vestimentaSugerida.any { it.contains("impermeable", ignoreCase = true) })
-        assertTrue(recomendacion.vestimentaSugerida.any { it.contains("antideslizante", ignoreCase = true) })
+        assertTrue(TextosEs.de(recomendacion.alertaCorta).contains("Lluvia intensa", ignoreCase = true))
+        assertTrue(recomendacion.vestimentaSugerida.any { TextosEs.de(it).contains("impermeable", ignoreCase = true) })
+        assertTrue(recomendacion.vestimentaSugerida.any { TextosEs.de(it).contains("antideslizante", ignoreCase = true) })
     }
 
     @Test
@@ -47,8 +47,8 @@ class ClimaVestimentaTest {
         )
 
         assertEquals(NivelRiesgo.OPTIMO, recomendacion.nivel)
-        assertTrue(recomendacion.vestimentaSugerida.any { it.contains("Protector solar", ignoreCase = true) })
-        assertTrue(recomendacion.vestimentaSugerida.any { it.contains("UV", ignoreCase = true) })
+        assertTrue(recomendacion.vestimentaSugerida.any { TextosEs.de(it).contains("Protector solar", ignoreCase = true) })
+        assertTrue(recomendacion.vestimentaSugerida.any { TextosEs.de(it).contains("UV", ignoreCase = true) })
     }
 
     @Test
@@ -60,8 +60,8 @@ class ClimaVestimentaTest {
         )
 
         assertEquals(NivelRiesgo.PELIGRO, recomendacion.nivel)
-        assertTrue(recomendacion.vestimentaSugerida.any { it.contains("térmica", ignoreCase = true) })
-        assertTrue(recomendacion.vestimentaSugerida.any { it.contains("Guantes", ignoreCase = true) })
+        assertTrue(recomendacion.vestimentaSugerida.any { TextosEs.de(it).contains("térmica", ignoreCase = true) })
+        assertTrue(recomendacion.vestimentaSugerida.any { TextosEs.de(it).contains("Guantes", ignoreCase = true) })
     }
 
     @Test
@@ -73,6 +73,6 @@ class ClimaVestimentaTest {
         )
 
         assertEquals(NivelRiesgo.PRECAUCION, recomendacion.nivel)
-        assertTrue(recomendacion.vestimentaSugerida.any { it.contains("cortaviento", ignoreCase = true) })
+        assertTrue(recomendacion.vestimentaSugerida.any { TextosEs.de(it).contains("cortaviento", ignoreCase = true) })
     }
 }
