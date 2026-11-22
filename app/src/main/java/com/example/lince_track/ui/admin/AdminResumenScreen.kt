@@ -22,7 +22,9 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,8 +38,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.lince_track.R
 import com.example.lince_track.data.ReglasCheckin
+import com.example.lince_track.data.ResumenSouthboundRepository
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.remote.LinceApiClient
 import com.example.lince_track.ui.components.AvisoServiciosCard
@@ -56,6 +60,11 @@ fun AdminResumenScreen() {
     // En el idioma de la app (el error del repositorio viene como UiText).
     val error = ServicioRepository.errorTexto.collectAsState().value?.asString()
     var periodo by rememberSaveable { mutableStateOf(PeriodoResumen.SIETE_DIAS) }
+
+    // Datos de Southbound (/api/v1/resumen) para el mismo periodo.
+    val southbound: ResumenSouthboundViewModel = viewModel()
+    val estadoSouthbound by southbound.estado.collectAsState()
+    LaunchedEffect(periodo) { southbound.cargar(periodo) }
 
     val hoy = LocalDate.now()
     val conDemostracion = !LinceApiClient.estaConfigurada && periodo == PeriodoResumen.SIETE_DIAS
@@ -116,6 +125,11 @@ fun AdminResumenScreen() {
 
             if (conDemostracion) AvisoDemostracion()
 
+            // Sin clave de la API no hay /resumen: la tarjeta no se muestra.
+            if (southbound.disponible) {
+                TarjetaSouthbound(estadoSouthbound, onReintentar = southbound::reintentar)
+            }
+
             Puntualidad(resumen)
             Terminados(resumen)
             Rechazos(resumen)
@@ -147,6 +161,45 @@ private fun AvisoDemostracion() {
             )
         }
     }
+}
+
+/** Totales de Southbound para el periodo: servicios, pasajeros y cuántos hay en cada statusPL. */
+@Composable
+private fun TarjetaSouthbound(estado: EstadoResumenSouthbound, onReintentar: () -> Unit) {
+    TarjetaResumen(stringResource(R.string.southbound_titulo)) {
+        val resumen = estado.resumen
+        when {
+            estado.cargando -> Detalle(stringResource(R.string.southbound_cargando))
+            estado.error != null -> {
+                Detalle(estado.error.asString())
+                TextButton(onClick = onReintentar) { Text(stringResource(R.string.ruta_reintentar)) }
+            }
+            resumen != null -> {
+                CifraPrincipal(stringResource(R.string.southbound_totales, resumen.totalServicios, resumen.totalPax))
+                Detalle(stringResource(R.string.southbound_detalle, ResumenSouthboundRepository.OFICINA))
+                ListaCantidades(
+                    resumen.porStatusPL.map { conteo ->
+                        CantidadResumen(
+                            stringResource(R.string.southbound_fila, etiquetaStatusPL(conteo.clave), conteo.pax),
+                            conteo.servicios
+                        )
+                    },
+                    MaterialTheme.colorScheme.secondary
+                )
+            }
+        }
+    }
+}
+
+/** Nombre del statusPL en el idioma de la app; un código nuevo de la API se muestra tal cual. */
+@Composable
+private fun etiquetaStatusPL(clave: String): String = when (clave) {
+    "CF" -> stringResource(R.string.southbound_cf)
+    "RQ" -> stringResource(R.string.southbound_rq)
+    "DL" -> stringResource(R.string.southbound_dl)
+    "CX" -> stringResource(R.string.southbound_cx)
+    "SIN_ASIGNAR" -> stringResource(R.string.southbound_sin_asignar)
+    else -> clave
 }
 
 @Composable

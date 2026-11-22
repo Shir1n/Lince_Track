@@ -170,6 +170,31 @@ data class TransportistaDto(
     val totalServicios: Int? = null
 )
 
+// ---------- Resumen ----------
+
+/**
+ * Totales de `/api/v1/resumen` para el periodo pedido. Las claves (CF, RQ, SIN_ASIGNAR…) quedan como String para
+ * tolerar valores nuevos de la API.
+ */
+@Serializable
+data class ResumenDto(
+    val fechaDesde: String? = null,
+    val fechaHasta: String? = null,
+    val totalServicios: Int = 0,
+    val totalPax: Int = 0,
+    val porEstadoServicio: List<ConteoPorClaveDto> = emptyList(),
+    /** CF, RQ, DL, CX y SIN_ASIGNAR (servicios sin staff solicitado). */
+    val porStatusPL: List<ConteoPorClaveDto> = emptyList(),
+    val porOficina: List<ConteoPorClaveDto> = emptyList()
+)
+
+@Serializable
+data class ConteoPorClaveDto(
+    val clave: String = "",
+    val servicios: Int = 0,
+    val pax: Int = 0
+)
+
 // ---------- Sistema y errores ----------
 
 @Serializable
