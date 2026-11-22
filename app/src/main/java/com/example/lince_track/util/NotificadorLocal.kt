@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 import com.example.lince_track.R
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.AvisoLocal
+import com.example.lince_track.ui.theme.enIdiomaDeLaApp
 import com.example.lince_track.data.CambiosServicios
 import com.example.lince_track.data.IncidenciaServicio
 import com.example.lince_track.data.PerfilUsuario
@@ -45,7 +46,7 @@ object NotificadorLocal {
         if (iniciado) return
         iniciado = true
         val app = context.applicationContext
-        crearCanal(app)
+        crearCanal(app.enIdiomaDeLaApp())
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             var anterior: List<Servicio>? = null
             var incidenciasAnteriores: List<IncidenciaServicio> = emptyList()
@@ -91,9 +92,12 @@ object NotificadorLocal {
             LinceLogger.w("AVISOS", "Sin permiso de notificaciones: ${aviso.titulo.asString(context)}")
             return
         }
-        // Se traducen aquí, al idioma elegido en la app.
-        val titulo = aviso.titulo.asString(context)
-        val texto = aviso.texto.asString(context)
+        // Se traducen aquí, al idioma elegido en la app (no al del contexto de la aplicación, que puede ser el
+        // del teléfono o el de cuando se abrió la app). El canal se actualiza para que su nombre siga ese idioma.
+        val traducido = context.enIdiomaDeLaApp()
+        crearCanal(traducido)
+        val titulo = aviso.titulo.asString(traducido)
+        val texto = aviso.texto.asString(traducido)
         val abrirApp = context.packageManager.getLaunchIntentForPackage(context.packageName)?.let {
             PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         }

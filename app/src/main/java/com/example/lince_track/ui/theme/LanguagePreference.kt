@@ -1,5 +1,8 @@
 package com.example.lince_track.ui.theme
 
+import android.content.Context
+import android.content.res.Configuration
+import android.os.LocaleList
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import java.util.Locale
@@ -50,4 +53,16 @@ fun cambiarIdioma(language: AppLanguage) {
     val locales = language.languageTag?.let { LocaleListCompat.forLanguageTags(it) }
         ?: LocaleListCompat.getEmptyLocaleList()
     AppCompatDelegate.setApplicationLocales(locales)
+}
+
+/**
+ * Este contexto con el idioma elegido en la app. Sirve para lo que no es una pantalla (notificaciones): el contexto
+ * de la aplicación puede seguir con el idioma con que se abrió la app y no se entera del cambio.
+ */
+fun Context.enIdiomaDeLaApp(): Context {
+    val locales = AppCompatDelegate.getApplicationLocales()
+    if (locales.isEmpty) return this
+    val config = Configuration(resources.configuration)
+    config.setLocales(LocaleList.forLanguageTags(locales.toLanguageTags()))
+    return createConfigurationContext(config)
 }

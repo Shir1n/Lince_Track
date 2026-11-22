@@ -67,6 +67,8 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import com.example.lince_track.ui.theme.BarraSuperior
 import com.example.lince_track.util.textoUi
+import com.example.lince_track.ui.components.tituloVisible
+import com.example.lince_track.ui.components.nombreVisible
 
 @Composable
 fun ServiciosScreen(
@@ -332,7 +334,7 @@ private fun ServicioCard(
                 verticalAlignment = Alignment.Top
             ) {
                 Text(
-                    text = servicio.titulo,
+                    text = tituloVisible(servicio.titulo),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -353,7 +355,7 @@ private fun ServicioCard(
                 MetaChip(stringResource(R.string.chip_pasajeros, servicio.pasajeros))
                 // Un traslado o una excursión sin guía no necesita la etiqueta.
                 if (servicio.guia != ServicioMapper.SIN_GUIA) {
-                    MetaChip(stringResource(R.string.chip_guia, servicio.guia))
+                    MetaChip(stringResource(R.string.chip_guia, nombreVisible(servicio.guia)))
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))

@@ -84,6 +84,7 @@ import java.time.ZoneOffset
 import kotlinx.coroutines.launch
 import com.example.lince_track.ui.theme.BarraSuperior
 import com.example.lince_track.util.textoUi
+import com.example.lince_track.ui.components.tituloVisible
 
 /**
  * Panel del administrador: estado de los servicios del día elegido y respuestas de conductores
@@ -512,7 +513,7 @@ private fun ReasignarDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = servicio.titulo,
+                    text = tituloVisible(servicio.titulo),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -590,7 +591,7 @@ private fun FilaCard(
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = servicio.titulo,
+                    text = tituloVisible(servicio.titulo),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,

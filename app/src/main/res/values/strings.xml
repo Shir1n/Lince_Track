@@ -703,4 +703,6 @@
     <string name="ruta_marcador_tu_vehiculo">Tu vehículo</string>
     <string name="ruta_panel_ocultar">Ocultar detalles del check-in</string>
     <string name="ruta_panel_mostrar">Mostrar detalles del check-in</string>
+    <string name="persona_sin_guia">Sin guía</string>
+    <string name="persona_sin_transportista">Sin transportista</string>
 </resources>
