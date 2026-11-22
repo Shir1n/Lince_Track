@@ -59,6 +59,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -83,6 +85,12 @@ import com.example.lince_track.BuildConfig
 import com.example.lince_track.R
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.CheckinServicio
+import com.example.lince_track.data.EvaluacionCheckin
+import com.example.lince_track.data.Geocerca
+import com.example.lince_track.data.HitoRepository
+import com.example.lince_track.data.ParametrosCheckin
+import com.example.lince_track.data.ReglasGeocerca
+import com.example.lince_track.data.ResultadoCheckin
 import com.example.lince_track.data.ReglasCheckin
 import com.example.lince_track.data.ReglasIncidencia
 import com.example.lince_track.ui.components.ReportarIncidenciaDialog
@@ -99,6 +107,7 @@ import com.example.lince_track.data.formatHora
 import com.example.lince_track.data.clima.TipoClima
 import com.example.lince_track.data.esGuiado
 import com.example.lince_track.data.responsable
+import com.example.lince_track.data.remote.mensajeBloqueo
 import com.example.lince_track.data.servicios.ServicioMapper
 import com.example.lince_track.util.LinceLogger
 import com.google.android.gms.location.LocationCallback
@@ -111,14 +120,18 @@ import android.os.Looper
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.runtime.mutableFloatStateOf
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
+import java.time.LocalDateTime
 import java.util.Locale
+import java.util.UUID
 import kotlin.math.roundToInt
 import com.example.lince_track.ui.theme.BarraSuperior
 
@@ -220,6 +233,7 @@ private fun RutaMapaContenido(
     }
     var userGeoPoint by remember { mutableStateOf(SimuladorCercaPickup) }
     var isUsingRealGps by remember { mutableStateOf(false) }
+    var precisionGps by remember { mutableStateOf<Float?>(null) }
     var currentSpeedKmh by remember { mutableFloatStateOf(0f) }
 
     val fusedLocationClient = remember {
@@ -245,6 +259,7 @@ private fun RutaMapaContenido(
                 currentSpeedKmh = speed
                 userGeoPoint = GeoPoint(loc.latitude, loc.longitude)
                 isUsingRealGps = true
+                precisionGps = if (loc.hasAccuracy()) loc.accuracy else null
                 // Sin coordenadas en el registro: la consola de logs se puede compartir y no debe guardar el
                 // recorrido de la persona (aviso de privacidad).
                 if (speed > 5f) {
@@ -281,9 +296,10 @@ private fun RutaMapaContenido(
             fetchCurrentGps(
                 context = context,
                 fusedClient = fusedLocationClient,
-                onLocation = { point, real ->
+                onLocation = { point, real, precision ->
                     userGeoPoint = point
                     isUsingRealGps = real
+                    precisionGps = precision
                     recentrarMapa++
                 }
             )
@@ -302,9 +318,10 @@ private fun RutaMapaContenido(
             fetchCurrentGps(
                 context = context,
                 fusedClient = fusedLocationClient,
-                onLocation = { point, real ->
+                onLocation = { point, real, precision ->
                     userGeoPoint = point
                     isUsingRealGps = real
+                    precisionGps = precision
                     recentrarMapa++
                 }
             )
@@ -314,7 +331,55 @@ private fun RutaMapaContenido(
         }
     }
 
-    val destinationPoint = remember(servicio) {
+    // Geocerca del pickup y reglas de coordinación, desde el backend propio.
+    val hitos = remember { HitoRepository() }
+    var geocercas by remember { mutableStateOf<List<Geocerca>?>(null) }
+    var parametrosCheckin by remember { mutableStateOf<ParametrosCheckin?>(null) }
+    var errorBackend by remember { mutableStateOf<String?>(null) }
+    var cargarBackend by remember { mutableIntStateOf(0) }
+    LaunchedEffect(cargarBackend) {
+        errorBackend = null
+        val porDefecto = context.getString(R.string.error_operacion)
+        hitos.geocercas()
+            .onSuccess { geocercas = it }
+            .onFailure { errorBackend = it.mensajeBloqueo(porDefecto) }
+        hitos.parametros()
+            .onSuccess { parametrosCheckin = it }
+            .onFailure { errorBackend = errorBackend ?: it.mensajeBloqueo(porDefecto) }
+    }
+    // La hora límite se revisa cada 30 s mientras el mapa está abierto.
+    var ahora by remember { mutableStateOf(LocalDateTime.now(ReglasGeocerca.ZONA)) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000L)
+            ahora = LocalDateTime.now(ReglasGeocerca.ZONA)
+        }
+    }
+    val geocercaPickup = remember(geocercas, servicio.origen) {
+        geocercas?.let { ReglasGeocerca.buscar(it, servicio.origen) }
+    }
+    val pickupPoint = geocercaPickup?.let { GeoPoint(it.lat, it.lon) } ?: PickupHotelCumbres
+    // Primera validación, en la app: bloquea el botón. El backend la repite con su propia hora.
+    val evaluacion = parametrosCheckin?.takeIf { geocercas != null }?.let { parametros ->
+        ReglasGeocerca.evaluar(
+            geocerca = geocercaPickup,
+            lat = userGeoPoint.latitude,
+            lon = userGeoPoint.longitude,
+            gpsReal = isUsingRealGps,
+            precisionMetros = precisionGps,
+            ahora = ahora,
+            inicio = LocalDateTime.of(servicio.fecha, servicio.horaInicio),
+            parametros = parametros
+        )
+    }
+    val evaluacionVigente by rememberUpdatedState(evaluacion)
+    // Se cambia solo cuando el backend respondió: si se reintenta tras un corte, no se duplica el check-in.
+    var claveCheckin by rememberSaveable { mutableStateOf(UUID.randomUUID().toString()) }
+
+    // Con geocerca, el destino es su punto; sin ella, se deduce del texto (la API no trae coordenadas).
+    val destinationPoint = remember(servicio, geocercas) {
+        val geocercaDestino = geocercas?.let { ReglasGeocerca.buscar(it, servicio.destino) }
+        if (geocercaDestino != null) return@remember GeoPoint(geocercaDestino.lat, geocercaDestino.lon)
         when {
             servicio.destino.contains("Petrohué", ignoreCase = true) ||
                 servicio.destino.contains("Parque", ignoreCase = true) -> DestinoPetrohue
@@ -325,6 +390,7 @@ private fun RutaMapaContenido(
 
     val referenceTarget = when {
         isCheckInDone -> destinationPoint
+        geocercaPickup != null -> pickupPoint
         activeRole == RolMapa.GUIA -> PuntoEncuentroGuias
         else -> PickupHotelCumbres
     }
@@ -429,6 +495,54 @@ private fun RutaMapaContenido(
         }
     }
 
+    fun avisarBloqueo(rechazo: EvaluacionCheckin) {
+        enviarIncidencia(
+            ReglasGeocerca.tipoIncidencia(rechazo.resultado),
+            ReglasGeocerca.detalleIncidencia(rechazo, servicio.origen)
+        )
+    }
+
+    // Check-in: la app ya lo validó (el botón queda bloqueado si no cumple); el backend lo valida otra vez.
+    fun registrarCheckInValidado(mensajeExito: String, guardar: suspend () -> Result<String?>) {
+        val evaluacionActual = evaluacionVigente ?: return
+        if (procesando || !evaluacionActual.resultado.permitido) return
+        scope.launch {
+            procesando = true
+            val respuesta = hitos.registrar(
+                servicioId = servicio.id,
+                checkIn = true,
+                lat = userGeoPoint.latitude,
+                lon = userGeoPoint.longitude,
+                precisionMetros = precisionGps ?: 0f,
+                claveIdempotencia = claveCheckin
+            )
+            procesando = false
+            respuesta.onSuccess { hito ->
+                claveCheckin = UUID.randomUUID().toString()
+                if (hito.resultado == ResultadoCheckin.VERIFICADO) {
+                    registrar(mensajeExito, guardar)
+                } else {
+                    val rechazo = evaluacionActual.copy(
+                        resultado = hito.resultado ?: ResultadoCheckin.SIN_GEOCERCA,
+                        distanciaMetros = hito.distanciaMetros ?: evaluacionActual.distanciaMetros
+                    )
+                    LinceLogger.w("CHECKIN", "El backend rechazó el check-in de ${servicio.id}: ${rechazo.resultado}")
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            context.getString(
+                                R.string.ruta_checkin_rechazado,
+                                motivoBloqueo(context, rechazo, servicio.origen)
+                            )
+                        )
+                    }
+                    avisarBloqueo(rechazo)
+                }
+            }.onFailure { e ->
+                snackbarHostState.showSnackbar(e.mensajeBloqueo(context.getString(R.string.error_operacion)))
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -467,6 +581,8 @@ private fun RutaMapaContenido(
                         context = context,
                         userPoint = userGeoPoint,
                         destinationPoint = destinationPoint,
+                        pickupPoint = pickupPoint,
+                        radioGeocerca = geocercaPickup?.radioMetros,
                         originTitle = servicio.origen,
                         destinationTitle = servicio.destino,
                         activeRole = activeRole,
@@ -520,13 +636,14 @@ private fun RutaMapaContenido(
                                     fetchCurrentGps(
                                         context = context,
                                         fusedClient = fusedLocationClient,
-                                        onLocation = { point, real ->
+                                        onLocation = { point, real, precision ->
                                             userGeoPoint = point
                                             isUsingRealGps = real
+                                            precisionGps = precision
                                             recentrarMapa++
                                             scope.launch {
                                                 val msg = if (real) {
-                                                    context.getString(R.string.ruta_gps_actualizado, formatCoord(point))
+                                                    context.getString(R.string.ruta_gps_actualizado, textoPrecision(precision))
                                                 } else {
                                                     context.getString(R.string.ruta_gps_simulado_aviso)
                                                 }
@@ -583,7 +700,12 @@ private fun RutaMapaContenido(
                 distanceMeters = distanceMeters,
                 userPoint = userGeoPoint,
                 isUsingRealGps = isUsingRealGps,
+                precisionGps = precisionGps,
                 procesando = procesando,
+                evaluacion = evaluacion,
+                errorBackend = errorBackend,
+                onReintentar = { cargarBackend++ },
+                onAvisarBloqueo = { evaluacion?.let { avisarBloqueo(it) } },
                 onReportarIncidencia = { showIncidenciaDialog = true },
                 onPrimaryAction = {
                     val esGuia = activeRole == RolMapa.GUIA
@@ -591,14 +713,14 @@ private fun RutaMapaContenido(
                         val exito = if (esGuia) {
                             context.getString(R.string.ruta_guia_checkin_ok, servicio.pasajeros)
                         } else {
-                            context.getString(R.string.ruta_conductor_checkin_ok, formatCoord(userGeoPoint))
+                            context.getString(R.string.ruta_conductor_checkin_ok, textoPrecision(precisionGps))
                         }
-                        registrar(exito) {
+                        registrarCheckInValidado(exito) {
                             ServicioRepository.registrarCheckIn(
                                 id = servicio.id,
                                 lat = userGeoPoint.latitude,
                                 lon = userGeoPoint.longitude,
-                                distanciaM = distanceMeters,
+                                distanciaM = evaluacionVigente?.distanciaMetros ?: distanceMeters,
                                 gpsReal = isUsingRealGps
                             )
                         }
@@ -609,6 +731,16 @@ private fun RutaMapaContenido(
                             context.getString(R.string.ruta_conductor_checkout_ok, servicio.destino)
                         }
                         registrar(exito) {
+                            hitos.registrar(
+                                servicioId = servicio.id,
+                                checkIn = false,
+                                lat = userGeoPoint.latitude,
+                                lon = userGeoPoint.longitude,
+                                precisionMetros = precisionGps ?: 0f,
+                                claveIdempotencia = UUID.randomUUID().toString()
+                            ).onFailure { e ->
+                                LinceLogger.w("CHECKIN", "Check-out sin registro en el backend: ${e.message}")
+                            }
                             ServicioRepository.registrarCheckOut(
                                 id = servicio.id,
                                 lat = userGeoPoint.latitude,
@@ -861,6 +993,8 @@ private fun OsmMapContainer(
     context: Context,
     userPoint: GeoPoint,
     destinationPoint: GeoPoint,
+    pickupPoint: GeoPoint,
+    radioGeocerca: Int?,
     originTitle: String,
     destinationTitle: String,
     activeRole: RolMapa,
@@ -923,38 +1057,58 @@ private fun OsmMapContainer(
     val userMarker = remember(mapView) {
         Marker(mapView).apply {
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+            icon = ContextCompat.getDrawable(
+                context,
+                if (activeRole == RolMapa.GUIA) R.drawable.ic_mapa_persona else R.drawable.ic_mapa_vehiculo
+            )
         }
     }
 
     // Ruta y marcadores fijos: solo se rehacen si cambia el servicio o el rol.
-    LaunchedEffect(mapView, destinationPoint, originTitle, destinationTitle, activeRole, routeColorArgb) {
+    LaunchedEffect(mapView, destinationPoint, pickupPoint, radioGeocerca, originTitle, destinationTitle, activeRole, routeColorArgb) {
         mapView.overlays.clear()
 
         val routeLine = Polyline().apply {
-            setPoints(listOf(PickupHotelCumbres, destinationPoint))
+            setPoints(listOf(pickupPoint, destinationPoint))
             outlinePaint.color = routeColorArgb
             outlinePaint.strokeWidth = 10f
         }
         mapView.overlays.add(routeLine)
 
+        // Zona donde se permite el check-in.
+        if (radioGeocerca != null) {
+            val zona = Polygon(mapView).apply {
+                points = Polygon.pointsAsCircle(pickupPoint, radioGeocerca.toDouble())
+                fillPaint.color = (routeColorArgb and 0x00FFFFFF) or 0x33000000
+                outlinePaint.color = routeColorArgb
+                outlinePaint.strokeWidth = 4f
+                title = "Geocerca: $originTitle ($radioGeocerca m)"
+            }
+            mapView.overlays.add(zona)
+        }
+
         val originMarker = Marker(mapView).apply {
-            position = PickupHotelCumbres
+            position = pickupPoint
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            icon = ContextCompat.getDrawable(context, R.drawable.ic_mapa_pickup)
             title = "Pickup: $originTitle"
         }
         mapView.overlays.add(originMarker)
 
         val destinationMarker = Marker(mapView).apply {
             position = destinationPoint
-            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            // La bandera se apoya en la base del asta, no en el centro.
+            setAnchor(0.25f, Marker.ANCHOR_BOTTOM)
+            icon = ContextCompat.getDrawable(context, R.drawable.ic_mapa_destino)
             title = "Destino: $destinationTitle"
         }
         mapView.overlays.add(destinationMarker)
 
-        if (activeRole == RolMapa.GUIA) {
+        if (activeRole == RolMapa.GUIA && radioGeocerca == null) {
             val guideMeetingMarker = Marker(mapView).apply {
                 position = PuntoEncuentroGuias
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                icon = ContextCompat.getDrawable(context, R.drawable.ic_mapa_encuentro)
                 title = "Punto de Encuentro Guía / Recepción Grupo"
             }
             mapView.overlays.add(guideMeetingMarker)
@@ -992,12 +1146,21 @@ private fun RoleBottomActionPanel(
     distanceMeters: Int,
     userPoint: GeoPoint,
     isUsingRealGps: Boolean,
+    precisionGps: Float?,
     procesando: Boolean,
+    evaluacion: EvaluacionCheckin?,
+    errorBackend: String?,
+    onReintentar: () -> Unit,
+    onAvisarBloqueo: () -> Unit,
     onReportarIncidencia: () -> Unit,
     onPrimaryAction: () -> Unit
 ) {
     val isCheckInDone = checkin != null
     val isServiceFinished = checkin?.finalizado == true
+    val context = LocalContext.current
+    // El check-in se valida con la geocerca; el check-out solo queda registrado.
+    val validarCheckin = activeRole != RolMapa.COORDINADOR && !isCheckInDone
+    val bloqueo = evaluacion?.takeIf { validarCheckin && !it.resultado.permitido }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1041,14 +1204,17 @@ private fun RoleBottomActionPanel(
 
             Spacer(modifier = Modifier.height(3.dp))
 
+            // Con la geocerca cargada, la distancia ya va en la línea de validación (sin mostrar coordenadas).
+            val conGeocerca = validarCheckin && evaluacion?.geocerca != null
             val detalle = when {
+                conGeocerca -> null
                 activeRole == RolMapa.COORDINADOR ->
                     checkin?.let { ReglasCheckin.resumen(it) } ?: stringResource(R.string.ruta_sin_checkin)
                 isUsingRealGps ->
                     stringResource(
                         R.string.ruta_distancia_gps_real,
                         ReglasCheckin.formatoDistancia(distanceMeters),
-                        formatCoord(userPoint)
+                        textoPrecision(precisionGps)
                     )
                 BuildConfig.DEBUG ->
                     stringResource(
@@ -1057,17 +1223,80 @@ private fun RoleBottomActionPanel(
                     )
                 else -> stringResource(R.string.ruta_esperando_gps)
             }
-            Text(
-                text = detalle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (detalle != null) {
+                Text(
+                    text = detalle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (validarCheckin) {
+                Spacer(modifier = Modifier.height(6.dp))
+                when {
+                    evaluacion != null -> {
+                        val geocerca = evaluacion.geocerca
+                        if (geocerca != null) {
+                            val distancia = ReglasCheckin.formatoDistancia(evaluacion.distanciaMetros ?: 0)
+                            val radio = ReglasCheckin.formatoDistancia(geocerca.radioMetros)
+                            val precision = evaluacion.precisionMetros?.takeIf { isUsingRealGps }
+                            Text(
+                                text = if (precision != null) {
+                                    stringResource(R.string.ruta_geocerca_datos, distancia, radio, "$precision m")
+                                } else {
+                                    stringResource(R.string.ruta_geocerca_datos_sin_gps, distancia, radio)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = stringResource(
+                                    R.string.ruta_geocerca_limite,
+                                    horaCorta(evaluacion.limite),
+                                    evaluacion.parametros.anticipacionMinutos
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                        if (bloqueo != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = motivoBloqueo(context, bloqueo, servicio.origen),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.error,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                    errorBackend != null -> {
+                        Text(
+                            text = stringResource(R.string.ruta_geocerca_error, errorBackend),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center
+                        )
+                        TextButton(onClick = onReintentar) {
+                            Text(stringResource(R.string.ruta_reintentar), fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    else -> Text(
+                        text = stringResource(R.string.ruta_geocerca_cargando),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
 
             if (activeRole != RolMapa.COORDINADOR) {
                 Spacer(modifier = Modifier.height(10.dp))
 
                 val primaryButtonText = stringResource(
-                    when (activeRole) {
+                    if (bloqueo != null) R.string.ruta_btn_checkin_bloqueado else when (activeRole) {
                         RolMapa.GUIA -> when {
                             isServiceFinished -> R.string.ruta_btn_excursion_finalizada
                             !isCheckInDone -> R.string.ruta_btn_confirmar_presentacion
@@ -1083,7 +1312,8 @@ private fun RoleBottomActionPanel(
 
                 Button(
                     onClick = onPrimaryAction,
-                    enabled = !isServiceFinished && !procesando,
+                    enabled = !isServiceFinished && !procesando &&
+                        (!validarCheckin || evaluacion?.resultado?.permitido == true),
                     shape = RoundedCornerShape(50),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (!isCheckInDone) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary
@@ -1106,6 +1336,12 @@ private fun RoleBottomActionPanel(
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
+                }
+
+                if (bloqueo != null && ReglasIncidencia.puedeReportar(servicio, checkin)) {
+                    TextButton(onClick = onAvisarBloqueo) {
+                        Text(stringResource(R.string.ruta_avisar_bloqueo), fontWeight = FontWeight.Bold)
+                    }
                 }
 
                 if (ReglasIncidencia.puedeReportar(servicio, checkin)) {
@@ -1327,11 +1563,11 @@ private fun hasPermissions(context: Context): Boolean {
 private fun fetchCurrentGps(
     context: Context,
     fusedClient: com.google.android.gms.location.FusedLocationProviderClient,
-    onLocation: (GeoPoint, Boolean) -> Unit
+    onLocation: (GeoPoint, Boolean, Float?) -> Unit
 ) {
     if (!hasPermissions(context)) return
     // La posición simulada solo existe en compilaciones de desarrollo.
-    val usarRespaldo = { if (BuildConfig.DEBUG) onLocation(SimuladorCercaPickup, false) }
+    val usarRespaldo = { if (BuildConfig.DEBUG) onLocation(SimuladorCercaPickup, false, null) }
     fusedClient.getCurrentLocation(
         Priority.PRIORITY_HIGH_ACCURACY,
         CancellationTokenSource().token
@@ -1342,14 +1578,17 @@ private fun fetchCurrentGps(
                 LinceLogger.i(
                     tag = "GPS",
                     message = "Ubicación GPS real obtenida",
-                    details = "lat=${location.latitude}, lon=${location.longitude}, acc=${location.accuracy}m"
+                    details = "precisión=${location.accuracy.roundToInt()} m"
                 )
-                onLocation(GeoPoint(location.latitude, location.longitude), true)
+                onLocation(
+                    GeoPoint(location.latitude, location.longitude),
+                    true,
+                    if (location.hasAccuracy()) location.accuracy else null
+                )
             } else {
                 LinceLogger.w(
                     tag = "GPS",
-                    message = "Coordenada fuera de Chile (emulador); usando punto simulado en Puerto Varas",
-                    details = "raw=${location.latitude},${location.longitude} -> sim=${SimuladorCercaPickup.latitude},${SimuladorCercaPickup.longitude}"
+                    message = "Coordenada fuera de Chile (emulador); usando punto simulado en Puerto Varas"
                 )
                 usarRespaldo()
             }
@@ -1374,6 +1613,33 @@ private fun calculateDistanceMeters(from: GeoPoint, to: GeoPoint): Int {
     )
     return results[0].roundToInt()
 }
+
+/** Por qué no se permite el check-in, para la persona en terreno. */
+private fun motivoBloqueo(context: Context, evaluacion: EvaluacionCheckin, lugar: String): String {
+    val geocerca = evaluacion.geocerca
+    return when (evaluacion.resultado) {
+        ResultadoCheckin.VERIFICADO -> ""
+        ResultadoCheckin.SIN_GEOCERCA -> context.getString(R.string.ruta_bloqueo_sin_geocerca, lugar)
+        ResultadoCheckin.SIN_GPS_REAL -> context.getString(R.string.ruta_bloqueo_sin_gps)
+        ResultadoCheckin.GPS_IMPRECISO -> context.getString(
+            R.string.ruta_bloqueo_impreciso,
+            "${evaluacion.precisionMetros ?: 0} m",
+            "${evaluacion.parametros.precisionMaximaMetros} m"
+        )
+        ResultadoCheckin.FUERA_DE_ZONA -> context.getString(
+            R.string.ruta_bloqueo_fuera,
+            ReglasCheckin.formatoDistancia(evaluacion.distanciaMetros ?: 0),
+            geocerca?.nombre ?: lugar,
+            ReglasCheckin.formatoDistancia(geocerca?.radioMetros ?: 0)
+        )
+        ResultadoCheckin.TARDE -> context.getString(R.string.ruta_bloqueo_tarde, horaCorta(evaluacion.limite))
+    }
+}
+
+private fun horaCorta(hora: LocalDateTime): String = "%02d:%02d".format(Locale.US, hora.hour, hora.minute)
+
+/** Precisión del GPS para mostrar; en pantalla no van coordenadas (quedan en capturas y videos). */
+private fun textoPrecision(precision: Float?): String = precision?.let { "± ${it.roundToInt()} m" } ?: "—"
 
 private fun formatCoord(point: GeoPoint): String {
     val lat = "%.4f".format(Locale.US, point.latitude)
