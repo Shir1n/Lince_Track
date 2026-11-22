@@ -14,7 +14,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -70,7 +74,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -224,6 +230,7 @@ private fun RutaMapaContenido(
     val isServiceFinished = checkin?.finalizado == true
 
     var procesando by remember { mutableStateOf(false) }
+    var altoPanel by remember { mutableIntStateOf(0) }
     var showExternalNavDialog by remember { mutableStateOf(false) }
     var showIncidenciaDialog by remember { mutableStateOf(false) }
     var recentrarMapa by remember { mutableIntStateOf(0) }
@@ -693,68 +700,73 @@ private fun RutaMapaContenido(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            RoleBottomActionPanel(
-                servicio = servicio,
-                activeRole = activeRole,
-                checkin = checkin,
-                distanceMeters = distanceMeters,
-                userPoint = userGeoPoint,
-                isUsingRealGps = isUsingRealGps,
-                precisionGps = precisionGps,
-                procesando = procesando,
-                evaluacion = evaluacion,
-                errorBackend = errorBackend,
-                onReintentar = { cargarBackend++ },
-                onAvisarBloqueo = { evaluacion?.let { avisarBloqueo(it) } },
-                onReportarIncidencia = { showIncidenciaDialog = true },
-                onPrimaryAction = {
-                    val esGuia = activeRole == RolMapa.GUIA
-                    if (!isCheckInDone) {
-                        val exito = if (esGuia) {
-                            context.getString(R.string.ruta_guia_checkin_ok, servicio.pasajeros)
-                        } else {
-                            context.getString(R.string.ruta_conductor_checkin_ok, textoPrecision(precisionGps))
-                        }
-                        registrarCheckInValidado(exito) {
-                            ServicioRepository.registrarCheckIn(
-                                id = servicio.id,
-                                lat = userGeoPoint.latitude,
-                                lon = userGeoPoint.longitude,
-                                distanciaM = evaluacionVigente?.distanciaMetros ?: distanceMeters,
-                                gpsReal = isUsingRealGps
-                            )
-                        }
-                    } else {
-                        val exito = if (esGuia) {
-                            context.getString(R.string.ruta_guia_checkout_ok)
-                        } else {
-                            context.getString(R.string.ruta_conductor_checkout_ok, servicio.destino)
-                        }
-                        registrar(exito) {
-                            hitos.registrar(
-                                servicioId = servicio.id,
-                                checkIn = false,
-                                lat = userGeoPoint.latitude,
-                                lon = userGeoPoint.longitude,
-                                precisionMetros = precisionGps ?: 0f,
-                                claveIdempotencia = UUID.randomUUID().toString()
-                            ).onFailure { e ->
-                                LinceLogger.w("CHECKIN", "Check-out sin registro en el backend: ${e.message}")
+            // Se mide el panel para que los avisos aparezcan encima y no tapen sus botones.
+            Box(modifier = Modifier.onGloballyPositioned { altoPanel = it.size.height }) {
+                RoleBottomActionPanel(
+                    servicio = servicio,
+                    activeRole = activeRole,
+                    checkin = checkin,
+                    distanceMeters = distanceMeters,
+                    userPoint = userGeoPoint,
+                    isUsingRealGps = isUsingRealGps,
+                    precisionGps = precisionGps,
+                    procesando = procesando,
+                    evaluacion = evaluacion,
+                    errorBackend = errorBackend,
+                    onReintentar = { cargarBackend++ },
+                    onAvisarBloqueo = { evaluacion?.let { avisarBloqueo(it) } },
+                    onReportarIncidencia = { showIncidenciaDialog = true },
+                    onPrimaryAction = {
+                        val esGuia = activeRole == RolMapa.GUIA
+                        if (!isCheckInDone) {
+                            val exito = if (esGuia) {
+                                context.getString(R.string.ruta_guia_checkin_ok, servicio.pasajeros)
+                            } else {
+                                context.getString(R.string.ruta_conductor_checkin_ok, textoPrecision(precisionGps))
                             }
-                            ServicioRepository.registrarCheckOut(
-                                id = servicio.id,
-                                lat = userGeoPoint.latitude,
-                                lon = userGeoPoint.longitude
-                            )
+                            registrarCheckInValidado(exito) {
+                                ServicioRepository.registrarCheckIn(
+                                    id = servicio.id,
+                                    lat = userGeoPoint.latitude,
+                                    lon = userGeoPoint.longitude,
+                                    distanciaM = evaluacionVigente?.distanciaMetros ?: distanceMeters,
+                                    gpsReal = isUsingRealGps
+                                )
+                            }
+                        } else {
+                            val exito = if (esGuia) {
+                                context.getString(R.string.ruta_guia_checkout_ok)
+                            } else {
+                                context.getString(R.string.ruta_conductor_checkout_ok, servicio.destino)
+                            }
+                            registrar(exito) {
+                                hitos.registrar(
+                                    servicioId = servicio.id,
+                                    checkIn = false,
+                                    lat = userGeoPoint.latitude,
+                                    lon = userGeoPoint.longitude,
+                                    precisionMetros = precisionGps ?: 0f,
+                                    claveIdempotencia = UUID.randomUUID().toString()
+                                ).onFailure { e ->
+                                    LinceLogger.w("CHECKIN", "Check-out sin registro en el backend: ${e.message}")
+                                }
+                                ServicioRepository.registrarCheckOut(
+                                    id = servicio.id,
+                                    lat = userGeoPoint.latitude,
+                                    lon = userGeoPoint.longitude
+                                )
+                            }
                         }
                     }
-                }
-            )
+                )
+            }
         }
 
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = with(LocalDensity.current) { altoPanel.toDp() })
         )
     }
 
@@ -1138,6 +1150,8 @@ private fun OsmMapContainer(
     )
 }
 
+private const val UMBRAL_ARRASTRE_PX = 40f
+
 @Composable
 private fun RoleBottomActionPanel(
     servicio: Servicio,
@@ -1161,6 +1175,8 @@ private fun RoleBottomActionPanel(
     // El check-in se valida con la geocerca; el check-out solo queda registrado.
     val validarCheckin = activeRole != RolMapa.COORDINADOR && !isCheckInDone
     val bloqueo = evaluacion?.takeIf { validarCheckin && !it.resultado.permitido }
+    var expandido by rememberSaveable { mutableStateOf(true) }
+    var arrastre by remember { mutableFloatStateOf(0f) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1171,129 +1187,154 @@ private fun RoleBottomActionPanel(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                // Arrastrar hacia abajo deja solo el botón principal; hacia arriba lo vuelve a mostrar todo.
+                .draggable(
+                    orientation = Orientation.Vertical,
+                    state = rememberDraggableState { delta -> arrastre += delta },
+                    onDragStopped = {
+                        if (arrastre > UMBRAL_ARRASTRE_PX) expandido = false
+                        if (arrastre < -UMBRAL_ARRASTRE_PX) expandido = true
+                        arrastre = 0f
+                    }
+                )
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
                 modifier = Modifier
-                    .width(36.dp)
-                    .height(4.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(2.dp))
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            val locationTitle = when (activeRole) {
-                RolMapa.TRANSPORTISTA -> stringResource(
-                    if (isCheckInDone) R.string.ruta_destino else R.string.ruta_punto_recogida,
-                    if (isCheckInDone) servicio.destino else servicio.origen
-                )
-                RolMapa.GUIA -> stringResource(
-                    if (isCheckInDone) R.string.ruta_destino else R.string.ruta_recepcion_pasajeros,
-                    if (isCheckInDone) servicio.destino else servicio.origen
-                )
-                RolMapa.COORDINADOR -> servicio.responsable
-            }
-            Text(
-                text = locationTitle,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(3.dp))
-
-            // Con la geocerca cargada, la distancia ya va en la línea de validación (sin mostrar coordenadas).
-            val conGeocerca = validarCheckin && evaluacion?.geocerca != null
-            val detalle = when {
-                conGeocerca -> null
-                activeRole == RolMapa.COORDINADOR ->
-                    checkin?.let { ReglasCheckin.resumen(it) } ?: stringResource(R.string.ruta_sin_checkin)
-                isUsingRealGps ->
-                    stringResource(
-                        R.string.ruta_distancia_gps_real,
-                        ReglasCheckin.formatoDistancia(distanceMeters),
-                        textoPrecision(precisionGps)
-                    )
-                BuildConfig.DEBUG ->
-                    stringResource(
-                        R.string.ruta_distancia_gps_simulado,
-                        ReglasCheckin.formatoDistancia(distanceMeters)
-                    )
-                else -> stringResource(R.string.ruta_esperando_gps)
-            }
-            if (detalle != null) {
-                Text(
-                    text = detalle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            if (validarCheckin) {
-                Spacer(modifier = Modifier.height(6.dp))
-                when {
-                    evaluacion != null -> {
-                        val geocerca = evaluacion.geocerca
-                        if (geocerca != null) {
-                            val distancia = ReglasCheckin.formatoDistancia(evaluacion.distanciaMetros ?: 0)
-                            val radio = ReglasCheckin.formatoDistancia(geocerca.radioMetros)
-                            val precision = evaluacion.precisionMetros?.takeIf { isUsingRealGps }
-                            Text(
-                                text = if (precision != null) {
-                                    stringResource(R.string.ruta_geocerca_datos, distancia, radio, "$precision m")
-                                } else {
-                                    stringResource(R.string.ruta_geocerca_datos_sin_gps, distancia, radio)
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = stringResource(
-                                    R.string.ruta_geocerca_limite,
-                                    horaCorta(evaluacion.limite),
-                                    evaluacion.parametros.anticipacionMinutos
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                        if (bloqueo != null) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = motivoBloqueo(context, bloqueo, servicio.origen),
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.error,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                    errorBackend != null -> {
-                        Text(
-                            text = stringResource(R.string.ruta_geocerca_error, errorBackend),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            textAlign = TextAlign.Center
+                    .fillMaxWidth()
+                    .clickable(
+                        onClickLabel = stringResource(
+                            if (expandido) R.string.ruta_panel_ocultar else R.string.ruta_panel_mostrar
                         )
-                        TextButton(onClick = onReintentar) {
-                            Text(stringResource(R.string.ruta_reintentar), fontWeight = FontWeight.Bold)
+                    ) { expandido = !expandido }
+                    .padding(top = 12.dp, bottom = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(36.dp)
+                        .height(4.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(2.dp))
+                )
+            }
+
+            AnimatedVisibility(visible = expandido) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val locationTitle = when (activeRole) {
+                        RolMapa.TRANSPORTISTA -> stringResource(
+                            if (isCheckInDone) R.string.ruta_destino else R.string.ruta_punto_recogida,
+                            if (isCheckInDone) servicio.destino else servicio.origen
+                        )
+                        RolMapa.GUIA -> stringResource(
+                            if (isCheckInDone) R.string.ruta_destino else R.string.ruta_recepcion_pasajeros,
+                            if (isCheckInDone) servicio.destino else servicio.origen
+                        )
+                        RolMapa.COORDINADOR -> servicio.responsable
+                    }
+                    Text(
+                        text = locationTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(3.dp))
+
+                    // Con la geocerca cargada, la distancia ya va en la línea de validación (sin mostrar coordenadas).
+                    val conGeocerca = validarCheckin && evaluacion?.geocerca != null
+                    val detalle = when {
+                        conGeocerca -> null
+                        activeRole == RolMapa.COORDINADOR ->
+                            checkin?.let { ReglasCheckin.resumen(it) } ?: stringResource(R.string.ruta_sin_checkin)
+                        isUsingRealGps ->
+                            stringResource(
+                                R.string.ruta_distancia_gps_real,
+                                ReglasCheckin.formatoDistancia(distanceMeters),
+                                textoPrecision(precisionGps)
+                            )
+                        BuildConfig.DEBUG ->
+                            stringResource(
+                                R.string.ruta_distancia_gps_simulado,
+                                ReglasCheckin.formatoDistancia(distanceMeters)
+                            )
+                        else -> stringResource(R.string.ruta_esperando_gps)
+                    }
+                    if (detalle != null) {
+                        Text(
+                            text = detalle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (validarCheckin) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        when {
+                            evaluacion != null -> {
+                                val geocerca = evaluacion.geocerca
+                                if (geocerca != null) {
+                                    val distancia = ReglasCheckin.formatoDistancia(evaluacion.distanciaMetros ?: 0)
+                                    val radio = ReglasCheckin.formatoDistancia(geocerca.radioMetros)
+                                    val precision = evaluacion.precisionMetros?.takeIf { isUsingRealGps }
+                                    Text(
+                                        text = if (precision != null) {
+                                            stringResource(R.string.ruta_geocerca_datos, distancia, radio, "$precision m")
+                                        } else {
+                                            stringResource(R.string.ruta_geocerca_datos_sin_gps, distancia, radio)
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Text(
+                                        text = stringResource(
+                                            R.string.ruta_geocerca_limite,
+                                            horaCorta(evaluacion.limite),
+                                            evaluacion.parametros.anticipacionMinutos
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                                if (bloqueo != null) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = motivoBloqueo(context, bloqueo, servicio.origen),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.error,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                            errorBackend != null -> {
+                                Text(
+                                    text = stringResource(R.string.ruta_geocerca_error, errorBackend),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    textAlign = TextAlign.Center
+                                )
+                                TextButton(onClick = onReintentar) {
+                                    Text(stringResource(R.string.ruta_reintentar), fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            else -> Text(
+                                text = stringResource(R.string.ruta_geocerca_cargando),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
-                    else -> Text(
-                        text = stringResource(R.string.ruta_geocerca_cargando),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
 
             if (activeRole != RolMapa.COORDINADOR) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(if (expandido) 10.dp else 0.dp))
 
                 val primaryButtonText = stringResource(
                     if (bloqueo != null) R.string.ruta_btn_checkin_bloqueado else when (activeRole) {
@@ -1338,15 +1379,19 @@ private fun RoleBottomActionPanel(
                     )
                 }
 
-                if (bloqueo != null && ReglasIncidencia.puedeReportar(servicio, checkin)) {
-                    TextButton(onClick = onAvisarBloqueo) {
-                        Text(stringResource(R.string.ruta_avisar_bloqueo), fontWeight = FontWeight.Bold)
-                    }
-                }
+                AnimatedVisibility(visible = expandido) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        if (bloqueo != null && ReglasIncidencia.puedeReportar(servicio, checkin)) {
+                            TextButton(onClick = onAvisarBloqueo) {
+                                Text(stringResource(R.string.ruta_avisar_bloqueo), fontWeight = FontWeight.Bold)
+                            }
+                        }
 
-                if (ReglasIncidencia.puedeReportar(servicio, checkin)) {
-                    TextButton(onClick = onReportarIncidencia) {
-                        Text(stringResource(R.string.detalle_reportar_incidencia), fontWeight = FontWeight.Bold)
+                        if (ReglasIncidencia.puedeReportar(servicio, checkin)) {
+                            TextButton(onClick = onReportarIncidencia) {
+                                Text(stringResource(R.string.detalle_reportar_incidencia), fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
             }

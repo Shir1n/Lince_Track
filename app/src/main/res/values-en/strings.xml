@@ -479,4 +479,6 @@
     <string name="ruta_bloqueo_tarde">The check-in deadline has passed (%1$s).</string>
     <string name="ruta_checkin_rechazado">The server rejected the check-in: %1$s Coordination will be notified.</string>
     <string name="ruta_checkin_validando">Validating check-in with the server…</string>
+    <string name="ruta_panel_ocultar">Hide check-in details</string>
+    <string name="ruta_panel_mostrar">Show check-in details</string>
 </resources>

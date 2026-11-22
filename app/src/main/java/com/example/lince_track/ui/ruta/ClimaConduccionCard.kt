@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lince_track.BuildConfig
@@ -137,24 +138,22 @@ fun ClimaConduccionCard(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.Bottom,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = "${clima.tempC.roundToInt()}°C",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = contentColor
-                        )
-                        Text(
-                            text = "• ${clima.tipo.label}",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = secondaryTextColor,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
-                    }
+                    Text(
+                        text = "${clima.tempC.roundToInt()}°C",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = contentColor,
+                        maxLines = 1
+                    )
+                    // Debajo de la temperatura: al lado quedaba tan angosto que cortaba las palabras.
+                    Text(
+                        text = clima.tipo.label,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = secondaryTextColor,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
 
                     Text(
                         text = stringResource(
