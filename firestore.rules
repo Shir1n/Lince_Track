@@ -233,6 +233,25 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // tokensFcm/{uid}: { token, actualizadoEn }
+    // Token de notificaciones del teléfono donde la persona inició sesión por última vez. Solo lo escribe su
+    // dueño y nadie lo lee desde la app: lo leen las Cloud Functions (Admin SDK, que no pasa por estas reglas).
+    function tokenValido(uid) {
+      let d = request.resource.data;
+      return tieneAcceso()
+        && request.auth.uid == uid
+        && d.token is string
+        && d.token.size() > 0
+        && d.token.size() <= 4096
+        && d.actualizadoEn == request.time
+        && d.keys().hasOnly(['token', 'actualizadoEn']);
+    }
+    match /tokensFcm/{uid} {
+      allow read: if false;
+      allow create, update: if tokenValido(uid);
+      allow delete: if signedIn() && request.auth.uid == uid;
+    }
+
     // Todo lo demás queda DENEGADO por defecto.
     // Cada colección nueva (respuestas, checkins, incidencias, alertas...) se agrega
     // aquí con su propio bloque "match" y sus reglas. No usar comodines {document=**}.

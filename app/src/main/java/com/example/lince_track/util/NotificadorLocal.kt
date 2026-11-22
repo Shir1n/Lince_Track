@@ -26,8 +26,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Notificaciones del teléfono mientras la app sigue viva (abierta o en segundo plano): salen de
- * lo que ya escucha ServicioRepository. Con la app cerrada no llegan; eso requiere un servidor
- * que envíe notificaciones, disponible al pasar Firebase al plan Blaze.
+ * lo que ya escucha ServicioRepository. Con la app cerrada las envían las Cloud Functions
+ * (`functions/`); ambas usan la etiqueta "servicio|<id>", así que si llegan las dos, una reemplaza a la otra.
  */
 object NotificadorLocal {
 
@@ -72,6 +72,9 @@ object NotificadorLocal {
         }
     }
 
+    /** Misma etiqueta que usan las Cloud Functions (`android.notification.tag`). */
+    fun etiqueta(servicioId: String): String = "servicio|$servicioId"
+
     private fun crearCanal(context: Context) {
         val canal = NotificationChannel(
             CANAL,
@@ -95,7 +98,13 @@ object NotificadorLocal {
         val titulo = aviso.titulo.asString(context)
         val texto = aviso.texto.asString(context)
         val abrirApp = context.packageManager.getLaunchIntentForPackage(context.packageName)?.let {
-            PendingIntent.getActivity(context, 0, it, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            it.putExtra(AperturaNotificacion.EXTRA_SERVICIO, aviso.servicioId)
+            PendingIntent.getActivity(
+                context,
+                aviso.servicioId.hashCode(),
+                it,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
         }
         val notificacion = NotificationCompat.Builder(context, CANAL)
             .setSmallIcon(R.drawable.ic_notificacion_small_icon)
@@ -106,6 +115,6 @@ object NotificadorLocal {
             .setContentIntent(abrirApp)
             .setAutoCancel(true)
             .build()
-        NotificationManagerCompat.from(context).notify("${aviso.servicioId}|$titulo".hashCode(), notificacion)
+        NotificationManagerCompat.from(context).notify(etiqueta(aviso.servicioId), 0, notificacion)
     }
 }

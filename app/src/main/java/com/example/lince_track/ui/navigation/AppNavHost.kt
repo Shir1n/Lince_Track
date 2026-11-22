@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.rememberCoroutineScope
+import com.example.lince_track.util.AperturaNotificacion
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -224,6 +225,16 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             )
         }
         EstadoAvisoVersion.Ninguno -> Unit
+    }
+
+    // Al tocar una notificación se abre el detalle de ese servicio, una vez que hay sesión.
+    val servicioNotificado by AperturaNotificacion.servicioId.collectAsState()
+    LaunchedEffect(servicioNotificado, currentRoute) {
+        val id = servicioNotificado ?: return@LaunchedEffect
+        if (currentRoute == Routes.MAIN) {
+            AperturaNotificacion.consumir()
+            navController.navigate(Routes.detalleServicio(id))
+        }
     }
 
     val showBottomBar = currentRoute == Routes.MAIN || currentRoute == Routes.MAIN_CONDUCTOR
