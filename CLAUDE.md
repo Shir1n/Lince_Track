@@ -19,21 +19,22 @@ Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta 
 ## Evaluación del curso (DSY1105, revisado el 13-11-2026)
 El material del docente está en `contexto/` (ignorada en Git: trae la API key y un video de 250 MB; **no subirla**):
 pautas `EA4_...Encargo` y `EA5_...Defensa`, caso `Formato_Caso_DSY1105`, guía `ACCESO_ESTUDIANTES.md`, colección de
-Postman y la transcripción de la reunión con Southbound.
+Postman y la transcripción de la reunión con Southbound. Desde el 21-11-2026 también trae (en el computador de Shir1n)
+la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`), la keystore de release
+(`lince-release.jks`) y un `local.properties` con sus contraseñas. **Nunca** mostrar ni subir esos archivos.
 - **EA4 (6 %, en parejas):** entrega en AVA en la semana 15 (código Android y backend, APK release firmada, README,
   evidencia de pruebas y enlace a GitHub público). Cambios en el repositorio después del plazo = nota 1,0.
 - **EA5 (24 %, individual, 15 min):** defensa en la semana 16, sin IA, con la APK en un celular real. El 40 % es una
   **modificación en vivo** que recorra Compose → ViewModel → endpoint → base de datos (ej.: radio de 150 a 100 m,
   tolerancia de puntualidad, motivo obligatorio de incidencia, campo "precisión del GPS").
 - **Lo que piden y falta hoy:**
-  - Backend propio **Spring Boot** + Swagger/OpenAPI + JWT/roles + BD. El docente aceptó Firebase, pero igual pide
-    microservicios: ya existe la base en `backend/` (ver "Backend propio"); falta conectarla a la app.
-  - Check-in **bloqueado** fuera de la geocerca (radio inicial 150 m, configurable por coordinación) o si es más tarde
-    que 15 min antes del pickup; mostrar distancia, radio y precisión del GPS, y generar incidencia si falla.
-    Validación doble: la app y el backend. Catálogo ficticio de hoteles con coordenadas.
-  - Disponibilidad: bloquear días con 7 días de anticipación y nunca sobre un servicio asignado.
-  - Room + WorkManager: caché, cola de check-ins sin conexión, sincronización con reintentos e idempotencia.
-  - Español e inglés con selector de idioma persistente.
+  - ~~Backend propio **Spring Boot** + Swagger/OpenAPI + JWT/roles + BD~~ en `backend/` y ya usado por la app
+    (bloqueos, geocercas y check-in). Falta publicarlo fuera del computador (ver "Backend propio").
+  - ~~Check-in **bloqueado** fuera de la geocerca o tarde~~ **Hecho (PR 53, 21-11-2026):** ver "Check-in con geocerca".
+  - ~~Disponibilidad: bloquear días con 7 días de anticipación~~ **Hecho (PR 51).**
+  - Room + WorkManager: caché, cola de check-ins sin conexión, sincronización con reintentos e idempotencia. El
+    backend ya acepta `claveIdempotencia`; falta la cola en la app.
+  - ~~Español e inglés con selector de idioma persistente~~ **Hecho (PR 52 y 54).**
   - JUnit + MockK con cobertura > 90 % en ViewModel/Repository y al menos un Compose UI Test.
   - ~~APK release firmada~~ **Hecha el 20-11-2026** (ver "Comandos"); falta instalarla en el celular de la defensa.
   - Usar también `/guias`, `/transportistas`, `/clientes`, `/catalogos` y `/resumen`; mostrar `requestId` en errores.
@@ -43,16 +44,18 @@ Postman y la transcripción de la reunión con Southbound.
   paguen al transportista. Un guía puede hacer un tour de medio día y un transfer el mismo día, pero no otro servicio
   si tiene un tour de día completo.
 
-## Estado actual (13-11-2026)
-- **Objetivo cercano:** un video para vender la app a los dueños de Southbound, con el flujo lo más completo posible.
+## Estado actual (21-11-2026)
+- **Objetivo cercano:** la presentación del viernes 27-11 (08:30-08:50, grupo Patagonia-Dev) es para "vender" la app.
+  Diferenciadores ya hechos: check-in con geocerca validado por el backend y notificaciones con la app cerrada
+  (Cloud Functions). Para mostrar las notificaciones hacen falta dos dispositivos (conductor y administrador).
+- **Ramas recientes:** PR 53 (check-in con geocerca), PR 55 (panel del mapa plegable, clima y aviso sobre el panel) y
+  PR 54 (arreglo del idioma) ya están en `master`. `feature/notificaciones-push` está subida y sin merge; sus reglas y
+  funciones **ya están publicadas** en Firebase.
 - **Clave de la API disponible** (vence el 31-12-2026). Los datos de la API llegan hasta el 15-12-2026. Con la clave
-  en `local.properties`, master compila, pasan los 150 tests y los DTO calzan con el JSON real; falta probarla en
-  celulares.
-- **Rama en curso:** `fix/detalles-video` (revisión visual con los tres roles). Ya están en `master` el resumen (PR 30),
-  la ubicación en la incidencia (PR 31), el panel con fecha (PR 32), el perfil (PR 34), las pestañas deslizables de los
-  tres roles (PR 33) y el verificador de versión (PR 36).
-- **Reglas:** revisar que la versión de `firestore.rules` de `master` (`telefono` en `estadosServicio`, `lat` y `lon` en
-  `incidencias`) esté publicada antes de probar: si falta, aceptar, rechazar o reportar da error.
+  en `local.properties` la app usa los datos reales (probado en celular el 21-11-2026). Pasan los 262 tests de la app
+  (92,9 % de líneas en ViewModel y repositorios), los 118 de reglas y los 9 de las funciones.
+- **Reglas:** la versión publicada el 21-11-2026 es la de `feature/notificaciones-push` (agrega `tokensFcm`). Si alguien
+  cambia `firestore.rules`, publicarla antes de probar: si falta, aceptar, rechazar o reportar da error.
 - **Cuentas de prueba** en `usuarios/{uid}`:
   - Carlos Morales R.: `conductor`, `transportistaId: 37`, sin `perfilNuevo` (se muestra el perfil completo de ejemplo).
   - Patricio Lagos: `conductor`, `transportistaId: 43`, `perfilNuevo: true`. Es el reemplazo en el video.
@@ -82,9 +85,8 @@ Postman y la transcripción de la reunión con Southbound.
 - **Resumen para los dueños** (`ui/admin/AdminResumenScreen`): sin clave de la API, "Últimos 7 días" suma el historial
   inventado de `ResumenDemostracion`, siempre con un aviso visible; "Hoy" y las cifras con clave son solo datos reales.
   Los márgenes (15 minutos de puntualidad, 500 m de distancia) son provisionales: falta confirmarlos con Southbound.
-- **Fuera por ahora:** fotos y ubicación en vivo (mejor con Blaze) y chat (ya está WhatsApp).
-- **No mostrar en el video:** botones del líder del grupo (sin teléfono), notificaciones con la app cerrada (no llegan) y
-  botones de cuentas de prueba en el login.
+- **Fuera por ahora:** fotos (ya se pueden, con Blaze y Storage), ubicación en vivo y chat (ya está WhatsApp).
+- **No mostrar en el video:** botones del líder del grupo (sin teléfono) y botones de cuentas de prueba en el login.
 - **Limitaciones conocidas:**
   - Historial solo alcanza a los últimos 7 días cargados.
   - Quien es reemplazado deja su check-in sin cerrar, ya no puede abrir el servicio, y si se le devuelve aparece aceptado
@@ -95,7 +97,9 @@ Postman y la transcripción de la reunión con Southbound.
 ## Stack
 - Kotlin 2.2.10, Jetpack Compose + Material 3, Navigation Compose 2.10.2
 - AGP 9.3.3, Gradle 9.5, compileSdk/targetSdk 37, minSdk 27, Java 11
-- Firebase BoM 34.19.0: Auth + Firestore (+ Analytics). Plan **Spark**.
+- Firebase BoM 34.19.0: Auth + Firestore + Messaging (sin Analytics). Plan **Blaze** desde el 21-11-2026.
+- Cloud Functions de 2.ª generación en Node 22 (`functions/`, firebase-functions 7 y firebase-admin 14), región
+  `southamerica-west1` (Santiago, la misma de Firestore).
 - Retrofit 3.0.0 + kotlinx.serialization 1.9.0 (API de Southbound)
 - osmdroid (mapa OSM), Play Services Location, Coil, DataStore (tema)
 
@@ -122,8 +126,8 @@ Postman y la transcripción de la reunión con Southbound.
 - Desde el PR 36 todos firman con `app/debug.keystore` (versionada, solo para debug: el repositorio es público). Un
   celular con una versión firmada antes con otra clave rechaza instalar (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`) y hay que
   desinstalar una vez. Se pierde la sesión y lo no enviado: confirmarlo antes con quien usa ese celular.
-- **APK release:** `.\gradlew.bat assembleRelease` firma con la keystore `D:\IA\Fire\lince-release.jks` (de Shir1n,
-  fuera del repo); la ruta y las contraseñas están en su `local.properties` (`LINCE_RELEASE_*`). Sin esos datos sale
+- **APK release:** `.\gradlew.bat assembleRelease` firma con la keystore `lince-release.jks` de Shir1n (fuera del
+  repo: `D:\IA\Fire` en un computador y `contexto/` en el otro); la ruta y las contraseñas están en su `local.properties` (`LINCE_RELEASE_*`). Sin esos datos sale
   sin firmar. Instrucciones en el README. Un celular con la versión debug instalada no acepta la release encima
   (firma distinta): hay que desinstalar primero. `androidx.fragment` va fijo en 1.8.9 porque Play Services trae la
   1.1.0 y el lint de release lo rechaza. En `res/` las imágenes deben tener la extensión de su formato real (un JPEG
@@ -131,6 +135,15 @@ Postman y la transcripción de la reunión con Southbound.
 - La versión sale de `version.json` (raíz). La app compara con el de `master` en GitHub al abrir; si el APK de
   `releases/latest` no existe, el aviso de versión desactualizada no ofrece descargar.
 - `gh` puede no estar instalado.
+- **Firebase CLI:** viene en `firestore-tests/node_modules` (no hace falta instalarlo aparte). Tras `npx firebase login`
+  (desde `firestore-tests/`, con la cuenta dueña del proyecto) se publica desde la raíz con
+  `.\firestore-tests\node_modules\.bin\firebase deploy --only firestore:rules` o `--only functions`. La cuenta de
+  servicio no sirve para publicar (Google responde 403). Las imágenes de las funciones se borran tras 1 día.
+- **Tests de las funciones:** `cd functions; npm install; npm test` (`node --test`, sin Firebase).
+- **Backend en el celular por USB:** `LINCE_BACKEND_URL=http://localhost:8080/` en `local.properties` y
+  `adb reverse tcp:8080 tcp:8080`. El reenvío se pierde si el cable se desconecta: si el mapa dice "Sin conexión con el
+  servidor", repetir el `adb reverse`. El emulador de los tests de reglas también usa el puerto 8080: detener el backend
+  mientras corren.
 
 ## Identificadores
 - `applicationId = "cl.duoc.lince_track"` (registrado en el proyecto Firebase `lince-track-66c55`).
@@ -142,10 +155,13 @@ Postman y la transcripción de la reunión con Southbound.
 - `data/` — `AuthRepository` (login + `PerfilUsuario` desde Firestore), `Rol`, `Servicio` (modelo de UI),
   `ServicioRepository` (fuente única de servicios para las pantallas), `RespuestaRepository` y
   `RespuestaServicio` (aceptar/rechazar en Firestore), `CheckinRepository`, `AsignacionRepository`,
-  `IncidenciaRepository`. Reglas sin Android ni Firebase, con tests: `ReglasCompanero` (la otra persona del tour),
-  `ReglasAsignacion` (qué ve cada uno y reemplazos), `ReglasIncidencia`, `ReglasCheckin`, `CambiosServicios` (qué notificar).
+  `IncidenciaRepository`, `BloqueoRepository` y `HitoRepository` (backend propio), `TokenFcmRepository` (token de
+  notificaciones). Reglas sin Android ni Firebase, con tests: `ReglasCompanero` (la otra persona del tour),
+  `ReglasAsignacion` (qué ve cada uno y reemplazos), `ReglasIncidencia`, `ReglasCheckin`, `ReglasGeocerca` (check-in con
+  geocerca), `CambiosServicios` (qué notificar).
   - `data/remote/` — `LinceApi` (Retrofit), `LinceApiClient` (header `X-API-Key`, errores → `LinceApiException`),
-    `dto/LinceDtos.kt` (JSON de la API + `LinceJson`).
+    `dto/LinceDtos.kt` (JSON de la API + `LinceJson`). `BloqueoApi` y `BloqueoApiClient` son el cliente del backend
+    propio (bloqueos, parámetros, geocercas e hitos), con el token de Firebase; `dto/HitoDtos.kt`.
   - `data/servicios/` — `ServiciosDataSource` (+ `ApiServiciosDataSource`), `FakeServiciosDataSource`,
     `ServicioMapper` (DTO → `Servicio`), `FiltroServicios`.
   - `data/clima/` — `ClimaService` (Open-Meteo).
@@ -154,7 +170,10 @@ Postman y la transcripción de la reunión con Southbound.
   `detalle`, `calendario` (+ `agenda/AgendaViewModel`), `ruta` (mapa, check-in, clima), `alertas`,
   `historial` (servicios con check-out; solo alcanza a los últimos 7 días cargados), `perfil`, `ajustes`,
   `components` (incluye `Incidencias`), `theme`.
-- `util/` — `LinceLogger` (consola de logs en Ajustes), `WhatsApp.kt` (`abrirWhatsApp`), `NotificadorLocal`.
+- `util/` — `LinceLogger` (consola de logs en Ajustes), `WhatsApp.kt` (`abrirWhatsApp`), `NotificadorLocal`,
+  `LinceMessagingService` (Firebase Cloud Messaging) y `AperturaNotificacion` (abre el servicio de una notificación).
+- `functions/` (raíz del repo) — Cloud Functions: `index.js` (escucha Firestore y envía) y `reglas.js` (qué avisar y a
+  quién, con tests en `functions/test/`).
 
 ## Fuente de datos: API de Southbound (solo lectura)
 - Docs: https://ws.southbound.travel/lince-api/api-docs/ · Base: `https://ws.southbound.travel/lince-api/`
@@ -195,8 +214,8 @@ Postman y la transcripción de la reunión con Southbound.
   rechazado o cancelado (DL, CX, XX), eso manda sobre la respuesta. Las reglas no pueden comprobar que
   el servicio sea de esa persona (vive en la API); lo revisa la app.
 - `checkins/{uid}_{servicioId}`: check-in y check-out con hora del servidor, coordenadas, distancia al
-  punto y si el GPS era real (`CheckinRepository`). No se bloquea por distancia ni por hora: se registra
-  para que Coordinación lo vea. Solo lo leen el dueño y el administrador.
+  punto y si el GPS era real (`CheckinRepository`). Se escribe solo después de que el backend verificó el
+  check-in (ver "Check-in con geocerca"). Solo lo leen el dueño y el administrador.
 - `estadosServicio/{servicioId}`: lo que el guía y el conductor de un mismo tour ven del otro (estado, nombre y teléfono, sin motivo
   ni observaciones). Se escribe junto con `respuestas` en un solo lote y lo leen todos los usuarios con rol. Solo
   quien lo publicó puede cambiarlo; el administrador lo borra al reasignar.
@@ -208,14 +227,22 @@ Postman y la transcripción de la reunión con Southbound.
   señal se envían igual, y nunca con la posición simulada. Las lee quien reportó y el administrador. Solo el administrador responde (queda "En
   gestión"), las resuelve y, con una abierta, puede enviar reemplazo aunque el servicio esté aceptado o en curso. Los
   botones de llamar y WhatsApp usan `usuarios/{uid}.telefono` (opcional).
-- Notificaciones locales (`NotificadorLocal`, `CambiosServicios`): solo con la app viva. Con la app cerrada requieren
-  Blaze y un servidor. Los primeros 10 s tras cargar no avisan: Firestore entrega primero la caché del teléfono y
+- **Notificaciones con la app cerrada** (desde el 21-11-2026): al iniciar sesión, `TokenFcmRepository` guarda el token
+  del teléfono en `tokensFcm/{uid}` (`{ token, actualizadoEn }`, un teléfono por cuenta: el último). Al cerrar sesión se
+  anula el token en Firebase (ya no hay permiso para borrar el documento) y la función borra el documento al ver que no
+  sirve. Las reglas dejan escribir solo al dueño y nadie lo lee desde la app. Cuatro Cloud Functions en `functions/`:
+  `avisarAsignacion` (reemplazo → la persona nueva), `avisarIncidenciaNueva` (→ administradores),
+  `avisarIncidenciaAtendida` (respuesta o resolución → quien reportó) y `avisarRechazo` (→ administradores). Usan el
+  canal "servicios" y la etiqueta `servicio|<id>`, la misma de `NotificadorLocal`, así que si llegan las dos una
+  reemplaza a la otra. Al tocar el aviso la app abre el detalle de ese servicio (`MainActivity` es `singleTask`).
+  Logs: `firebase functions:log`. Probado el 21-11-2026 con el celular bloqueado (reemplazo de prueba en el 3139,
+  ya borrado).
+- Notificaciones locales (`NotificadorLocal`, `CambiosServicios`): con la app viva. Los primeros 10 s tras cargar no avisan: Firestore entrega primero la caché del teléfono y
   después el servidor, y esa diferencia repetía avisos antiguos cada vez que se abría la app.
 - Tests de reglas en `firestore-tests/` con el emulador y un proyecto demo (`npm install`, `npm test`;
   necesita Java en el PATH). Tras cambiar `firestore.rules`, hay que publicarlas en Firebase.
-- `storage.rules` está en el repo pero **sin uso**: Storage exige plan Blaze. Se activará Blaze
-  (crédito de prueba de 90 días) recién cuando se implementen fotos; elegir región con cuota gratuita
-  y crear presupuesto de $5 ese mismo día.
+- `storage.rules` está en el repo pero **sin uso** (las fotos aún no se implementan). El proyecto ya está en Blaze:
+  revisar que exista una alerta de presupuesto de $5 en Google Cloud.
 - Plan detallado de datos: `Lince_Track_plan_base_de_datos.txt` (v2). Desactualizado en parte:
   con la API ya no se crean `servicios` en Firestore, y `asignaciones` ahora guarda solo los reemplazos. Firestore solo
   guarda lo que la app escribe.
@@ -232,8 +259,27 @@ Postman y la transcripción de la reunión con Southbound.
 - Local usa H2 en `backend/data/`; Docker usa PostgreSQL. La clave de la API va en `LINCE_API_KEY` (variable de entorno o
   `backend/.env`, ignorado).
 - Lee los reemplazos (`asignaciones/{servicioId}`) con Firebase Admin si `GOOGLE_APPLICATION_CREDENTIALS` apunta a la
-  cuenta de servicio (la de Shir1n está en `D:\IA\Fire`, fuera del repo); sin ella arranca igual y no los ve.
-- Falta: que la app lo use (Retrofit + Room + WorkManager).
+  cuenta de servicio (la de Shir1n está fuera del repo: `D:\IA\Fire` o `contexto/`, según el computador); sin ella
+  arranca igual y no los ve.
+- La app ya lo usa para bloqueos (PR 51) y para el check-in con geocerca (PR 53). Falta Room + WorkManager y publicarlo
+  fuera del computador (por ejemplo, en Cloud Run): **sin el backend nadie puede hacer check-in**.
+- Para probar sin token de administrador, la base H2 local se puede editar con el `h2-*.jar` de la caché de Gradle
+  (`org.h2.tools.Shell`, usuario `sa` sin contraseña; `AUTO_SERVER=TRUE` permite hacerlo con el backend corriendo).
+
+### Check-in con geocerca (PR 53)
+- `RutaMapaScreen` carga del backend las geocercas (`GET /api/geocercas`) y las reglas (`/api/parametros`). El pickup
+  es la geocerca cuyo nombre coincide con `servicio.origen` (los 4 lugares de PUX calzan con la API real); el destino,
+  la de `servicio.destino`, y si no hay, se deduce del texto como antes.
+- `ReglasGeocerca.evaluar` repite en la app las reglas del backend, en el mismo orden: sin geocerca → sin GPS real
+  (posición simulada) → GPS impreciso (sobre 50 m) → fuera de zona (sobre el radio, 150 m) → tarde (después del pickup
+  − 15 min). Si no cumple, el botón dice "CHECK-IN BLOQUEADO", se muestra el motivo y "Avisar a Coordinación" crea la
+  incidencia (Atraso si llegó tarde; si no, Otro).
+- Al marcar, `HitoRepository.registrar` envía el hito con una `claveIdempotencia` (UUID que solo cambia cuando el
+  backend respondió). Si responde `VERIFICADO` se guarda en Firestore como antes; si no, se muestra el motivo y la
+  incidencia se crea sola. `HITO_DUPLICADO` cuenta como verificado. El check-out se registra, pero no se bloquea.
+- La pantalla muestra distancia, radio, precisión del GPS y hora límite, nunca coordenadas (quedan en capturas y videos).
+- Modificación en vivo típica: el radio de cada hotel (`PUT /api/geocercas/{id}`) o `radioPorDefectoMetros` y
+  `anticipacionMinutos` (`PUT /api/parametros`).
 
 ## Privacidad (Ley 21.719, vigente desde el 01-12-2026)
 - Aviso "Tus datos en Lince Track" (`ui/components/Privacidad.kt`): se muestra al abrir la app hasta pulsar
@@ -268,9 +314,9 @@ Postman y la transcripción de la reunión con Southbound.
 3. Benjamin: `DarkErrorContainer` gris. El botón de la otra persona en el detalle abre su WhatsApp (teléfono compartido
    al aceptar). Los del líder del grupo quedan visibles a propósito aunque no haya teléfono: la API no trae el dato. `ConexionConductorScreen` sigue en construcción y fuera de
    la barra: el guía ve Alertas en su lugar. Las alertas se calculan al abrir la pestaña (`GeneradorAlertas`).
-4. Mapa: la ruta es una línea recta desde el Hotel Cumbres y el destino se deduce del texto (faltan
-   coordenadas en la API). Falta validar distancia y hora del check-in. Las incidencias aún no llevan fotos:
-   requieren Storage, y por lo tanto Blaze.
+4. Mapa: la ruta es una línea recta entre las geocercas de pickup y destino (sin trazado por calles). El servicio 3067
+   de Carlos quedó con check-in y check-out de prueba (21-11-2026): para reusarlo, borrar `checkins/{uid}_3067` en
+   Firebase y sus hitos en la base del backend. Las incidencias aún no llevan fotos (requieren Storage).
 5. Luciano: sumar datos de `GET /api/v1/resumen` al panel del administrador (los totales de hoy se calculan
    desde los servicios cargados, porque los datos de ejemplo no traen ese endpoint).
 6. Ignacio: preguntas a Southbound, clave del docente, Trello, README (estructura y roles).
