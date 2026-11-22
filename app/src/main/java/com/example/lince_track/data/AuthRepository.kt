@@ -1,6 +1,8 @@
 package com.example.lince_track.data
 
+import com.example.lince_track.R
 import com.example.lince_track.util.LinceLogger
+import com.example.lince_track.util.UiText
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.DocumentSnapshot
@@ -16,7 +18,8 @@ import kotlinx.coroutines.flow.asStateFlow
  * determinar desde Firestore. Solo el administrador crea cuentas y asigna roles.
  * El mensaje se muestra al usuario; el detalle técnico va a LinceLogger.
  */
-class SinRolException(message: String) : IllegalStateException(message)
+/** El mensaje queda en español (registro); [texto] es lo que se muestra, en el idioma de la app. */
+class SinRolException(message: String, val texto: UiText = UiText.DynamicString(message)) : IllegalStateException(message)
 
 /**
  * Fuente de datos de autenticación y roles.
@@ -51,6 +54,10 @@ object AuthRepository {
     /** Motivo por el que no se pudo recuperar el perfil de una sesión ya abierta. */
     val errorPerfil: StateFlow<String?> = _errorPerfil.asStateFlow()
 
+    private val _errorPerfilTexto = MutableStateFlow<UiText?>(null)
+    /** El mismo motivo, para mostrarlo en el idioma de la app. */
+    val errorPerfilTexto: StateFlow<UiText?> = _errorPerfilTexto.asStateFlow()
+
     val usuarioActual: FirebaseUser?
         get() = auth.currentUser
 
@@ -61,7 +68,7 @@ object AuthRepository {
      */
     suspend fun iniciarSesion(email: String, password: String): Result<Rol> = try {
         val resultado = auth.signInWithEmailAndPassword(email.trim(), password).await()
-        val uid = resultado.user?.uid ?: throw SinRolException(MENSAJE_ERROR_CUENTA)
+        val uid = resultado.user?.uid ?: throw errorLeerCuenta()
         val perfil = obtenerPerfil(uid)
         establecerPerfil(perfil)
         Result.success(perfil.rol)
@@ -83,7 +90,9 @@ object AuthRepository {
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        _errorPerfil.value = (e as? SinRolException)?.message ?: MENSAJE_ERROR_CUENTA
+        val error = e as? SinRolException ?: errorLeerCuenta()
+        _errorPerfil.value = error.message
+        _errorPerfilTexto.value = error.texto
         LinceLogger.e(TAG, "No se pudo recuperar el perfil de la sesión", e)
         null
     }
@@ -92,6 +101,7 @@ object AuthRepository {
         _rolActual.value = null
         _perfilActual.value = null
         _errorPerfil.value = null
+        _errorPerfilTexto.value = null
         auth.signOut()
     }
 
@@ -99,7 +109,14 @@ object AuthRepository {
         _rolActual.value = perfil.rol
         _perfilActual.value = perfil
         _errorPerfil.value = null
+        _errorPerfilTexto.value = null
     }
+
+    private fun errorLeerCuenta() =
+        SinRolException(MENSAJE_ERROR_CUENTA, UiText.StringResource(R.string.error_leer_cuenta))
+
+    private fun errorCuentaSinConfigurar() =
+        SinRolException(MENSAJE_CUENTA_SIN_CONFIGURAR, UiText.StringResource(R.string.error_cuenta_sin_configurar))
 
     private suspend fun obtenerPerfil(uid: String): PerfilUsuario {
         val documento = try {
@@ -108,24 +125,30 @@ object AuthRepository {
             LinceLogger.e(TAG, "Error al leer el documento del usuario (${e.code})", e)
             throw when (e.code) {
                 FirebaseFirestoreException.Code.PERMISSION_DENIED ->
-                    SinRolException("Tu cuenta no tiene permiso para ingresar. Contacta al administrador.")
+                    SinRolException(
+                        "Tu cuenta no tiene permiso para ingresar. Contacta al administrador.",
+                        UiText.StringResource(R.string.error_cuenta_sin_permiso)
+                    )
                 FirebaseFirestoreException.Code.UNAVAILABLE ->
-                    SinRolException("Sin conexión con la base de datos. Revisa tu internet.")
+                    SinRolException(
+                        "Sin conexión con la base de datos. Revisa tu internet.",
+                        UiText.StringResource(R.string.error_sin_conexion_bd)
+                    )
                 else ->
-                    SinRolException(MENSAJE_ERROR_CUENTA)
+                    errorLeerCuenta()
             }
         }
 
         if (!documento.exists()) {
             LinceLogger.w(TAG, "No existe el documento del usuario en '$COLECCION_USUARIOS'")
-            throw SinRolException(MENSAJE_CUENTA_SIN_CONFIGURAR)
+            throw errorCuentaSinConfigurar()
         }
 
         val valorRol = documento.getString("rol")
         val rol = Rol.desde(valorRol)
         if (rol == null) {
             LinceLogger.w(TAG, "Campo 'rol' no válido", details = "valor=\"$valorRol\"")
-            throw SinRolException(MENSAJE_CUENTA_SIN_CONFIGURAR)
+            throw errorCuentaSinConfigurar()
         }
 
         return PerfilUsuario(

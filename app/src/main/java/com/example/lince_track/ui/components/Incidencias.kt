@@ -47,6 +47,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.lince_track.util.textoUi
 
 /**
  * Envía una incidencia con la ubicación de quien reporta. Pide el permiso si falta, pero la
@@ -78,12 +79,13 @@ fun rememberEnviarIncidencia(
             resultado
                 .onSuccess { aviso ->
                     snackbarHostState.showSnackbar(
-                        aviso ?: localizedContext.getString(R.string.incidencia_enviada)
+                        aviso?.let { ServicioRepository.textoAviso(it).asString(localizedContext) }
+                            ?: localizedContext.getString(R.string.incidencia_enviada)
                     )
                 }
                 .onFailure { e ->
                     snackbarHostState.showSnackbar(
-                        e.message ?: localizedContext.getString(R.string.incidencia_error_envio)
+                        e.textoUi(R.string.incidencia_error_envio).asString(localizedContext)
                     )
                 }
         }
@@ -91,7 +93,7 @@ fun rememberEnviarIncidencia(
 
     // Con o sin permiso la incidencia se envía; sin permiso, va sin ubicación.
     val pedirUbicacion = rememberPermisoUbicacion(
-        motivo = "Para que Coordinación sepa dónde estás, la incidencia lleva tu ubicación de este momento."
+        motivo = stringResource(R.string.incidencia_motivo_ubicacion)
     ) {
         pendiente?.let { (tipo, detalle) -> enviar(tipo, detalle) }
         pendiente = null

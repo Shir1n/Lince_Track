@@ -66,8 +66,8 @@ class LoginViewModel(
     }
 
     private fun Throwable.mensajeAmigable(): UiText = when (this) {
-        is SinRolException -> message?.let { UiText.DynamicString(it) }
-            ?: UiText.StringResource(R.string.login_error_sin_rol)
+        // Ya viene en el idioma de la app (si no trae texto propio, usa su mensaje).
+        is SinRolException -> texto
         is FirebaseAuthInvalidUserException -> UiText.StringResource(R.string.login_error_usuario_no_existe)
         is FirebaseAuthInvalidCredentialsException -> UiText.StringResource(R.string.login_error_credenciales)
         is FirebaseNetworkException -> UiText.StringResource(R.string.login_error_red)

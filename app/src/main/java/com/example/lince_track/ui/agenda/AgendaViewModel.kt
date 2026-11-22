@@ -1,7 +1,9 @@
 package com.example.lince_track.ui.agenda
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.lince_track.R
 import com.example.lince_track.data.Bloqueo
 import com.example.lince_track.data.BloqueoRepository
 import com.example.lince_track.data.MotivoRechazo
@@ -10,13 +12,15 @@ import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.formatFecha
 import com.example.lince_track.data.remote.BloqueoApiException
-import com.example.lince_track.data.remote.mensajeBloqueo
 import com.example.lince_track.util.LinceLogger
+import com.example.lince_track.util.UiText
+import com.example.lince_track.util.textoUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.IOException
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -44,8 +48,9 @@ class AgendaViewModel(
     private val _processingIds = MutableStateFlow<Set<String>>(emptySet())
     val processingIds: StateFlow<Set<String>> = _processingIds.asStateFlow()
 
-    private val _message = MutableStateFlow<String?>(null)
-    val message: StateFlow<String?> = _message.asStateFlow()
+    // UiText y no String: la pantalla lo traduce al idioma elegido en la app.
+    private val _message = MutableStateFlow<UiText?>(null)
+    val message: StateFlow<UiText?> = _message.asStateFlow()
 
     // --- Bloqueo de días (disponibilidad) ---
     private val _bloqueos = MutableStateFlow<List<Bloqueo>>(emptyList())
@@ -130,7 +135,7 @@ class AgendaViewModel(
      * Solicita el bloqueo de un día.
      * Realiza doble validación: primero en cliente con las reglas de negocio, y luego en el backend.
      */
-    fun bloquearDia(fecha: LocalDate, motivo: String? = null, onResultado: ((Boolean) -> Unit)? = null) {
+    fun bloquearDia(fecha: LocalDate, motivo: String, onResultado: ((Boolean) -> Unit)? = null) {
         if (_operandoBloqueo.value) return
 
         // Validación en cliente (doble validación)
@@ -138,19 +143,26 @@ class AgendaViewModel(
         val anticipacion = _diasAnticipacion.value
         if (!ReglasBloqueo.tieneAnticipacion(fecha, fechaHoy, anticipacion)) {
             val primerDia = ReglasBloqueo.primerDiaBloqueable(fechaHoy, anticipacion)
-            _message.value = "Solo se puede bloquear desde el ${formatFecha(primerDia)}."
+            _message.value = UiText.StringResource(R.string.bloqueo_desde, formatFecha(primerDia))
             onResultado?.invoke(false)
             return
         }
 
         if (ReglasBloqueo.tieneServicioAsignado(servicios.value, fecha)) {
-            _message.value = "Ese día tienes un servicio asignado."
+            _message.value = UiText.StringResource(R.string.bloqueo_dia_con_servicio)
             onResultado?.invoke(false)
             return
         }
 
         if (ReglasBloqueo.estaBloqueado(fecha, _bloqueos.value)) {
-            _message.value = "Ese día ya está bloqueado."
+            _message.value = UiText.StringResource(R.string.bloqueo_ya_bloqueado)
+            onResultado?.invoke(false)
+            return
+        }
+
+        // El motivo es obligatorio (el diálogo tampoco deja confirmar sin él).
+        if (motivo.isBlank()) {
+            _message.value = UiText.StringResource(R.string.bloqueo_motivo_obligatorio)
             onResultado?.invoke(false)
             return
         }
@@ -161,10 +173,10 @@ class AgendaViewModel(
             _operandoBloqueo.value = false
             res.onSuccess { nuevoBloqueo ->
                 _bloqueos.update { lista -> (lista.filterNot { it.id == nuevoBloqueo.id } + nuevoBloqueo).sortedBy { it.fecha } }
-                _message.value = "Día bloqueado correctamente."
+                _message.value = UiText.StringResource(R.string.bloqueo_ok)
                 onResultado?.invoke(true)
             }.onFailure { error ->
-                _message.value = error.mensajeBloqueo("No se pudo bloquear el día.")
+                _message.value = textoErrorBloqueo(error, R.string.bloqueo_error_crear)
                 // Si coordinación cambió la anticipación, la app tenía un valor viejo: se vuelve a pedir.
                 if ((error as? BloqueoApiException)?.codigoApi == "SIN_ANTICIPACION") cargarBloqueosYParametros()
                 onResultado?.invoke(false)
@@ -183,13 +195,34 @@ class AgendaViewModel(
             _operandoBloqueo.value = false
             res.onSuccess {
                 _bloqueos.update { lista -> lista.filterNot { it.id == bloqueoId } }
-                _message.value = "Bloqueo eliminado correctamente."
+                _message.value = UiText.StringResource(R.string.bloqueo_eliminado)
                 onResultado?.invoke(true)
             }.onFailure { error ->
-                _message.value = error.mensajeBloqueo("No se pudo eliminar el bloqueo.")
+                _message.value = textoErrorBloqueo(error, R.string.bloqueo_error_eliminar)
                 onResultado?.invoke(false)
             }
         }
+    }
+
+    /**
+     * Error del backend de bloqueos en el idioma de la app: los códigos conocidos usan textos propios; los demás, el
+     * mensaje del servidor. Si el backend mandó un requestId, se agrega para poder buscarlo en sus logs.
+     */
+    private fun textoErrorBloqueo(error: Throwable, @StringRes porDefecto: Int): UiText {
+        val e = error as? BloqueoApiException
+        val texto = when {
+            e?.codigoApi == "SIN_ANTICIPACION" -> UiText.StringResource(R.string.bloqueo_sin_anticipacion)
+            e?.codigoApi == "DIA_CON_SERVICIO" -> UiText.StringResource(R.string.bloqueo_dia_con_servicio)
+            e?.codigoApi == "YA_BLOQUEADO" -> UiText.StringResource(R.string.bloqueo_ya_bloqueado)
+            e?.codigoApi == "MOTIVO_OBLIGATORIO" -> UiText.StringResource(R.string.bloqueo_motivo_obligatorio)
+            e?.codigoHttp == 403 -> UiText.StringResource(R.string.bloqueo_sin_permiso)
+            e?.codigoHttp == 404 -> UiText.StringResource(R.string.bloqueo_no_encontrado)
+            e?.cause is IOException -> UiText.StringResource(R.string.error_sin_conexion_servidor)
+            e?.codigoHttp != null && !e.message.isNullOrBlank() -> UiText.DynamicString(e.message!!)
+            else -> UiText.StringResource(porDefecto)
+        }
+        val requestId = e?.requestId
+        return if (requestId.isNullOrBlank()) texto else UiText.StringResource(R.string.error_con_id, texto, requestId)
     }
 
     private fun operar(servicio: Servicio, op: suspend (String) -> Result<String?>) {
@@ -199,9 +232,9 @@ class AgendaViewModel(
             val resultado = op(servicio.id)
             _processingIds.update { it - servicio.id }
             resultado.onSuccess { aviso ->
-                if (aviso != null) _message.value = aviso
+                if (aviso != null) _message.value = ServicioRepository.textoAviso(aviso)
             }.onFailure { e ->
-                _message.value = e.message ?: "No se pudo completar la operación"
+                _message.value = e.textoUi(R.string.agenda_operacion_fallida)
             }
         }
     }

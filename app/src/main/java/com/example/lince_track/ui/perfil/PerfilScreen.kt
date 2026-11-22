@@ -307,7 +307,7 @@ private fun ResumenPerfil() {
                 }
                 Image(
                     painter = painter,
-                    contentDescription = "Foto del conductor",
+                    contentDescription = stringResource(R.string.perfil_cd_foto_conductor),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(76.dp)
@@ -324,7 +324,7 @@ private fun ResumenPerfil() {
                 ) {
                     Icon(
                         Icons.Outlined.PhotoCamera,
-                        contentDescription = "Cambiar foto",
+                        contentDescription = stringResource(R.string.perfil_cambiar_foto),
                         tint = MaterialTheme.colorScheme.onSecondary,
                         modifier = Modifier.padding(4.dp)
                     )
@@ -340,7 +340,7 @@ private fun ResumenPerfil() {
                 fontWeight = FontWeight.Bold
             )
             Text(
-                "Transportista Oficial Southbound",
+                stringResource(R.string.perfil_transportista_oficial),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -365,7 +365,7 @@ private fun ResumenPerfil() {
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        "EN TURNO ACTIVO",
+                        stringResource(R.string.perfil_en_turno),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondary,
@@ -390,12 +390,12 @@ private fun ResumenPerfil() {
                     modifier = Modifier.weight(1.2f)
                 )
                 DatoPerfil(
-                    titulo = "Base",
+                    titulo = stringResource(R.string.perfil_base),
                     valor = "Puerto\nVaras",
                     modifier = Modifier.weight(1f)
                 )
                 DatoPerfil(
-                    titulo = "Flota",
+                    titulo = stringResource(R.string.perfil_flota),
                     valor = "Sprinter 516",
                     modifier = Modifier.weight(1.1f),
                     color = MaterialTheme.colorScheme.secondary
@@ -439,30 +439,30 @@ private fun DatosPersonales() {
             IconoCircular(Icons.Outlined.Badge)
             Spacer(Modifier.width(9.dp))
             Text(
-                "Datos Personales y\nOperativos",
+                stringResource(R.string.perfil_datos_personales),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
-            Etiqueta("Verificado")
+            Etiqueta(stringResource(R.string.perfil_verificado))
         }
 
         Spacer(Modifier.height(16.dp))
 
         FilaDato(
-            "Nombre Completo",
+            stringResource(R.string.perfil_nombre_completo),
             "Carlos Morales Riquelme",
             Icons.Outlined.Person
         )
         FilaDato(
-            "Correo Institucional",
+            stringResource(R.string.perfil_correo_institucional),
             "cmorales@southbound.cl",
             Icons.Outlined.Email,
             subrayado = true
         )
         FilaDato(
-            "Teléfono Institucional",
+            stringResource(R.string.perfil_telefono_institucional),
             "+56 9 7842 1190",
             Icons.Outlined.Phone
         )
@@ -488,23 +488,23 @@ private fun DatosPersonales() {
             Spacer(Modifier.width(10.dp))
             Column {
                 Text(
-                    "Licencia de Conducir",
+                    stringResource(R.string.perfil_licencia_conducir),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Profesional A2",
+                        stringResource(R.string.perfil_licencia_profesional),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.width(6.dp))
-                    Etiqueta("Clase A2")
+                    Etiqueta(stringResource(R.string.perfil_licencia_clase))
                 }
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    "Vigencia hasta Noviembre 2028 (Al día)",
+                    stringResource(R.string.perfil_licencia_vigencia),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -564,13 +564,13 @@ private fun VehiculoAsignado() {
             IconoCircular(Icons.Outlined.DirectionsBus)
             Spacer(Modifier.width(9.dp))
             Text(
-                "Vehículo Asignado",
+                stringResource(R.string.perfil_vehiculo_asignado),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
-            Etiqueta("● Operativo")
+            Etiqueta(stringResource(R.string.perfil_operativo))
         }
 
         Spacer(Modifier.height(14.dp))
@@ -583,7 +583,7 @@ private fun VehiculoAsignado() {
         ) {
             Image(
                 painter = painterResource(R.drawable.mercedes_benz_sprinter),
-                contentDescription = "Mercedes-Benz Sprinter en la Patagonia",
+                contentDescription = stringResource(R.string.perfil_cd_vehiculo),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
@@ -607,7 +607,7 @@ private fun VehiculoAsignado() {
                     .padding(10.dp)
             ) {
                 Text(
-                    "VAN DE PASAJEROS",
+                    stringResource(R.string.perfil_van_pasajeros),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -620,7 +620,7 @@ private fun VehiculoAsignado() {
                     color = Color.White
                 )
                 Text(
-                    "Año modelo 2023",
+                    stringResource(R.string.perfil_anio_modelo, 2023),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.85f)
                 )
@@ -642,7 +642,7 @@ private fun VehiculoAsignado() {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        "PATENTE",
+                        stringResource(R.string.perfil_patente),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -661,13 +661,13 @@ private fun VehiculoAsignado() {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MiniDato(
                 Icons.Outlined.Groups,
-                "Capacidad",
-                "19 Pasajeros",
+                stringResource(R.string.perfil_capacidad),
+                stringResource(R.string.chip_pasajeros, 19),
                 Modifier.weight(1f)
             )
             MiniDato(
                 Icons.Outlined.Speed,
-                "Odómetro",
+                stringResource(R.string.perfil_odometro),
                 "64.280 km",
                 Modifier.weight(1f)
             )
@@ -691,7 +691,7 @@ private fun VehiculoAsignado() {
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                "Revisión técnica y homologación SERNATUR al día (Sep 2026).",
+                stringResource(R.string.perfil_revision_sernatur),
                 style = MaterialTheme.typography.bodySmall,
                 lineHeight = 15.sp,
                 color = MaterialTheme.colorScheme.onSurface
@@ -744,14 +744,14 @@ private fun ResumenOperacional() {
             IconoCircular(Icons.Outlined.Analytics)
             Spacer(Modifier.width(9.dp))
             Text(
-                "Resumen Operacional",
+                stringResource(R.string.perfil_resumen_operacional),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
             Text(
-                "Mes en curso",
+                stringResource(R.string.perfil_mes_en_curso),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -763,7 +763,7 @@ private fun ResumenOperacional() {
             Estadistica(
                 icono = Icons.Outlined.Route,
                 valor = "42",
-                titulo = "Viajes Mes",
+                titulo = stringResource(R.string.perfil_viajes_mes),
                 fondo = MaterialTheme.colorScheme.surfaceVariant,
                 iconFondo = MaterialTheme.colorScheme.secondary,
                 iconTint = MaterialTheme.colorScheme.onSecondary,
@@ -772,7 +772,7 @@ private fun ResumenOperacional() {
             Estadistica(
                 icono = Icons.Outlined.Star,
                 valor = "4,9 ★",
-                titulo = "Calificación",
+                titulo = stringResource(R.string.perfil_calificacion),
                 fondo = MaterialTheme.colorScheme.tertiaryContainer,
                 iconFondo = MaterialTheme.colorScheme.tertiary,
                 iconTint = MaterialTheme.colorScheme.onTertiary,
@@ -782,7 +782,7 @@ private fun ResumenOperacional() {
             Estadistica(
                 icono = Icons.Outlined.AccessTime,
                 valor = "98,4 %",
-                titulo = "Puntualidad",
+                titulo = stringResource(R.string.perfil_puntualidad),
                 fondo = MaterialTheme.colorScheme.surfaceVariant,
                 iconFondo = MaterialTheme.colorScheme.secondary,
                 iconTint = MaterialTheme.colorScheme.onSecondary,
@@ -809,7 +809,7 @@ private fun ResumenOperacional() {
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                "Certificación Conductor Destacado\n2026",
+                stringResource(R.string.perfil_certificacion),
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.SemiBold,
                 lineHeight = 15.sp,
@@ -817,7 +817,7 @@ private fun ResumenOperacional() {
                 modifier = Modifier.weight(1f)
             )
             Text(
-                "NIVEL\nORO",
+                stringResource(R.string.perfil_nivel_oro),
                 style = MaterialTheme.typography.labelSmall,
                 lineHeight = 13.sp,
                 fontWeight = FontWeight.Bold,
@@ -1063,7 +1063,7 @@ private fun PieDePagina() {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            "Operaciones Cono Sur · Southbound Logistics",
+            stringResource(R.string.perfil_operaciones_cono_sur),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center

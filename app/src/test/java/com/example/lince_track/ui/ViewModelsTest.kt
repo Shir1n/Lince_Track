@@ -106,7 +106,7 @@ class ViewModelsTest {
         advanceUntilIdle()
 
         assertTrue(vm.processingIds.value.isEmpty())
-        assertEquals("Sin conexión: se enviará al recuperar la señal.", vm.message.value)
+        assertEquals(UiText.StringResource(R.string.aviso_en_cola), vm.message.value)
         assertEquals(listOf("3008"), aceptados)
         vm.limpiarMensaje()
         assertNull(vm.message.value)
@@ -130,11 +130,11 @@ class ViewModelsTest {
 
         vm.rechazar(servicio, MotivoRechazo.OTRO, "")
         advanceUntilIdle()
-        assertEquals("Indica el motivo del rechazo", vm.message.value)
+        assertEquals(UiText.DynamicString("Indica el motivo del rechazo"), vm.message.value)
 
         vm.rechazar(servicio, MotivoRechazo.FUERZA_MAYOR, "")
         advanceUntilIdle()
-        assertEquals("No se pudo completar la operación", vm.message.value)
+        assertEquals(UiText.StringResource(R.string.agenda_operacion_fallida), vm.message.value)
     }
 
     // ---------- LoginViewModel ----------

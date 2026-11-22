@@ -1,7 +1,6 @@
 package com.example.lince_track
 
 import com.example.lince_track.data.AsignacionServicio
-import com.example.lince_track.data.AvisoLocal
 import com.example.lince_track.data.CambiosServicios
 import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.EstadoServicio
@@ -106,8 +105,8 @@ class IncidenciasTest {
     fun `avisa al administrador de una incidencia nueva`() {
         val avisos = CambiosServicios.incidencias(emptyList(), listOf(incidencia("1")), Rol.ADMINISTRADOR)
 
-        assertEquals("Incidencia: Atraso", avisos.single().titulo)
-        assertEquals("Carlos Morales en Excursión", avisos.single().texto)
+        assertEquals("Incidencia: Atraso", TextosEs.de(avisos.single().titulo))
+        assertEquals("Carlos Morales en Excursión", TextosEs.de(avisos.single().texto))
     }
 
     @Test
@@ -116,7 +115,7 @@ class IncidenciasTest {
             listOf(incidencia("1")), listOf(incidencia("1", resuelta = true)), Rol.CONDUCTOR
         )
 
-        assertEquals("Incidencia resuelta", avisos.single().titulo)
+        assertEquals("Incidencia resuelta", TextosEs.de(avisos.single().titulo))
     }
 
     @Test
@@ -127,7 +126,7 @@ class IncidenciasTest {
             Rol.GUIA
         )
 
-        assertEquals(AvisoLocal("8941", "Coordinación respondió", "Va un reemplazo"), avisos.single())
+        assertEquals(Triple("8941", "Coordinación respondió", "Va un reemplazo"), TextosEs.de(avisos.single()))
     }
 
     @Test
@@ -138,7 +137,7 @@ class IncidenciasTest {
             Rol.CONDUCTOR
         )
 
-        assertEquals(AvisoLocal("8941", "Incidencia resuelta", "Se cambió el vehículo"), avisos.single())
+        assertEquals(Triple("8941", "Incidencia resuelta", "Se cambió el vehículo"), TextosEs.de(avisos.single()))
     }
 
     @Test

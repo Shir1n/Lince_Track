@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Idiomas de la app. Android 13+ los muestra en Ajustes > Apps > Lince Track > Idioma. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="es-CL" />
+    <locale android:name="en" />
+</locale-config>

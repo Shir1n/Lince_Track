@@ -1,5 +1,6 @@
 package com.example.lince_track.ui
 
+import com.example.lince_track.R
 import com.example.lince_track.data.Bloqueo
 import com.example.lince_track.data.BloqueoRepository
 import com.example.lince_track.data.Datos
@@ -9,6 +10,7 @@ import com.example.lince_track.data.remote.dto.BloqueoDto
 import com.example.lince_track.data.remote.dto.BloqueoSolicitudDto
 import com.example.lince_track.data.remote.dto.ParametrosDto
 import com.example.lince_track.ui.agenda.AgendaViewModel
+import com.example.lince_track.util.UiText
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -140,10 +142,10 @@ class AgendaBloqueosTest {
     fun aMenosDeSieteDiasNoLlamaAlBackend() = runTest(dispatcher) {
         val vm = agenda()
 
-        vm.bloquearDia(aTresDias) { resultado = it }
+        vm.bloquearDia(aTresDias, "Descanso") { resultado = it }
         advanceUntilIdle()
 
-        assertEquals("Solo se puede bloquear desde el ${formatFecha(LocalDate.of(2026, 11, 27))}.", vm.message.value)
+        assertEquals(UiText.StringResource(R.string.bloqueo_desde, formatFecha(LocalDate.of(2026, 11, 27))), vm.message.value)
         assertEquals(false, resultado)
         coVerify(exactly = 0) { api.crear(any()) }
     }
@@ -152,10 +154,10 @@ class AgendaBloqueosTest {
     fun unDiaConServicioNoSeBloquea() = runTest(dispatcher) {
         val vm = agenda()
 
-        vm.bloquearDia(diaConServicio) { resultado = it }
+        vm.bloquearDia(diaConServicio, "Descanso") { resultado = it }
         advanceUntilIdle()
 
-        assertEquals("Ese día tienes un servicio asignado.", vm.message.value)
+        assertEquals(UiText.StringResource(R.string.bloqueo_dia_con_servicio), vm.message.value)
         assertEquals(false, resultado)
         coVerify(exactly = 0) { api.crear(any()) }
     }
@@ -165,10 +167,22 @@ class AgendaBloqueosTest {
         val vm = agendaConBloqueos(dto(1, diaLibre))
         advanceUntilIdle()
 
-        vm.bloquearDia(diaLibre) { resultado = it }
+        vm.bloquearDia(diaLibre, "Descanso") { resultado = it }
         advanceUntilIdle()
 
-        assertEquals("Ese día ya está bloqueado.", vm.message.value)
+        assertEquals(UiText.StringResource(R.string.bloqueo_ya_bloqueado), vm.message.value)
+        assertEquals(false, resultado)
+        coVerify(exactly = 0) { api.crear(any()) }
+    }
+
+    @Test
+    fun sinMotivoNoSeBloquea() = runTest(dispatcher) {
+        val vm = agenda()
+
+        vm.bloquearDia(diaLibre, "   ") { resultado = it }
+        advanceUntilIdle()
+
+        assertEquals(UiText.StringResource(R.string.bloqueo_motivo_obligatorio), vm.message.value)
         assertEquals(false, resultado)
         coVerify(exactly = 0) { api.crear(any()) }
     }
@@ -184,13 +198,13 @@ class AgendaBloqueosTest {
         advanceUntilIdle()
         assertTrue(vm.operandoBloqueo.value)
 
-        vm.bloquearDia(LocalDate.of(2026, 12, 1)) // mientras se envía, un segundo toque no hace nada
+        vm.bloquearDia(LocalDate.of(2026, 12, 1), "Otro") // mientras se envía, un segundo toque no hace nada
         respuesta.complete(dto(3, diaLibre, "Descanso"))
         advanceUntilIdle()
 
         assertFalse(vm.operandoBloqueo.value)
         assertEquals(listOf(3L, 1L), vm.bloqueos.value.map { it.id })
-        assertEquals("Día bloqueado correctamente.", vm.message.value)
+        assertEquals(UiText.StringResource(R.string.bloqueo_ok), vm.message.value)
         assertEquals(true, resultado)
         coVerify(exactly = 1) { api.crear(any()) }
         coVerify { api.crear(BloqueoSolicitudDto("2026-11-30", "Descanso")) }
@@ -203,14 +217,30 @@ class AgendaBloqueosTest {
         coEvery { api.crear(any()) } throws errorHttp(422, "SIN_ANTICIPACION", "Solo desde el 01-12-2026", "abc")
         coEvery { api.obtenerParametros() } returns ParametrosDto(diasAnticipacionBloqueo = 11)
 
-        vm.bloquearDia(diaLibre) { resultado = it }
+        vm.bloquearDia(diaLibre, "Descanso") { resultado = it }
         advanceUntilIdle()
 
-        assertEquals("Solo desde el 01-12-2026 (ID: abc)", vm.message.value)
+        assertEquals(
+            UiText.StringResource(R.string.error_con_id, UiText.StringResource(R.string.bloqueo_sin_anticipacion), "abc"),
+            vm.message.value
+        )
         assertEquals(false, resultado)
         assertEquals(11, vm.diasAnticipacion.value)
         assertTrue(vm.bloqueos.value.isEmpty())
         coVerify(exactly = 2) { api.obtenerParametros() }
+    }
+
+    @Test
+    fun siElBackendPideElMotivoSeMuestraTraducido() = runTest(dispatcher) {
+        val vm = agendaConBloqueos()
+        advanceUntilIdle()
+        coEvery { api.crear(any()) } throws errorHttp(400, "MOTIVO_OBLIGATORIO", "Indica el motivo del bloqueo.")
+
+        vm.bloquearDia(diaLibre, "Descanso") { resultado = it }
+        advanceUntilIdle()
+
+        assertEquals(UiText.StringResource(R.string.bloqueo_motivo_obligatorio), vm.message.value)
+        assertEquals(false, resultado)
     }
 
     @Test
@@ -219,10 +249,10 @@ class AgendaBloqueosTest {
         advanceUntilIdle()
         coEvery { api.crear(any()) } throws errorHttp(409, "DIA_CON_SERVICIO")
 
-        vm.bloquearDia(diaLibre) { resultado = it }
+        vm.bloquearDia(diaLibre, "Descanso") { resultado = it }
         advanceUntilIdle()
 
-        assertEquals("Ese día tienes un servicio asignado.", vm.message.value)
+        assertEquals(UiText.StringResource(R.string.bloqueo_dia_con_servicio), vm.message.value)
         assertEquals(false, resultado)
         coVerify(exactly = 1) { api.obtenerParametros() }
     }
@@ -241,7 +271,7 @@ class AgendaBloqueosTest {
         advanceUntilIdle()
 
         assertEquals(listOf(4L), vm.bloqueos.value.map { it.id })
-        assertEquals("Bloqueo eliminado correctamente.", vm.message.value)
+        assertEquals(UiText.StringResource(R.string.bloqueo_eliminado), vm.message.value)
         assertEquals(true, resultado)
         assertFalse(vm.operandoBloqueo.value)
         coVerify(exactly = 0) { api.eliminar(4) }
@@ -256,7 +286,7 @@ class AgendaBloqueosTest {
         vm.desbloquearDia(3) { resultado = it }
         advanceUntilIdle()
 
-        assertEquals("Sin conexión con el servidor. Revisa tu red.", vm.message.value)
+        assertEquals(UiText.StringResource(R.string.error_sin_conexion_servidor), vm.message.value)
         assertEquals(false, resultado)
         assertEquals(listOf(3L), vm.bloqueos.value.map { it.id })
     }

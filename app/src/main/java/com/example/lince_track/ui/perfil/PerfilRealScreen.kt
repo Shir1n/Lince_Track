@@ -99,7 +99,8 @@ fun PerfilRealScreen(
     val perfil by AuthRepository.perfilActual.collectAsState()
     val servicios by ServicioRepository.servicios.collectAsState()
     val checkins by ServicioRepository.checkins.collectAsState()
-    val error by ServicioRepository.error.collectAsState()
+    // En el idioma de la app (el error del repositorio viene como UiText).
+    val error = ServicioRepository.errorTexto.collectAsState().value?.asString()
     val email = AuthRepository.usuarioActual?.email.orEmpty()
     val nombre = perfil?.nombre?.takeIf { it.isNotBlank() } ?: email
     PerfilRealContenido(

@@ -113,6 +113,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.datastore.preferences)
+    // Idioma por app (AppCompatDelegate.setApplicationLocales): cambia la app, no el teléfono.
+    implementation(libs.androidx.appcompat)
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)

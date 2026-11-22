@@ -32,6 +32,8 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -292,7 +294,7 @@ class ApiIntegracionTest {
         mvc.perform(put("/api/parametros").with(admin()).contentType(MediaType.APPLICATION_JSON)
                 .content(reglas(15, 50, 150, 3)));
         mvc.perform(post("/api/bloqueos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fecha\": \"2026-11-25\"}"))
+                        .content("{\"fecha\": \"2026-11-25\", \"motivo\": \"Descanso\"}"))
                 .andExpect(status().isCreated());
     }
 
@@ -387,7 +389,7 @@ class ApiIntegracionTest {
         when(asignaciones.recibidos("uid-reemplazo", dia))
                 .thenReturn(List.of(new Reemplazo(1103, "uid-reemplazo", "conductor", "2026-11-30")));
         mvc.perform(post("/api/bloqueos").with(reemplazo()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fecha\": \"2026-11-30\"}"))
+                        .content("{\"fecha\": \"2026-11-30\", \"motivo\": \"Descanso\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("DIA_CON_SERVICIO"));
     }
@@ -398,7 +400,7 @@ class ApiIntegracionTest {
         when(lince.serviciosDe(eq(dia), eq(37L), any())).thenReturn(List.of(servicio(1104, 37, "CF", "CF")));
         when(asignaciones.de(1104)).thenReturn(Optional.of(new Reemplazo(1104, "uid-reemplazo", "conductor", "2026-12-01")));
         mvc.perform(post("/api/bloqueos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fecha\": \"2026-12-01\"}"))
+                        .content("{\"fecha\": \"2026-12-01\", \"motivo\": \"Descanso\"}"))
                 .andExpect(status().isCreated());
     }
 
@@ -407,9 +409,19 @@ class ApiIntegracionTest {
     @Test
     void bloquearConMenosDeSieteDiasSeRechaza() throws Exception {
         mvc.perform(post("/api/bloqueos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fecha\": \"2026-11-25\"}"))
+                        .content("{\"fecha\": \"2026-11-25\", \"motivo\": \"Descanso\"}"))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.error.code").value("SIN_ANTICIPACION"));
+    }
+
+    @Test
+    void bloquearSinMotivoSeRechaza() throws Exception {
+        for (String cuerpo : List.of("{\"fecha\": \"2026-12-10\"}", "{\"fecha\": \"2026-12-10\", \"motivo\": \"   \"}")) {
+            mvc.perform(post("/api/bloqueos").with(conductor()).contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error.code").value("MOTIVO_OBLIGATORIO"));
+        }
+        verify(lince, never()).serviciosDe(any(), any(), any());
     }
 
     @Test
@@ -417,7 +429,7 @@ class ApiIntegracionTest {
         when(lince.serviciosDe(eq(LocalDate.of(2026, 11, 28)), eq(37L), any()))
                 .thenReturn(List.of(servicio(2001, 37, "CF", "RQ")));
         mvc.perform(post("/api/bloqueos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fecha\": \"2026-11-28\"}"))
+                        .content("{\"fecha\": \"2026-11-28\", \"motivo\": \"Descanso\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("DIA_CON_SERVICIO"));
     }
@@ -433,7 +445,7 @@ class ApiIntegracionTest {
         String id = respuesta.replaceAll(".*\"id\"\\s*:\\s*(\\d+).*", "$1");
 
         mvc.perform(post("/api/bloqueos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fecha\": \"2026-11-29\"}"))
+                        .content("{\"fecha\": \"2026-11-29\", \"motivo\": \"Descanso\"}"))
                 .andExpect(status().isConflict());
         mvc.perform(delete("/api/bloqueos/" + id).with(conductor())).andExpect(status().isNoContent());
     }
@@ -537,7 +549,7 @@ class ApiIntegracionTest {
     @Test
     void unaCuentaSinIdDeLaApiNoPuedeBloquear() throws Exception {
         mvc.perform(post("/api/bloqueos").with(sinIds()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fecha\": \"2026-12-10\"}"))
+                        .content("{\"fecha\": \"2026-12-10\", \"motivo\": \"Descanso\"}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -546,9 +558,9 @@ class ApiIntegracionTest {
         LocalDate dia = LocalDate.of(2026, 12, 12);
         when(lince.serviciosDe(eq(dia), eq(37L), any())).thenReturn(List.of());
         String id = idDe(mvc.perform(post("/api/bloqueos").with(conductor()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fecha\": \"2026-12-12\", \"motivo\": \"  \"}"))
+                        .content("{\"fecha\": \"2026-12-12\", \"motivo\": \"  Control médico  \"}"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.motivo").isEmpty())
+                .andExpect(jsonPath("$.motivo").value("Control médico"))
                 .andReturn().getResponse().getContentAsString());
 
         mvc.perform(delete("/api/bloqueos/" + id).with(reemplazo())).andExpect(status().isForbidden());

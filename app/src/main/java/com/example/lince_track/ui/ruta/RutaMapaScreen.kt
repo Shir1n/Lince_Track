@@ -121,6 +121,7 @@ import org.osmdroid.views.overlay.Polyline
 import java.util.Locale
 import kotlin.math.roundToInt
 import com.example.lince_track.ui.theme.BarraSuperior
+import com.example.lince_track.util.textoUi
 
 enum class RolMapa(val label: String) {
     TRANSPORTISTA("Transportista"),
@@ -272,8 +273,7 @@ private fun RutaMapaContenido(
 
     // Antes del permiso de Android se explica para qué se usa la ubicación (aviso de privacidad).
     val pedirUbicacion = rememberPermisoUbicacion(
-        motivo = "Mientras el mapa está abierto, el GPS muestra tu posición, la distancia al punto de encuentro y tu " +
-            "velocidad (eso no se envía). En el check-in y el check-out se registra dónde estás."
+        motivo = stringResource(R.string.ruta_motivo_ubicacion)
     ) { granted ->
         hasLocationPermission = granted
         LinceLogger.i("GPS", "Respuesta de permisos de ubicación: granted=$granted")
@@ -331,8 +331,8 @@ private fun RutaMapaContenido(
 
     val targetLabel = when {
         isCheckInDone -> servicio.destino
-        activeRole == RolMapa.GUIA -> "Lobby ${servicio.origen} (Punto de Encuentro)"
-        else -> "${servicio.origen} (Pickup)"
+        activeRole == RolMapa.GUIA -> stringResource(R.string.ruta_objetivo_guia, servicio.origen)
+        else -> stringResource(R.string.ruta_objetivo_pickup, servicio.origen)
     }
 
     val distanceMeters = remember(userGeoPoint, referenceTarget) {
@@ -422,9 +422,9 @@ private fun RutaMapaContenido(
             val resultado = operacion()
             procesando = false
             resultado.onSuccess { aviso ->
-                snackbarHostState.showSnackbar(aviso ?: mensajeExito)
+                snackbarHostState.showSnackbar(aviso?.let { ServicioRepository.textoAviso(it).asString(context) } ?: mensajeExito)
             }.onFailure { e ->
-                snackbarHostState.showSnackbar(e.message ?: context.getString(R.string.error_operacion))
+                snackbarHostState.showSnackbar(e.textoUi(R.string.error_operacion).asString(context))
             }
         }
     }
@@ -940,14 +940,15 @@ private fun OsmMapContainer(
         val originMarker = Marker(mapView).apply {
             position = PickupHotelCumbres
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            title = "Pickup: $originTitle"
+            // Contexto de la Activity: ya viene en el idioma elegido en la app.
+            title = mapView.context.getString(R.string.ruta_marcador_pickup, originTitle)
         }
         mapView.overlays.add(originMarker)
 
         val destinationMarker = Marker(mapView).apply {
             position = destinationPoint
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            title = "Destino: $destinationTitle"
+            title = mapView.context.getString(R.string.ruta_destino, destinationTitle)
         }
         mapView.overlays.add(destinationMarker)
 
@@ -955,7 +956,7 @@ private fun OsmMapContainer(
             val guideMeetingMarker = Marker(mapView).apply {
                 position = PuntoEncuentroGuias
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                title = "Punto de Encuentro Guía / Recepción Grupo"
+                title = mapView.context.getString(R.string.ruta_marcador_encuentro_guia)
             }
             mapView.overlays.add(guideMeetingMarker)
         }

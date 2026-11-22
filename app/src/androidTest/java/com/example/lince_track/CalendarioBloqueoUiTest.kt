@@ -7,6 +7,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
+import androidx.test.platform.app.InstrumentationRegistry
+import com.example.lince_track.R
 import com.example.lince_track.data.BloqueoRepository
 import com.example.lince_track.data.Rol
 import com.example.lince_track.data.formatFecha
@@ -39,6 +42,11 @@ class CalendarioBloqueoUiTest {
 
     private val hoy = LocalDate.of(2026, 11, 20)
     private val api = BloqueoApiFalsa()
+
+    // Los textos se leen de los recursos: así el test pasa con la app en español o en inglés.
+    private val contexto get() = InstrumentationRegistry.getInstrumentation().targetContext
+    private val idioma get() = contexto.resources.configuration.locales[0]
+    private fun texto(id: Int, vararg args: Any): String = contexto.getString(id, *args)
 
     /** Responde como el backend, sin red: guarda lo que se bloquea. */
     private class BloqueoApiFalsa : BloqueoApi {
@@ -97,12 +105,12 @@ class CalendarioBloqueoUiTest {
         tocarDia(aTresDias)
         composeRule.onNodeWithTag("btn_bloquear_dia").performScrollTo().assertIsNotEnabled()
         composeRule
-            .onNodeWithText("Mínimo 7 días de anticipación (desde ${formatFecha(LocalDate.of(2026, 11, 27))})")
+            .onNodeWithText(texto(R.string.bloqueo_anticipacion_min, 7, formatFecha(LocalDate.of(2026, 11, 27), idioma)))
             .assertExists()
 
         // Tocar de nuevo el día elegido tampoco abre el diálogo.
         tocarDia(aTresDias)
-        composeRule.onNodeWithText("Motivo (opcional)").assertDoesNotExist()
+        composeRule.onNodeWithTag("campo_motivo_bloqueo").assertDoesNotExist()
         assertEquals(0, api.creados.size)
     }
 
@@ -114,9 +122,9 @@ class CalendarioBloqueoUiTest {
         tocarDia(diaLibre)
         tocarDia(diaLibre)
 
-        composeRule.onNodeWithText("Disponibilidad").assertDoesNotExist()
+        composeRule.onNodeWithText(texto(R.string.bloqueo_disponibilidad)).assertDoesNotExist()
         composeRule.onNodeWithTag("btn_bloquear_dia").assertDoesNotExist()
-        composeRule.onNodeWithText("Motivo (opcional)").assertDoesNotExist()
+        composeRule.onNodeWithTag("campo_motivo_bloqueo").assertDoesNotExist()
     }
 
     @Test
@@ -125,7 +133,7 @@ class CalendarioBloqueoUiTest {
 
         tocarDia(LocalDate.of(2026, 11, 28))
 
-        composeRule.onNodeWithText("Tiene servicios asignados este día").assertExists()
+        composeRule.onNodeWithText(texto(R.string.bloqueo_tiene_servicios)).assertExists()
         composeRule.onNodeWithTag("btn_bloquear_dia").assertDoesNotExist()
     }
 
@@ -135,13 +143,15 @@ class CalendarioBloqueoUiTest {
 
         tocarDia(LocalDate.of(2026, 11, 30))
         composeRule.onNodeWithTag("btn_bloquear_dia").performScrollTo().assertIsEnabled().performClick()
-        composeRule.onNodeWithText("Motivo (opcional)").assertExists()
-        composeRule.onNodeWithText("Bloquear").performClick()
+        // El motivo es obligatorio: sin escribirlo, no se puede confirmar.
+        composeRule.onNodeWithTag("btn_confirmar_bloqueo").assertIsNotEnabled()
+        composeRule.onNodeWithTag("campo_motivo_bloqueo").performTextInput("Descanso")
+        composeRule.onNodeWithTag("btn_confirmar_bloqueo").assertIsEnabled().performClick()
         composeRule.waitForIdle()
 
         composeRule.waitUntil(timeoutMillis = 5_000) { api.creados.isNotEmpty() }
-        assertEquals(listOf(BloqueoSolicitudDto("2026-11-30", null)), api.creados)
-        composeRule.onNodeWithText("BLOQ").assertExists()
-        composeRule.onNodeWithText("Día bloqueado").assertExists()
+        assertEquals(listOf(BloqueoSolicitudDto("2026-11-30", "Descanso")), api.creados)
+        composeRule.onNodeWithText(texto(R.string.bloqueo_badge_corto)).assertExists()
+        composeRule.onNodeWithText(texto(R.string.bloqueo_dia_bloqueado)).assertExists()
     }
 }

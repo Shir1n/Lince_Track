@@ -1,5 +1,7 @@
 package com.example.lince_track.data
 
+import androidx.annotation.StringRes
+import com.example.lince_track.R
 import com.example.lince_track.data.remote.LinceApiClient
 import com.example.lince_track.data.remote.aLinceApiException
 import com.example.lince_track.data.servicios.ApiServiciosDataSource
@@ -7,7 +9,9 @@ import com.example.lince_track.data.servicios.FakeServiciosDataSource
 import com.example.lince_track.data.servicios.FiltroServicios
 import com.example.lince_track.data.servicios.ServicioMapper
 import com.example.lince_track.data.servicios.ServiciosDataSource
+import com.example.lince_track.util.ErrorTraducible
 import com.example.lince_track.util.LinceLogger
+import com.example.lince_track.util.UiText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -133,9 +137,15 @@ object ServicioRepository {
     val cargando: StateFlow<Boolean> = _cargando.asStateFlow()
 
     private val errorCarga = MutableStateFlow<String?>(null)
+    private val errorCargaTexto = MutableStateFlow<UiText?>(null)
     /** Último error (de carga o de la cuenta), listo para mostrar en pantalla (null si no hay). */
     val error: StateFlow<String?> =
         combine(errorCarga, AuthRepository.errorPerfil) { carga, perfil -> perfil ?: carga }
+            .stateIn(scope, SharingStarted.Eagerly, null)
+
+    /** El mismo error, para mostrarlo en el idioma de la app. */
+    val errorTexto: StateFlow<UiText?> =
+        combine(errorCargaTexto, AuthRepository.errorPerfilTexto) { carga, perfil -> perfil ?: carga }
             .stateIn(scope, SharingStarted.Eagerly, null)
 
     /** Qué pedir a la fuente; null si no hay nada que cargar para el usuario actual. */
@@ -168,6 +178,7 @@ object ServicioRepository {
         _asignaciones.value = emptyMap()
         _incidencias.value = emptyList()
         errorCarga.value = null
+        errorCargaTexto.value = null
         cargaInicialHecha = false
         filtroActual = perfil?.let { FiltroServicios.paraPerfil(it) }
 
@@ -202,6 +213,7 @@ object ServicioRepository {
 
         if (perfil != null && filtroActual == null) {
             errorCarga.value = CUENTA_SIN_VINCULAR
+            errorCargaTexto.value = UiText.StringResource(R.string.error_cuenta_sin_vincular)
             LinceLogger.w("SERVICIOS", "Cuenta de ${perfil.rol.etiqueta} sin id de la API")
         }
         refrescar()
@@ -219,6 +231,7 @@ object ServicioRepository {
                 serviciosFuente.value = convertidos
                 serviciosOficina.value = cargarOficina(filtro)
                 errorCarga.value = null
+                errorCargaTexto.value = null
                 if (!cargaInicialHecha) {
                     cargaInicialHecha = true
                     fuentesPendientes.update { it - 1 }
@@ -234,6 +247,7 @@ object ServicioRepository {
             } catch (e: Throwable) {
                 val error = e.aLinceApiException()
                 errorCarga.value = error.message
+                errorCargaTexto.value = error.texto
                 LinceLogger.e("SERVICIOS", "No se pudieron cargar los servicios (${fuente.nombre})", error)
             } finally {
                 _cargando.value = false
@@ -271,16 +285,16 @@ object ServicioRepository {
         val uid = AuthRepository.usuarioActual?.uid
         val perfil = AuthRepository.perfilActual.value
         if (uid == null || perfil == null || perfil.rol == Rol.ADMINISTRADOR) {
-            return Result.failure(IllegalStateException("Tu sesión no está lista. Intenta nuevamente."))
+            return falla(R.string.error_sesion_no_lista, "Tu sesión no está lista. Intenta nuevamente.")
         }
         val servicio = buscarPorId(id)
-            ?: return Result.failure(IllegalStateException("Asignación no encontrada"))
+            ?: return falla(R.string.error_asignacion_no_encontrada, "Asignación no encontrada")
         if (!ReglasIncidencia.puedeReportar(servicio, checkins.value[id])) {
-            return Result.failure(IllegalStateException("Este servicio ya no admite incidencias"))
+            return falla(R.string.error_no_admite_incidencias, "Este servicio ya no admite incidencias")
         }
         val texto = detalle.trim()
         if (!ReglasIncidencia.detalleValido(tipo, texto)) {
-            return Result.failure(IllegalArgumentException("Describe lo que pasó"))
+            return falla(R.string.error_describe_incidencia, "Describe lo que pasó")
         }
         return try {
             val confirmada = IncidenciaRepository.reportar(uid, perfil.rol, perfil.nombre.orEmpty(), servicio, tipo, texto, ubicacion)
@@ -289,7 +303,7 @@ object ServicioRepository {
             throw e
         } catch (e: Exception) {
             LinceLogger.e("SERVICIOS", "No se pudo guardar la incidencia", e)
-            Result.failure(IllegalStateException("No se pudo enviar la incidencia. Intenta nuevamente."))
+            falla(R.string.error_enviar_incidencia, "No se pudo enviar la incidencia. Intenta nuevamente.")
         }
     }
 
@@ -297,9 +311,9 @@ object ServicioRepository {
     suspend fun resolverIncidencia(incidencia: IncidenciaServicio, respuesta: String = ""): Result<String?> {
         val texto = respuesta.trim()
         if (!ReglasIncidencia.respuestaValida(texto, obligatoria = false)) {
-            return Result.failure(IllegalArgumentException("El mensaje es demasiado largo"))
+            return falla(R.string.error_mensaje_largo, "El mensaje es demasiado largo")
         }
-        return gestionarIncidencia("No se pudo marcar como resuelta. Intenta nuevamente.") { uid ->
+        return gestionarIncidencia("No se pudo marcar como resuelta. Intenta nuevamente.", R.string.error_marcar_resuelta) { uid ->
             IncidenciaRepository.resolver(incidencia.id, uid, texto)
         }
     }
@@ -308,17 +322,21 @@ object ServicioRepository {
     suspend fun responderIncidencia(incidencia: IncidenciaServicio, respuesta: String): Result<String?> {
         val texto = respuesta.trim()
         if (!ReglasIncidencia.respuestaValida(texto, obligatoria = true)) {
-            return Result.failure(IllegalArgumentException("Escribe una respuesta"))
+            return falla(R.string.error_escribe_respuesta, "Escribe una respuesta")
         }
-        return gestionarIncidencia("No se pudo enviar la respuesta. Intenta nuevamente.") { uid ->
+        return gestionarIncidencia("No se pudo enviar la respuesta. Intenta nuevamente.", R.string.error_enviar_respuesta) { uid ->
             IncidenciaRepository.responder(incidencia.id, uid, texto)
         }
     }
 
-    private suspend fun gestionarIncidencia(mensajeError: String, guardar: suspend (uid: String) -> Boolean): Result<String?> {
+    private suspend fun gestionarIncidencia(
+        mensajeError: String,
+        @StringRes textoError: Int,
+        guardar: suspend (uid: String) -> Boolean
+    ): Result<String?> {
         val uid = AuthRepository.usuarioActual?.uid
         if (uid == null || AuthRepository.perfilActual.value?.rol != Rol.ADMINISTRADOR) {
-            return Result.failure(IllegalStateException("Solo el administrador gestiona incidencias"))
+            return falla(R.string.error_solo_admin_incidencias, "Solo el administrador gestiona incidencias")
         }
         return try {
             Result.success(if (guardar(uid)) null else RESPUESTA_EN_COLA)
@@ -326,7 +344,7 @@ object ServicioRepository {
             throw e
         } catch (e: Exception) {
             LinceLogger.e("SERVICIOS", "No se pudo gestionar la incidencia", e)
-            Result.failure(IllegalStateException(mensajeError))
+            falla(textoError, mensajeError)
         }
     }
 
@@ -356,21 +374,21 @@ object ServicioRepository {
         throw e
     } catch (e: Exception) {
         LinceLogger.e("SERVICIOS", "No se pudo leer el personal", e)
-        Result.failure(IllegalStateException("No se pudo cargar el personal. Intenta nuevamente."))
+        falla(R.string.error_cargar_personal, "No se pudo cargar el personal. Intenta nuevamente.")
     }
 
     /** @return en caso de éxito, un aviso para mostrar al usuario (null si no hay nada que avisar). */
     suspend fun reasignar(servicio: Servicio, persona: PersonaDisponible): Result<String?> {
         val uid = AuthRepository.usuarioActual?.uid
         if (uid == null || AuthRepository.perfilActual.value?.rol != Rol.ADMINISTRADOR) {
-            return Result.failure(IllegalStateException("Solo el administrador puede reasignar"))
+            return falla(R.string.error_solo_admin_reasignar, "Solo el administrador puede reasignar")
         }
         val checkin = checkins.value[servicio.id]
         val conIncidencia = _incidencias.value.any { it.servicioId == servicio.id && !it.resuelta }
         val permitido = ReglasAsignacion.puedeReasignar(servicio, checkin) ||
             (conIncidencia && ReglasAsignacion.puedeReemplazar(servicio, checkin))
         if (!permitido) {
-            return Result.failure(IllegalStateException("Este servicio ya no se puede reasignar"))
+            return falla(R.string.error_no_reasignable, "Este servicio ya no se puede reasignar")
         }
         return try {
             Result.success(if (AsignacionRepository.reasignar(servicio, persona, uid)) null else RESPUESTA_EN_COLA)
@@ -378,11 +396,19 @@ object ServicioRepository {
             throw e
         } catch (e: Exception) {
             LinceLogger.e("SERVICIOS", "No se pudo reasignar el servicio", e)
-            Result.failure(IllegalStateException("No se pudo reasignar. Intenta nuevamente."))
+            falla(R.string.error_reasignar, "No se pudo reasignar. Intenta nuevamente.")
         }
     }
 
     fun buscarPorId(id: String): Servicio? = servicios.value.find { it.id == id }
+
+    /** Aviso devuelto al aceptar, rechazar, etc., en el idioma de la app. */
+    fun textoAviso(aviso: String): UiText =
+        if (aviso == RESPUESTA_EN_COLA) UiText.StringResource(R.string.aviso_en_cola) else UiText.DynamicString(aviso)
+
+    /** Falla con el mensaje en español (registro y tests) y su texto traducible para la pantalla. */
+    private fun <T> falla(@StringRes texto: Int, mensaje: String): Result<T> =
+        Result.failure(ErrorTraducible(UiText.StringResource(texto), mensaje))
 
     /** @return en caso de éxito, un aviso para mostrar al usuario (null si no hay nada que avisar). */
     suspend fun aceptar(id: String): Result<String?> =
@@ -392,7 +418,7 @@ object ServicioRepository {
     suspend fun rechazar(id: String, motivo: MotivoRechazo, observaciones: String): Result<String?> {
         val texto = observaciones.trim()
         if (!ReglasRespuesta.motivoValido(motivo, texto)) {
-            return Result.failure(IllegalArgumentException("Indica el motivo del rechazo"))
+            return falla(R.string.error_motivo_rechazo, "Indica el motivo del rechazo")
         }
         return responder(
             id,
@@ -428,22 +454,22 @@ object ServicioRepository {
         val uid = AuthRepository.usuarioActual?.uid
         val perfil = AuthRepository.perfilActual.value
         if (uid == null || perfil == null) {
-            return Result.failure(IllegalStateException("Tu sesión no está lista. Intenta nuevamente."))
+            return falla(R.string.error_sesion_no_lista, "Tu sesión no está lista. Intenta nuevamente.")
         }
         if (perfil.rol == Rol.ADMINISTRADOR) {
-            return Result.failure(IllegalStateException("El administrador no registra check-in"))
+            return falla(R.string.error_admin_checkin, "El administrador no registra check-in")
         }
         val servicio = buscarPorId(id)
-            ?: return Result.failure(IllegalStateException("Asignación no encontrada"))
+            ?: return falla(R.string.error_asignacion_no_encontrada, "Asignación no encontrada")
         if (servicio.estado != EstadoServicio.ACEPTADO) {
-            return Result.failure(IllegalStateException("Solo se registra en servicios aceptados"))
+            return falla(R.string.error_solo_aceptados, "Solo se registra en servicios aceptados")
         }
         val checkin = _checkins.value[id]
         if (esCheckIn && checkin != null) {
-            return Result.failure(IllegalStateException("El check-in ya está registrado"))
+            return falla(R.string.error_checkin_registrado, "El check-in ya está registrado")
         }
         if (!esCheckIn && (checkin == null || checkin.finalizado)) {
-            return Result.failure(IllegalStateException("No hay un check-in pendiente de cerrar"))
+            return falla(R.string.error_sin_checkin_pendiente, "No hay un check-in pendiente de cerrar")
         }
         return try {
             Result.success(if (guardar(uid, perfil.rol)) null else RESPUESTA_EN_COLA)
@@ -451,7 +477,7 @@ object ServicioRepository {
             throw e
         } catch (e: Exception) {
             LinceLogger.e("SERVICIOS", "No se pudo guardar el check-in", e)
-            Result.failure(IllegalStateException("No se pudo guardar el registro. Intenta nuevamente."))
+            falla(R.string.error_guardar_registro, "No se pudo guardar el registro. Intenta nuevamente.")
         }
     }
 
@@ -465,18 +491,18 @@ object ServicioRepository {
         val uid = AuthRepository.usuarioActual?.uid
         val perfil = AuthRepository.perfilActual.value
         if (uid == null || perfil == null) {
-            return Result.failure(IllegalStateException("Tu sesión no está lista. Intenta nuevamente."))
+            return falla(R.string.error_sesion_no_lista, "Tu sesión no está lista. Intenta nuevamente.")
         }
         if (perfil.rol == Rol.ADMINISTRADOR) {
-            return Result.failure(IllegalStateException("El administrador no responde servicios"))
+            return falla(R.string.error_admin_responde, "El administrador no responde servicios")
         }
         val actual = buscarPorId(id)
-            ?: return Result.failure(IllegalStateException("Asignación no encontrada"))
+            ?: return falla(R.string.error_asignacion_no_encontrada, "Asignación no encontrada")
         if (_checkins.value[id]?.finalizado == true) {
-            return Result.failure(IllegalStateException("Este servicio ya terminó"))
+            return falla(R.string.error_servicio_terminado, "Este servicio ya terminó")
         }
         if (actual.estado !in desde) {
-            return Result.failure(IllegalStateException("Esta asignación ya fue respondida"))
+            return falla(R.string.error_ya_respondida, "Esta asignación ya fue respondida")
         }
         return try {
             val confirmada = RespuestaRepository.guardar(uid, perfil.rol, perfil.nombre.orEmpty(), perfil.telefono.orEmpty(), id, actual.fecha.toString(), nuevoEstado, motivo, observaciones)
@@ -485,7 +511,7 @@ object ServicioRepository {
             throw e
         } catch (e: Exception) {
             LinceLogger.e("SERVICIOS", "No se pudo guardar la respuesta", e)
-            Result.failure(IllegalStateException("No se pudo guardar tu respuesta. Intenta nuevamente."))
+            falla(R.string.error_guardar_respuesta, "No se pudo guardar tu respuesta. Intenta nuevamente.")
         }
     }
 }

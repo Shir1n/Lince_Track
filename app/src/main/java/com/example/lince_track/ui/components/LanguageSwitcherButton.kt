@@ -15,30 +15,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.lince_track.R
 import com.example.lince_track.ui.theme.AppLanguage
-import com.example.lince_track.ui.theme.appLanguageFlow
-import com.example.lince_track.ui.theme.setAppLanguage
+import com.example.lince_track.ui.theme.cambiarIdioma
+import com.example.lince_track.ui.theme.idiomaActual
 import com.example.lince_track.util.LinceLogger
-import kotlinx.coroutines.launch
 
 @Composable
 fun LanguageSwitcherButton(
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val currentLanguage by context.appLanguageFlow.collectAsState(initial = AppLanguage.SYSTEM)
-    val scope = rememberCoroutineScope()
+    // Al cambiar el idioma la pantalla se recarga, así que basta con leerlo una vez.
+    val currentLanguage = remember { idiomaActual() }
     var expanded by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
@@ -82,7 +77,7 @@ fun LanguageSwitcherButton(
                     onClick = {
                         expanded = false
                         LinceLogger.i("IDIOMA", "Cambio de idioma a ${language.name}")
-                        scope.launch { context.setAppLanguage(language) }
+                        if (language != currentLanguage) cambiarIdioma(language)
                     }
                 )
             }

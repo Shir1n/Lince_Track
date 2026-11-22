@@ -42,7 +42,8 @@ fun AlertasScreen(onServiceClick: (String) -> Unit = {}) {
     val servicios by ServicioRepository.servicios.collectAsState()
     val checkins by ServicioRepository.checkins.collectAsState()
     val respuestas by ServicioRepository.respuestas.collectAsState()
-    val error by ServicioRepository.error.collectAsState()
+    // En el idioma de la app (el error del repositorio viene como UiText).
+    val error = ServicioRepository.errorTexto.collectAsState().value?.asString()
 
     val alertas = remember(servicios, checkins, respuestas) {
         GeneradorAlertas.generar(servicios, checkins, respuestas)

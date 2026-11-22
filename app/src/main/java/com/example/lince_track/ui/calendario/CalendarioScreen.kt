@@ -125,8 +125,10 @@ fun CalendarioScreen(
     var dialogoDesbloquear by remember { mutableStateOf<Bloqueo?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    // El ViewModel entrega el mensaje sin idioma (UiText): aquí se traduce al de la app.
+    val textoMensaje = message?.asString()
     LaunchedEffect(message) {
-        message?.let {
+        textoMensaje?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.limpiarMensaje()
         }
@@ -364,9 +366,11 @@ fun BloquearDiaDialog(
     fecha: LocalDate,
     procesando: Boolean,
     onDismiss: () -> Unit,
-    onConfirm: (String?) -> Unit
+    onConfirm: (String) -> Unit
 ) {
     var motivo by remember { mutableStateOf("") }
+    // El motivo es obligatorio: sin él no se puede bloquear.
+    val motivoValido = motivo.isNotBlank()
 
     AlertDialog(
         onDismissRequest = { if (!procesando) onDismiss() },
@@ -390,7 +394,9 @@ fun BloquearDiaDialog(
                     onValueChange = { if (it.length <= 200) motivo = it },
                     label = { Text(stringResource(R.string.bloqueo_motivo_label)) },
                     placeholder = { Text(stringResource(R.string.bloqueo_motivo_placeholder)) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("campo_motivo_bloqueo"),
                     singleLine = false,
                     maxLines = 3,
                     supportingText = {
@@ -406,8 +412,9 @@ fun BloquearDiaDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(motivo.ifBlank { null }) },
-                enabled = !procesando
+                onClick = { onConfirm(motivo.trim()) },
+                enabled = !procesando && motivoValido,
+                modifier = Modifier.testTag("btn_confirmar_bloqueo")
             ) {
                 if (procesando) {
                     CircularProgressIndicator(

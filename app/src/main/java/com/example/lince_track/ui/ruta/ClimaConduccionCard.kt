@@ -148,7 +148,7 @@ fun ClimaConduccionCard(
                             color = contentColor
                         )
                         Text(
-                            text = "• ${clima.tipo.label}",
+                            text = "• ${clima.tipo.texto.asString()}",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = secondaryTextColor,
@@ -159,7 +159,7 @@ fun ClimaConduccionCard(
                     Text(
                         text = stringResource(
                             R.string.clima_viento,
-                            clima.descripcionCorta,
+                            clima.descripcionCorta.asString(),
                             clima.windSpeedKmH.roundToInt()
                         ),
                         fontSize = 12.sp,
@@ -255,7 +255,7 @@ fun ClimaConduccionCard(
                                 text = if (recomendacionVestimenta != null) {
                                     stringResource(R.string.clima_badge_guia)
                                 } else {
-                                    nivelActual.label.uppercase()
+                                    nivelActual.texto.asString().uppercase()
                                 },
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
@@ -264,7 +264,7 @@ fun ClimaConduccionCard(
                         }
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = recomendacionVestimenta?.alertaCorta ?: recomendacion?.alertaCorta.orEmpty(),
+                            text = (recomendacionVestimenta?.alertaCorta ?: recomendacion?.alertaCorta)?.asString().orEmpty(),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = contentColor,
@@ -275,7 +275,7 @@ fun ClimaConduccionCard(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = recomendacionVestimenta?.mensajePersonalizado ?: recomendacion?.mensajePersonalizado.orEmpty(),
+                        text = (recomendacionVestimenta?.mensajePersonalizado ?: recomendacion?.mensajePersonalizado)?.asString().orEmpty(),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = contentColor,
@@ -304,7 +304,7 @@ fun ClimaConduccionCard(
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
-                                        text = prenda,
+                                        text = prenda.asString(),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = contentColor
@@ -330,7 +330,7 @@ fun ClimaConduccionCard(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = consejo,
+                                    text = consejo.asString(),
                                     fontSize = 11.sp,
                                     color = secondaryTextColor
                                 )
@@ -595,7 +595,7 @@ fun ClimaPresetDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = preset.label,
+                            text = preset.texto.asString(),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (preset == presetActual) FontWeight.Bold else FontWeight.Normal
                         )
