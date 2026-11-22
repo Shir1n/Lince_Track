@@ -703,6 +703,8 @@
     <string name="ruta_marcador_tu_vehiculo">Your vehicle</string>
     <string name="ruta_panel_ocultar">Hide check-in details</string>
     <string name="ruta_panel_mostrar">Show check-in details</string>
+    <string name="persona_sin_guia">No guide</string>
+    <string name="persona_sin_transportista">No driver</string>
     <!-- Check-in sin conexión (Room + WorkManager) -->
     <string name="sync_titulo">Offline records sent</string>
     <string name="sync_texto">%1$d records saved offline were sent.</string>

@@ -147,6 +147,9 @@ import java.util.UUID
 import kotlin.math.roundToInt
 import com.example.lince_track.ui.theme.BarraSuperior
 import com.example.lince_track.util.textoUi
+import com.example.lince_track.ui.components.tituloVisible
+import com.example.lince_track.ui.components.nombreVisible
+import com.example.lince_track.data.TextosServicio
 
 enum class RolMapa(val label: String) {
     TRANSPORTISTA("Transportista"),
@@ -481,7 +484,7 @@ private fun RutaMapaContenido(
     val recomendacionConduccion = remember(climaInfo, servicio) {
         ClimaService.generarRecomendacion(
             clima = climaInfo,
-            nombreConductor = if (servicio.esGuiado) "" else servicio.conductor,
+            nombreConductor = if (servicio.esGuiado || TextosServicio.esSinPersona(servicio.conductor)) "" else servicio.conductor,
             destino = servicio.destino
         )
     }
@@ -489,7 +492,7 @@ private fun RutaMapaContenido(
     val recomendacionVestimenta = remember(climaInfo, servicio) {
         ClimaService.generarRecomendacionVestimenta(
             clima = climaInfo,
-            nombreGuia = if (servicio.esGuiado) servicio.guia else "",
+            nombreGuia = if (servicio.esGuiado && !TextosServicio.esSinPersona(servicio.guia)) servicio.guia else "",
             destino = servicio.destino
         )
     }
@@ -978,7 +981,7 @@ private fun ServiceRouteHeaderCard(
                 verticalAlignment = Alignment.Top
             ) {
                 Text(
-                    text = servicio.titulo,
+                    text = tituloVisible(servicio.titulo),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -999,7 +1002,7 @@ private fun ServiceRouteHeaderCard(
             val subtitle = when (activeRole) {
                 RolMapa.TRANSPORTISTA ->
                     if (servicio.guia == ServicioMapper.SIN_GUIA) pasajerosTexto
-                    else "${stringResource(R.string.chip_guia, servicio.guia)} • $pasajerosTexto"
+                    else "${stringResource(R.string.chip_guia, nombreVisible(servicio.guia))} • $pasajerosTexto"
                 RolMapa.GUIA -> stringResource(R.string.ruta_reserva_pasajeros, servicio.reserva, pasajerosTexto)
                 RolMapa.COORDINADOR -> stringResource(R.string.ruta_responsable, servicio.responsable, pasajerosTexto)
             }

@@ -28,6 +28,7 @@ import com.example.lince_track.R
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.theme.BarraSuperior
+import com.example.lince_track.ui.components.tituloVisible
 
 enum class FiltroAlertas(val label: String, @param:StringRes val labelRes: Int) {
     TODAS("Todas", R.string.alertas_filtro_todas),
@@ -241,7 +242,7 @@ private fun AlertaCard(alerta: Alerta, onClick: () -> Unit) {
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = alerta.titulo,
+                text = tituloVisible(alerta.titulo),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface

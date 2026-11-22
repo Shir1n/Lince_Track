@@ -84,6 +84,7 @@ import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.SoporteDialog
 import com.example.lince_track.ui.theme.BarraSuperior
 import java.time.YearMonth
+import com.example.lince_track.ui.components.tituloVisible
 
 /**
  * Perfil de la cuenta (`usuarios/{uid}`) con sus servicios y check-ins. Por ahora, para que se vea
@@ -277,7 +278,7 @@ internal fun PerfilRealContenido(
                             EstadoServicioBadge(servicio.estado)
                         }
                         Spacer(Modifier.height(10.dp))
-                        Text(servicio.titulo, style = MaterialTheme.typography.bodyLarge,
+                        Text(tituloVisible(servicio.titulo), style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                         Text(
                             "${formatFecha(servicio.fecha, androidx.compose.ui.platform.LocalConfiguration.current.locales[0])} • ${formatHora(servicio.horaInicio)}",

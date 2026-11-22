@@ -297,7 +297,7 @@ fun IncidenciaCard(
             if (mostrarServicio) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${incidencia.titulo} • ${incidencia.nombre}",
+                    text = "${tituloVisible(incidencia.titulo)} • ${incidencia.nombre}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface

@@ -25,6 +25,7 @@ object TextosEs {
 
     fun de(texto: UiText): String = when (texto) {
         is UiText.DynamicString -> texto.value
+        is UiText.TituloServicio -> texto.titulo // en español queda como viene de la API
         is UiText.StringResource -> {
             val nombre = nombres[texto.resId] ?: error("Recurso desconocido: ${texto.resId}")
             val plantilla = textos[nombre] ?: error("Falta $nombre en values/strings.xml")

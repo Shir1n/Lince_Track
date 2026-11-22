@@ -77,6 +77,8 @@ import com.example.lince_track.util.abrirWhatsApp
 import kotlinx.coroutines.launch
 import com.example.lince_track.ui.theme.BarraSuperior
 import com.example.lince_track.util.textoUi
+import com.example.lince_track.ui.components.tituloVisible
+import com.example.lince_track.ui.components.nombreVisible
 
 @Composable
 fun DetalleServicioScreen(
@@ -263,7 +265,7 @@ private fun ServiceHeaderCard(servicio: Servicio) {
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = servicio.titulo,
+                text = tituloVisible(servicio.titulo),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -562,7 +564,7 @@ private fun GuideCard(servicio: Servicio) {
     val etiqueta = stringResource(
         if (esGuia) R.string.detalle_conductor_asignado else R.string.detalle_guia_asignado
     )
-    val nombre = if (esGuia) servicio.conductor else servicio.guia
+    val nombre = nombreVisible(if (esGuia) servicio.conductor else servicio.guia)
     val context = LocalContext.current
 
     Card(

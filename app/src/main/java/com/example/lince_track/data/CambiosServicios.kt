@@ -34,13 +34,13 @@ object CambiosServicios {
                 rol == Rol.ADMINISTRADOR && previa == null && !incidencia.resuelta -> AvisoLocal(
                     incidencia.servicioId,
                     texto(R.string.aviso_incidencia_nueva, incidencia.tipo.texto),
-                    texto(R.string.aviso_en_servicio, incidencia.nombre, incidencia.titulo)
+                    texto(R.string.aviso_en_servicio, incidencia.nombre, UiText.TituloServicio(incidencia.titulo))
                 )
                 rol != Rol.ADMINISTRADOR && previa?.resuelta == false && incidencia.resuelta -> AvisoLocal(
                     incidencia.servicioId,
                     texto(R.string.aviso_incidencia_resuelta),
                     if (incidencia.respuesta.isNotBlank()) UiText.DynamicString(incidencia.respuesta)
-                    else texto(R.string.aviso_en_servicio, incidencia.tipo.texto, incidencia.titulo)
+                    else texto(R.string.aviso_en_servicio, incidencia.tipo.texto, UiText.TituloServicio(incidencia.titulo))
                 )
                 rol != Rol.ADMINISTRADOR && previa != null && previa.respuesta != incidencia.respuesta -> AvisoLocal(
                     incidencia.servicioId,
@@ -61,12 +61,12 @@ object CambiosServicios {
                 EstadoServicio.RECHAZADO -> AvisoLocal(
                     servicio.id,
                     texto(R.string.aviso_servicio_rechazado),
-                    texto(R.string.aviso_rechazo, servicio.responsable, servicio.titulo)
+                    texto(R.string.aviso_rechazo, TextosServicio.nombre(servicio.responsable), UiText.TituloServicio(servicio.titulo))
                 )
                 EstadoServicio.ACEPTADO -> AvisoLocal(
                     servicio.id,
                     texto(R.string.aviso_servicio_confirmado),
-                    texto(R.string.aviso_confirmo, servicio.responsable, servicio.titulo)
+                    texto(R.string.aviso_confirmo, TextosServicio.nombre(servicio.responsable), UiText.TituloServicio(servicio.titulo))
                 )
                 EstadoServicio.PENDIENTE -> null
             }
@@ -84,7 +84,7 @@ object CambiosServicios {
                     texto(R.string.aviso_nuevo_servicio),
                     texto(
                         R.string.aviso_nuevo_servicio_detalle,
-                        servicio.titulo,
+                        UiText.TituloServicio(servicio.titulo),
                         formatFechaCorta(servicio.fecha),
                         formatHora(servicio.horaInicio)
                     )
@@ -96,7 +96,7 @@ object CambiosServicios {
         val quitados = antes
             .filter { it.id !in idsActuales && !it.fecha.isBefore(hoy) && it.estado != EstadoServicio.RECHAZADO }
             .map {
-                AvisoLocal(it.id, texto(R.string.aviso_servicio_reasignado), texto(R.string.aviso_ya_no_a_cargo, it.titulo))
+                AvisoLocal(it.id, texto(R.string.aviso_servicio_reasignado), texto(R.string.aviso_ya_no_a_cargo, UiText.TituloServicio(it.titulo)))
             }
         return nuevosOCambiados + quitados
     }
@@ -104,17 +104,20 @@ object CambiosServicios {
     private fun cambioDeCompanero(previo: Servicio, actual: Servicio): AvisoLocal? {
         val antes = if (actual.esGuiado) previo.conductor else previo.guia
         val ahora = if (actual.esGuiado) actual.conductor else actual.guia
+        val antesNadie = TextosServicio.esSinPersona(antes)
+        val ahoraNadie = TextosServicio.esSinPersona(ahora)
         return when {
-            antes == ahora -> null
-            ahora == ReglasCompanero.SIN_ASIGNAR -> AvisoLocal(
+            // "Sin guía" (de la API) y "Sin asignar" (nadie aceptó) son lo mismo: no hay nada que avisar.
+            antes == ahora || (antesNadie && ahoraNadie) -> null
+            ahoraNadie -> AvisoLocal(
                 actual.id,
                 texto(if (actual.esGuiado) R.string.aviso_conductor_sin_asignar else R.string.aviso_guia_sin_asignar),
-                texto(R.string.aviso_ya_no_esta, antes, actual.titulo)
+                texto(R.string.aviso_ya_no_esta, antes, UiText.TituloServicio(actual.titulo))
             )
             else -> AvisoLocal(
                 actual.id,
                 texto(if (actual.esGuiado) R.string.aviso_conductor_confirmado else R.string.aviso_guia_confirmado),
-                texto(R.string.aviso_confirmo, ahora, actual.titulo)
+                texto(R.string.aviso_confirmo, ahora, UiText.TituloServicio(actual.titulo))
             )
         }
     }

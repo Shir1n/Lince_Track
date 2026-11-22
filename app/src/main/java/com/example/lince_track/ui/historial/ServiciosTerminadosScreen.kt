@@ -43,6 +43,8 @@ import com.example.lince_track.data.esGuiado
 import com.example.lince_track.data.formatFechaCorta
 import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.theme.BarraSuperior
+import com.example.lince_track.ui.components.tituloVisible
+import com.example.lince_track.ui.components.nombreVisible
 
 /**
  * Servicios con check-out registrado, del más reciente al más antiguo. Solo alcanza a lo que
@@ -148,9 +150,9 @@ fun VerTerminadosBoton(cantidad: Int, onClick: () -> Unit) {
 @Composable
 private fun TerminadoCard(servicio: Servicio, checkin: CheckinServicio, onClick: () -> Unit) {
     val companero = if (servicio.esGuiado) {
-        stringResource(R.string.chip_conductor, servicio.conductor)
+        stringResource(R.string.chip_conductor, nombreVisible(servicio.conductor))
     } else {
-        stringResource(R.string.chip_guia, servicio.guia)
+        stringResource(R.string.chip_guia, nombreVisible(servicio.guia))
     }
 
     Card(
@@ -162,7 +164,7 @@ private fun TerminadoCard(servicio: Servicio, checkin: CheckinServicio, onClick:
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = servicio.titulo,
+                text = tituloVisible(servicio.titulo),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface

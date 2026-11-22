@@ -65,6 +65,8 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import com.example.lince_track.ui.theme.BarraSuperior
 import com.example.lince_track.util.textoUi
+import com.example.lince_track.ui.components.tituloVisible
+import com.example.lince_track.ui.components.nombreVisible
 
 /**
  * Lista de excursiones/traslados asignados al guía logueado.
@@ -337,7 +339,7 @@ private fun ServicioCard(
                 verticalAlignment = Alignment.Top
             ) {
                 Text(
-                    text = servicio.titulo,
+                    text = tituloVisible(servicio.titulo),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -374,7 +376,7 @@ private fun ServicioCard(
                 MetaChip(stringResource(R.string.chip_pasajeros, servicio.pasajeros))
                 // Un servicio guiado sin transporte no necesita la etiqueta.
                 if (servicio.conductor != ServicioMapper.SIN_TRANSPORTISTA) {
-                    MetaChip(stringResource(R.string.chip_conductor, servicio.conductor))
+                    MetaChip(stringResource(R.string.chip_conductor, nombreVisible(servicio.conductor)))
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))

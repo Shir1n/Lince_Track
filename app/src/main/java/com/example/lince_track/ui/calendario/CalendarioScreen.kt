@@ -85,6 +85,8 @@ import com.example.lince_track.ui.components.RejectServicioDialog
 import java.time.LocalDate
 import java.time.YearMonth
 import com.example.lince_track.ui.theme.BarraSuperior
+import com.example.lince_track.ui.components.tituloVisible
+import com.example.lince_track.ui.components.nombreVisible
 
 private val weekDayLabelRes = listOf(
     R.string.agenda_dia_l,
@@ -865,7 +867,7 @@ private fun AgendaCard(
                 verticalAlignment = Alignment.Top
             ) {
                 Text(
-                    text = servicio.titulo,
+                    text = tituloVisible(servicio.titulo),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -913,7 +915,7 @@ private fun AgendaCard(
 
             if (servicio.guia != ServicioMapper.SIN_GUIA) {
                 Text(
-                    text = stringResource(R.string.chip_guia, servicio.guia),
+                    text = stringResource(R.string.chip_guia, nombreVisible(servicio.guia)),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
