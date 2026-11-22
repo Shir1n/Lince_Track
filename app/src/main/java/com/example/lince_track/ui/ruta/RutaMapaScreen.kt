@@ -113,9 +113,14 @@ import com.example.lince_track.data.formatHora
 import com.example.lince_track.data.clima.TipoClima
 import com.example.lince_track.data.esGuiado
 import com.example.lince_track.data.responsable
+import com.example.lince_track.data.esSinConexion
+import com.example.lince_track.data.local.BaseLocal
+import com.example.lince_track.data.local.HitoPendiente
+import com.example.lince_track.data.remote.BloqueoApiException
 import com.example.lince_track.data.remote.mensajeBloqueo
 import com.example.lince_track.data.servicios.ServicioMapper
 import com.example.lince_track.util.LinceLogger
+import com.example.lince_track.util.SincronizarHitosWorker
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -127,6 +132,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.runtime.mutableFloatStateOf
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -230,8 +236,15 @@ private fun RutaMapaContenido(
 
     val checkins by ServicioRepository.checkins.collectAsState()
     val checkin = checkins[servicio.id]
-    val isCheckInDone = checkin != null
-    val isServiceFinished = checkin?.finalizado == true
+    // Lo marcado sin conexión espera en Room hasta que WorkManager lo envía; mientras, cuenta como hecho.
+    val hitosEnCola by remember { BaseLocal.dao?.observarHitos() ?: flowOf(emptyList()) }
+        .collectAsState(initial = emptyList())
+    val uidActual = AuthRepository.usuarioActual?.uid
+    val enColaServicio = hitosEnCola.filter { it.servicioId == servicio.id && it.uid == uidActual }
+    val checkInPendiente = enColaServicio.any { it.checkIn }
+    val checkOutPendiente = enColaServicio.any { !it.checkIn }
+    val isCheckInDone = checkin != null || checkInPendiente
+    val isServiceFinished = checkin?.finalizado == true || checkOutPendiente
 
     var procesando by remember { mutableStateOf(false) }
     var altoPanel by remember { mutableIntStateOf(0) }
@@ -512,6 +525,38 @@ private fun RutaMapaContenido(
         )
     }
 
+    /**
+     * Sin conexión con el backend, el check-in o check-out (ya validado en el teléfono) se guarda en Room y
+     * WorkManager lo envía cuando vuelva la señal, con la misma clave para que no se duplique.
+     */
+    suspend fun guardarSinConexion(checkIn: Boolean, clave: String, distancia: Int): Boolean {
+        val dao = BaseLocal.dao ?: return false
+        val uid = AuthRepository.usuarioActual?.uid ?: return false
+        val perfil = AuthRepository.perfilActual.value ?: return false
+        dao.guardarHito(
+            HitoPendiente(
+                clave = clave,
+                uid = uid,
+                rol = perfil.rol.id,
+                nombre = perfil.nombre.orEmpty(),
+                servicioId = servicio.id,
+                titulo = servicio.titulo,
+                fecha = servicio.fecha.toString(),
+                lugar = if (checkIn) servicio.origen else servicio.destino,
+                checkIn = checkIn,
+                lat = userGeoPoint.latitude,
+                lon = userGeoPoint.longitude,
+                precisionMetros = precisionGps ?: 0f,
+                distanciaMetros = distancia,
+                creadoEn = System.currentTimeMillis()
+            )
+        )
+        SincronizarHitosWorker.programar(context)
+        LinceLogger.i("CHECKIN", "Sin conexión: ${if (checkIn) "check-in" else "check-out"} de ${servicio.id} en cola")
+        scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.ruta_checkin_sin_conexion)) }
+        return true
+    }
+
     // Check-in: la app ya lo validó (el botón queda bloqueado si no cumple); el backend lo valida otra vez.
     fun registrarCheckInValidado(mensajeExito: String, guardar: suspend () -> Result<String?>) {
         val evaluacionActual = evaluacionVigente ?: return
@@ -548,7 +593,48 @@ private fun RutaMapaContenido(
                     avisarBloqueo(rechazo)
                 }
             }.onFailure { e ->
-                snackbarHostState.showSnackbar(e.mensajeBloqueo(context.getString(R.string.error_operacion)))
+                val distancia = evaluacionActual.distanciaMetros ?: distanceMeters
+                if ((e as? BloqueoApiException)?.esSinConexion == true && guardarSinConexion(true, claveCheckin, distancia)) {
+                    claveCheckin = UUID.randomUUID().toString()
+                } else {
+                    snackbarHostState.showSnackbar(e.mensajeBloqueo(context.getString(R.string.error_operacion)))
+                }
+            }
+        }
+    }
+
+    // Check-out: se registra en el backend sin bloquear. Si el check-in aún espera en la cola, o no hay conexión,
+    // el check-out también va a la cola (WorkManager lo envía después del check-in y lo guarda en Firestore).
+    fun registrarCheckOut(mensajeExito: String) {
+        if (procesando) return
+        scope.launch {
+            val clave = UUID.randomUUID().toString()
+            val aLaCola = if (checkInPendiente) {
+                true
+            } else {
+                procesando = true
+                val error = hitos.registrar(
+                    servicioId = servicio.id,
+                    checkIn = false,
+                    lat = userGeoPoint.latitude,
+                    lon = userGeoPoint.longitude,
+                    precisionMetros = precisionGps ?: 0f,
+                    claveIdempotencia = clave
+                ).exceptionOrNull() as? BloqueoApiException
+                procesando = false
+                if (error != null && !error.esSinConexion) {
+                    LinceLogger.w("CHECKIN", "Check-out sin registro en el backend: ${error.message}")
+                }
+                error?.esSinConexion == true
+            }
+            if (!aLaCola || !guardarSinConexion(false, clave, distanceMeters)) {
+                registrar(mensajeExito) {
+                    ServicioRepository.registrarCheckOut(
+                        id = servicio.id,
+                        lat = userGeoPoint.latitude,
+                        lon = userGeoPoint.longitude
+                    )
+                }
             }
         }
     }
@@ -709,6 +795,8 @@ private fun RutaMapaContenido(
                     servicio = servicio,
                     activeRole = activeRole,
                     checkin = checkin,
+                    checkInPendiente = checkInPendiente,
+                    checkOutPendiente = checkOutPendiente,
                     distanceMeters = distanceMeters,
                     userPoint = userGeoPoint,
                     isUsingRealGps = isUsingRealGps,
@@ -742,23 +830,7 @@ private fun RutaMapaContenido(
                             } else {
                                 context.getString(R.string.ruta_conductor_checkout_ok, servicio.destino)
                             }
-                            registrar(exito) {
-                                hitos.registrar(
-                                    servicioId = servicio.id,
-                                    checkIn = false,
-                                    lat = userGeoPoint.latitude,
-                                    lon = userGeoPoint.longitude,
-                                    precisionMetros = precisionGps ?: 0f,
-                                    claveIdempotencia = UUID.randomUUID().toString()
-                                ).onFailure { e ->
-                                    LinceLogger.w("CHECKIN", "Check-out sin registro en el backend: ${e.message}")
-                                }
-                                ServicioRepository.registrarCheckOut(
-                                    id = servicio.id,
-                                    lat = userGeoPoint.latitude,
-                                    lon = userGeoPoint.longitude
-                                )
-                            }
+                            registrarCheckOut(exito)
                         }
                     }
                 )
@@ -1163,6 +1235,8 @@ private fun RoleBottomActionPanel(
     servicio: Servicio,
     activeRole: RolMapa,
     checkin: CheckinServicio?,
+    checkInPendiente: Boolean,
+    checkOutPendiente: Boolean,
     distanceMeters: Int,
     userPoint: GeoPoint,
     isUsingRealGps: Boolean,
@@ -1175,8 +1249,8 @@ private fun RoleBottomActionPanel(
     onReportarIncidencia: () -> Unit,
     onPrimaryAction: () -> Unit
 ) {
-    val isCheckInDone = checkin != null
-    val isServiceFinished = checkin?.finalizado == true
+    val isCheckInDone = checkin != null || checkInPendiente
+    val isServiceFinished = checkin?.finalizado == true || checkOutPendiente
     val context = LocalContext.current
     // El check-in se valida con la geocerca; el check-out solo queda registrado.
     val validarCheckin = activeRole != RolMapa.COORDINADOR && !isCheckInDone
@@ -1273,6 +1347,17 @@ private fun RoleBottomActionPanel(
                             text = detalle,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (checkInPendiente || checkOutPendiente) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.ruta_pendiente_sincronizar),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            textAlign = TextAlign.Center
                         )
                     }
 

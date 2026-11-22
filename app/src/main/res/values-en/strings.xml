@@ -705,4 +705,10 @@
     <string name="ruta_panel_mostrar">Show check-in details</string>
     <string name="persona_sin_guia">No guide</string>
     <string name="persona_sin_transportista">No driver</string>
+    <!-- Check-in sin conexión (Room + WorkManager) -->
+    <string name="sync_titulo">Offline records sent</string>
+    <string name="sync_texto">%1$d records saved offline were sent.</string>
+    <string name="sync_texto_rechazos">%1$d records were sent; %2$d check-in was not accepted and Coordination was notified.</string>
+    <string name="ruta_checkin_sin_conexion">Offline: the record was saved and will be sent automatically when the signal returns.</string>
+    <string name="ruta_pendiente_sincronizar">Pending sync (offline)</string>
 </resources>

@@ -135,4 +135,17 @@ class ReglasGeocercaTest {
         assertTrue(ReglasGeocerca.detalleIncidencia(evaluar(), "x").contains("verificado"))
         assertTrue(fuera.length <= ReglasIncidencia.MAX_DETALLE)
     }
+
+    @Test
+    fun elDetalleDeUnRechazoDiferidoExplicaQueFueSinConexion() {
+        assertEquals(
+            "Check-in hecho sin conexión y rechazado por el servidor: después de la hora límite. " +
+                "Hotel Centro Puerto Varas: a 30 m (radio 150 m), GPS ± 8 m.",
+            ReglasGeocerca.detalleRechazoDiferido(ResultadoCheckin.TARDE, "Hotel Centro Puerto Varas", 30, 150, 8.2f)
+        )
+        assertTrue(
+            ReglasGeocerca.detalleRechazoDiferido(ResultadoCheckin.SIN_GEOCERCA, "x", null, null, 0f)
+                .endsWith("x: a sin dato (radio sin geocerca), GPS ± 0 m.")
+        )
+    }
 }
