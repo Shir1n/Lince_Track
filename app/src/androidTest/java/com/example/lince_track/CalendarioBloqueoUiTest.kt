@@ -17,6 +17,9 @@ import com.example.lince_track.data.remote.BloqueoApi
 import com.example.lince_track.data.remote.dto.AsignacionDto
 import com.example.lince_track.data.remote.dto.BloqueoDto
 import com.example.lince_track.data.remote.dto.BloqueoSolicitudDto
+import com.example.lince_track.data.remote.dto.GeocercaDto
+import com.example.lince_track.data.remote.dto.HitoDto
+import com.example.lince_track.data.remote.dto.HitoSolicitudDto
 import com.example.lince_track.data.remote.dto.ParametrosDto
 import com.example.lince_track.data.remote.dto.PersonaDto
 import com.example.lince_track.data.remote.dto.ReservaDto
@@ -58,6 +61,9 @@ class CalendarioBloqueoUiTest {
         }
         override suspend fun eliminar(id: Long) = Unit
         override suspend fun obtenerParametros(): ParametrosDto = ParametrosDto(diasAnticipacionBloqueo = 7)
+        // El calendario no usa geocercas ni hitos.
+        override suspend fun geocercas(): List<GeocercaDto> = emptyList()
+        override suspend fun registrarHito(solicitud: HitoSolicitudDto): HitoDto = error("No se usa en este test")
     }
 
     private fun servicioEl(fecha: LocalDate) = ServicioMapper.aDominio(

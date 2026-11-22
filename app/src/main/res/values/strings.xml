@@ -682,4 +682,23 @@
     <string name="api_error_inesperado">Error inesperado al consultar la API.</string>
     <string name="incidencia_motivo_ubicacion">Para que Coordinación sepa dónde estás, la incidencia lleva tu ubicación de este momento.</string>
     <string name="bloqueo_motivo_obligatorio">Indica el motivo del bloqueo.</string>
+    <!-- Check-in con geocerca -->
+    <string name="ruta_geocerca_cargando">Cargando la geocerca del punto de recogida…</string>
+    <string name="ruta_geocerca_error">No se pudo validar el check-in: %1$s</string>
+    <string name="ruta_reintentar">Reintentar</string>
+    <string name="ruta_geocerca_datos">Distancia %1$s • Radio %2$s • GPS ± %3$s</string>
+    <string name="ruta_geocerca_datos_sin_gps">Distancia %1$s • Radio %2$s • GPS sin señal real</string>
+    <string name="ruta_geocerca_limite">Check-in hasta las %1$s (%2$d min antes del pickup)</string>
+    <string name="ruta_btn_checkin_bloqueado">CHECK-IN BLOQUEADO</string>
+    <string name="ruta_avisar_bloqueo">Avisar a Coordinación</string>
+    <string name="ruta_bloqueo_sin_geocerca">%1$s no tiene geocerca. Pide a Coordinación que la agregue.</string>
+    <string name="ruta_bloqueo_sin_gps">Para hacer check-in se necesita el GPS real del teléfono.</string>
+    <string name="ruta_bloqueo_impreciso">El GPS es poco preciso (± %1$s; máximo %2$s). Sal al exterior y espera unos segundos.</string>
+    <string name="ruta_bloqueo_fuera">Estás fuera de la zona: a %1$s de %2$s (radio %3$s).</string>
+    <string name="ruta_bloqueo_tarde">Pasó la hora límite del check-in (%1$s).</string>
+    <string name="ruta_checkin_rechazado">El servidor rechazó el check-in: %1$s Se avisará a Coordinación.</string>
+    <string name="ruta_checkin_validando">Validando check-in con el servidor…</string>
+    <string name="ruta_marcador_geocerca">Geocerca: %1$s (%2$d m)</string>
+    <string name="ruta_marcador_tu_ubicacion">Tu ubicación</string>
+    <string name="ruta_marcador_tu_vehiculo">Tu vehículo</string>
 </resources>

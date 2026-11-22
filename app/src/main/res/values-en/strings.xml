@@ -682,4 +682,23 @@
     <string name="api_error_inesperado">Unexpected error while querying the API.</string>
     <string name="incidencia_motivo_ubicacion">So Coordination knows where you are, the incident includes your current location.</string>
     <string name="bloqueo_motivo_obligatorio">Enter the reason for the block.</string>
+    <!-- Check-in con geocerca -->
+    <string name="ruta_geocerca_cargando">Loading the pickup geofence…</string>
+    <string name="ruta_geocerca_error">Check-in could not be validated: %1$s</string>
+    <string name="ruta_reintentar">Retry</string>
+    <string name="ruta_geocerca_datos">Distance %1$s • Radius %2$s • GPS ± %3$s</string>
+    <string name="ruta_geocerca_datos_sin_gps">Distance %1$s • Radius %2$s • No real GPS signal</string>
+    <string name="ruta_geocerca_limite">Check-in until %1$s (%2$d min before pickup)</string>
+    <string name="ruta_btn_checkin_bloqueado">CHECK-IN BLOCKED</string>
+    <string name="ruta_avisar_bloqueo">Notify Coordination</string>
+    <string name="ruta_bloqueo_sin_geocerca">%1$s has no geofence. Ask Coordination to add it.</string>
+    <string name="ruta_bloqueo_sin_gps">Check-in requires the phone’s real GPS.</string>
+    <string name="ruta_bloqueo_impreciso">GPS accuracy is low (± %1$s; max %2$s). Go outside and wait a few seconds.</string>
+    <string name="ruta_bloqueo_fuera">You are outside the zone: %1$s from %2$s (radius %3$s).</string>
+    <string name="ruta_bloqueo_tarde">The check-in deadline has passed (%1$s).</string>
+    <string name="ruta_checkin_rechazado">The server rejected the check-in: %1$s Coordination will be notified.</string>
+    <string name="ruta_checkin_validando">Validating check-in with the server…</string>
+    <string name="ruta_marcador_geocerca">Geofence: %1$s (%2$d m)</string>
+    <string name="ruta_marcador_tu_ubicacion">Your location</string>
+    <string name="ruta_marcador_tu_vehiculo">Your vehicle</string>
 </resources>
