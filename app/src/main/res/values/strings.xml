@@ -479,4 +479,6 @@
     <string name="ruta_bloqueo_tarde">Pasó la hora límite del check-in (%1$s).</string>
     <string name="ruta_checkin_rechazado">El servidor rechazó el check-in: %1$s Se avisará a Coordinación.</string>
     <string name="ruta_checkin_validando">Validando check-in con el servidor…</string>
+    <string name="ruta_panel_ocultar">Ocultar detalles del check-in</string>
+    <string name="ruta_panel_mostrar">Mostrar detalles del check-in</string>
 </resources>
