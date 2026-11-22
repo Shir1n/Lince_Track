@@ -29,11 +29,11 @@ la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`)
   tolerancia de puntualidad, motivo obligatorio de incidencia, campo "precisión del GPS").
 - **Lo que piden y falta hoy:**
   - ~~Backend propio **Spring Boot** + Swagger/OpenAPI + JWT/roles + BD~~ en `backend/` y ya usado por la app
-    (bloqueos, geocercas y check-in). Falta publicarlo fuera del computador (ver "Backend propio").
+    (bloqueos, geocercas y check-in), **publicado en Cloud Run con Cloud SQL** desde el 22-11-2026 (ver "Backend propio").
   - ~~Check-in **bloqueado** fuera de la geocerca o tarde~~ **Hecho (PR 53, 21-11-2026):** ver "Check-in con geocerca".
   - ~~Disponibilidad: bloquear días con 7 días de anticipación~~ **Hecho (PR 51).**
-  - Room + WorkManager: caché, cola de check-ins sin conexión, sincronización con reintentos e idempotencia. El
-    backend ya acepta `claveIdempotencia`; falta la cola en la app.
+  - ~~Room + WorkManager~~ **Hecho (PR 58, 22-11-2026):** cola de check-ins sin conexión, caché de geocercas y reglas,
+    sincronización con reintentos e idempotencia (ver "Check-in sin conexión").
   - ~~Español e inglés con selector de idioma persistente~~ **Hecho (PR 52 y 54).**
   - JUnit + MockK con cobertura > 90 % en ViewModel/Repository y al menos un Compose UI Test.
   - ~~APK release firmada~~ **Hecha el 20-11-2026** (ver "Comandos"); falta instalarla en el celular de la defensa.
@@ -140,10 +140,15 @@ la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`)
   `.\firestore-tests\node_modules\.bin\firebase deploy --only firestore:rules` o `--only functions`. La cuenta de
   servicio no sirve para publicar (Google responde 403). Las imágenes de las funciones se borran tras 1 día.
 - **Tests de las funciones:** `cd functions; npm install; npm test` (`node --test`, sin Firebase).
-- **Backend en el celular por USB:** `LINCE_BACKEND_URL=http://localhost:8080/` en `local.properties` y
-  `adb reverse tcp:8080 tcp:8080`. El reenvío se pierde si el cable se desconecta: si el mapa dice "Sin conexión con el
-  servidor", repetir el `adb reverse`. El emulador de los tests de reglas también usa el puerto 8080: detener el backend
-  mientras corren.
+- **Backend:** la app usa por defecto el de Cloud Run (`BACKEND_NUBE` en `app/build.gradle.kts`). Para probar uno local:
+  `LINCE_BACKEND_URL=http://localhost:8080/` en `local.properties` y `adb reverse tcp:8080 tcp:8080` (el reenvío se
+  pierde si el cable se desconecta). El emulador de los tests de reglas también usa el puerto 8080: detener el backend
+  local mientras corren.
+- **Google Cloud CLI** (`gcloud`, instalado el 22-11-2026 en el computador de Shir1n, en
+  `%LOCALAPPDATA%\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd`; sesión iniciada con la cuenta dueña del proyecto).
+  Publicar el backend, desde `backend/`:
+  `gcloud run deploy lince-backend --source . --region southamerica-west1` (conserva variables y secretos). Logs:
+  `gcloud run services logs read lince-backend --region southamerica-west1`.
 
 ## Identificadores
 - `applicationId = "cl.duoc.lince_track"` (registrado en el proyecto Firebase `lince-track-66c55`).
@@ -261,8 +266,16 @@ la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`)
 - Lee los reemplazos (`asignaciones/{servicioId}`) con Firebase Admin si `GOOGLE_APPLICATION_CREDENTIALS` apunta a la
   cuenta de servicio (la de Shir1n está fuera del repo: `D:\IA\Fire` o `contexto/`, según el computador); sin ella
   arranca igual y no los ve.
-- La app ya lo usa para bloqueos (PR 51) y para el check-in con geocerca (PR 53). Falta Room + WorkManager y publicarlo
-  fuera del computador (por ejemplo, en Cloud Run): **sin el backend nadie puede hacer check-in**.
+- La app lo usa para bloqueos (PR 51), el check-in con geocerca (PR 53) y la cola sin conexión (PR 58).
+- **En la nube (desde el 22-11-2026):** Cloud Run `lince-backend` en `southamerica-west1`
+  (https://lince-backend-589632568586.southamerica-west1.run.app, Swagger en `/swagger-ui.html`), máximo 2 instancias,
+  perfil `nube`. Base: Cloud SQL `lince-db` (PostgreSQL 17, `db-f1-micro`, disco HDD de 10 GB, sin respaldos), base y
+  usuario `lince`; se conecta con el conector de Cloud SQL (`CLOUD_SQL_INSTANCIA`). La clave de la API y la contraseña
+  de la base están en Secret Manager (`lince-api-key`, `lince-db-password`). Lee Firestore con la identidad de Cloud
+  Run (`LINCE_FIREBASE_CREDENCIALES=nube`), sin archivo de clave. Costo aproximado: Cloud SQL unos US$9-10 al mes;
+  se puede borrar después de la entrega. El `Dockerfile` quita los CRLF de `gradlew` (si no, Linux no lo ejecuta).
+- Al partir con la base vacía, el backend crea las tablas y las 4 geocercas; los parámetros parten con los valores
+  de `application.yml`. Para mover una geocerca en la nube se usa `PUT /api/geocercas/{id}` con token de administrador.
 - Para probar sin token de administrador, la base H2 local se puede editar con el `h2-*.jar` de la caché de Gradle
   (`org.h2.tools.Shell`, usuario `sa` sin contraseña; `AUTO_SERVER=TRUE` permite hacerlo con el backend corriendo).
 
@@ -280,6 +293,18 @@ la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`)
 - La pantalla muestra distancia, radio, precisión del GPS y hora límite, nunca coordenadas (quedan en capturas y videos).
 - Modificación en vivo típica: el radio de cada hotel (`PUT /api/geocercas/{id}`) o `radioPorDefectoMetros` y
   `anticipacionMinutos` (`PUT /api/parametros`).
+
+### Check-in sin conexión (PR 58, Room + WorkManager)
+- Room (`data/local/LinceDatabase.kt`, con KSP): `hitos_pendientes` (cola) y la caché de `geocercas` y `parametros`.
+  `HitoRepository` guarda la caché al leer del backend y, si no hay conexión (`esSinConexion`: sin red, 5xx o 429), usa
+  la copia guardada. Un 4xx no se esconde con la caché.
+- Si la app permite el check-in y el backend no responde, se guarda en la cola con su clave y el panel muestra
+  "Pendiente de sincronizar". El check-out también va a la cola si su check-in sigue pendiente.
+- `SincronizarHitosWorker` (WorkManager, solo con red, reintentos exponenciales desde 30 s) usa `SincronizadorHitos`:
+  envía en orden y con la misma clave; VERIFICADO → Firestore; rechazado → incidencia y descarta su check-out; 4xx →
+  lo saca de la cola. Al terminar avisa con una notificación. `MainActivity` lo reprograma si quedó algo en la cola.
+- Probado el 22-11-2026 cortando el `adb reverse`: el check-in del 3166 (Patricio) se sincronizó solo en unos 20 s.
+  Ese servicio quedó aceptado y con check-in de prueba. Con el backend en Cloud Run, la demo se hace con modo avión.
 
 ## Privacidad (Ley 21.719, vigente desde el 01-12-2026)
 - Aviso "Tus datos en Lince Track" (`ui/components/Privacidad.kt`): se muestra al abrir la app hasta pulsar

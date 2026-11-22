@@ -13,6 +13,10 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Backend publicado en Cloud Run (público: protege sus datos con el token de Firebase). Para usar uno local,
+// LINCE_BACKEND_URL=http://localhost:8080/ en local.properties y adb reverse tcp:8080 tcp:8080.
+val BACKEND_NUBE = "https://lince-backend-589632568586.southamerica-west1.run.app/"
+
 // Valores locales (no se suben a git): local.properties está en .gitignore.
 val localProps = Properties().apply {
     val archivo = rootProject.file("local.properties")
@@ -73,7 +77,7 @@ android {
         buildConfigField("String", "LOCAL_VERSION_JSON_B64", "\"$versionJsonB64\"")
 
         // Backend propio de Lince (bloqueo de días, parámetros, etc.)
-        val backendUrl = localProps.getProperty("LINCE_BACKEND_URL", "http://10.0.2.2:8080/").trim()
+        val backendUrl = localProps.getProperty("LINCE_BACKEND_URL", BACKEND_NUBE).trim()
             .let { if (it.endsWith("/")) it else "$it/" }
         buildConfigField("String", "LINCE_BACKEND_URL", "\"$backendUrl\"")
     }
