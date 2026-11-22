@@ -48,16 +48,29 @@ object IncidenciaRepository {
         tipo: TipoIncidencia,
         detalle: String,
         ubicacion: Ubicacion?
+    ): Boolean = reportar(uid, rol, nombre, servicio.id, servicio.titulo, servicio.fecha.toString(), tipo, detalle, ubicacion)
+
+    /** Igual, sin el servicio cargado: la usa la sincronización en segundo plano (con la app cerrada). */
+    suspend fun reportar(
+        uid: String,
+        rol: Rol,
+        nombre: String,
+        servicioId: String,
+        titulo: String,
+        fecha: String,
+        tipo: TipoIncidencia,
+        detalle: String,
+        ubicacion: Ubicacion?
     ): Boolean = firestore.collection(COLECCION).document().set(
         buildMap<String, Any> {
             put("uid", uid)
             put("rol", rol.id)
             put("nombre", nombre)
-            put("servicioId", servicio.id)
-            put("titulo", servicio.titulo)
+            put("servicioId", servicioId)
+            put("titulo", titulo)
             put("tipo", tipo.codigo)
             put("detalle", detalle)
-            put("fecha", servicio.fecha.toString())
+            put("fecha", fecha)
             put("creadaEn", FieldValue.serverTimestamp())
             put("resuelta", false)
             if (ubicacion != null) {

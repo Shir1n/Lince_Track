@@ -126,14 +126,33 @@ object ReglasGeocerca {
         val radio = evaluacion.geocerca?.let { "${it.radioMetros} m" } ?: "sin geocerca"
         val gps = evaluacion.precisionMetros?.let { "± $it m" } ?: "sin dato"
         val hora = "%02d:%02d".format(evaluacion.limite.hour, evaluacion.limite.minute)
-        val motivo = when (evaluacion.resultado) {
-            ResultadoCheckin.VERIFICADO -> "verificado"
-            ResultadoCheckin.SIN_GEOCERCA -> "el punto de recogida no tiene geocerca"
-            ResultadoCheckin.SIN_GPS_REAL -> "sin GPS real"
-            ResultadoCheckin.GPS_IMPRECISO -> "GPS impreciso"
-            ResultadoCheckin.FUERA_DE_ZONA -> "fuera de la zona"
-            ResultadoCheckin.TARDE -> "después de la hora límite ($hora)"
-        }
-        return "Check-in bloqueado: $motivo. $nombre: a $distancia (radio $radio), GPS $gps."
+        return "Check-in bloqueado: ${motivo(evaluacion.resultado, hora)}. $nombre: a $distancia (radio $radio), GPS $gps."
+    }
+
+    /** Motivo en palabras para Coordinación; [horaLimite] se agrega si el check-in fue tarde. */
+    fun motivo(resultado: ResultadoCheckin, horaLimite: String? = null): String = when (resultado) {
+        ResultadoCheckin.VERIFICADO -> "verificado"
+        ResultadoCheckin.SIN_GEOCERCA -> "el punto de recogida no tiene geocerca"
+        ResultadoCheckin.SIN_GPS_REAL -> "sin GPS real"
+        ResultadoCheckin.GPS_IMPRECISO -> "GPS impreciso"
+        ResultadoCheckin.FUERA_DE_ZONA -> "fuera de la zona"
+        ResultadoCheckin.TARDE -> if (horaLimite != null) "después de la hora límite ($horaLimite)" else "después de la hora límite"
+    }
+
+    /**
+     * Detalle de la incidencia cuando un check-in hecho sin conexión llega después al backend y este lo rechaza
+     * (por ejemplo, porque su reloj dice que fue tarde).
+     */
+    fun detalleRechazoDiferido(
+        resultado: ResultadoCheckin,
+        lugar: String,
+        distanciaMetros: Int?,
+        radioMetros: Int?,
+        precisionMetros: Float
+    ): String {
+        val distancia = distanciaMetros?.let { "$it m" } ?: "sin dato"
+        val radio = radioMetros?.let { "$it m" } ?: "sin geocerca"
+        return "Check-in hecho sin conexión y rechazado por el servidor: ${motivo(resultado)}. " +
+            "$lugar: a $distancia (radio $radio), GPS ± ${precisionMetros.roundToInt()} m."
     }
 }
