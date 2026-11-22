@@ -34,6 +34,8 @@ dependencies {
 
     runtimeOnly("com.h2database:h2")
     runtimeOnly("org.postgresql:postgresql")
+    // Conexión a Cloud SQL desde Cloud Run (perfil "nube").
+    runtimeOnly("com.google.cloud.sql:postgres-socket-factory:1.31.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")

@@ -1,0 +1,9 @@
+# Lo que no se sube a Cloud Build al publicar en Cloud Run.
+.gcloudignore
+.git
+.gradle/
+build/
+data/
+.env
+scripts/node_modules/
+*.log
