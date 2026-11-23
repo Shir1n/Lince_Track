@@ -1,5 +1,6 @@
 package com.example.lince_track.data.remote
 
+import com.example.lince_track.data.remote.dto.CatalogosDto
 import com.example.lince_track.data.remote.dto.GuiaDto
 import com.example.lince_track.data.remote.dto.HealthDto
 import com.example.lince_track.data.remote.dto.PaginaDto
@@ -38,6 +39,28 @@ interface LinceApi {
 
     @GET("api/v1/servicios/{id}")
     suspend fun servicio(@Path("id") id: Long): RespuestaDto<ServicioDto>
+
+    /** Guías de la oficina (paginado). [activo] null trae activos e inactivos. */
+    @GET("api/v1/guias")
+    suspend fun guias(
+        @Query("oficina") oficina: String? = null,
+        @Query("activo") activo: Boolean? = null,
+        @Query("page") page: Int? = null,
+        @Query("pageSize") pageSize: Int? = null
+    ): PaginaDto<GuiaDto>
+
+    /** Transportistas de la oficina, con sus vehículos (paginado). [activo] null trae activos e inactivos. */
+    @GET("api/v1/transportistas")
+    suspend fun transportistas(
+        @Query("oficina") oficina: String? = null,
+        @Query("activo") activo: Boolean? = null,
+        @Query("page") page: Int? = null,
+        @Query("pageSize") pageSize: Int? = null
+    ): PaginaDto<TransportistaDto>
+
+    /** Valores posibles: oficinas, idiomas, tipos de servicio, estados, statusPL y tipos de vehículo. */
+    @GET("api/v1/catalogos")
+    suspend fun catalogos(): RespuestaDto<CatalogosDto>
 
     @GET("api/v1/guias/{id}")
     suspend fun guia(@Path("id") id: Long): RespuestaDto<GuiaDto>
