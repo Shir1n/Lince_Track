@@ -722,4 +722,12 @@
     <string name="southbound_dl">Rechazados</string>
     <string name="southbound_cx">Cancelados</string>
     <string name="southbound_sin_asignar">Sin asignar</string>
+    <string name="puntualidad_error">No se pudo cargar la puntualidad del equipo.</string>
+    <string name="puntualidad_sin_permiso">Solo el administrador puede ver la puntualidad del equipo.</string>
+    <string name="puntualidad_titulo">Puntualidad del equipo</string>
+    <string name="puntualidad_cargando">Cargando la puntualidad del equipo…</string>
+    <string name="puntualidad_sin_datos">Nadie ha hecho check-in en este periodo.</string>
+    <string name="puntualidad_total_detalle">%1$d servicios con check-in. La menos puntual, primero.</string>
+    <string name="puntualidad_sin_nombre">Sin nombre</string>
+    <string name="puntualidad_fila_detalle">%1$d servicios · %2$d tarde · %3$d fuera de zona</string>
 </resources>

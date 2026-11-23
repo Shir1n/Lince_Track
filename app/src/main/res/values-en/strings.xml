@@ -722,4 +722,12 @@
     <string name="southbound_dl">Rejected</string>
     <string name="southbound_cx">Cancelled</string>
     <string name="southbound_sin_asignar">Unassigned</string>
+    <string name="puntualidad_error">Team punctuality could not be loaded.</string>
+    <string name="puntualidad_sin_permiso">Only the administrator can see team punctuality.</string>
+    <string name="puntualidad_titulo">Team punctuality</string>
+    <string name="puntualidad_cargando">Loading team punctuality…</string>
+    <string name="puntualidad_sin_datos">No one has checked in during this period.</string>
+    <string name="puntualidad_total_detalle">%1$d services with check-in. Least punctual first.</string>
+    <string name="puntualidad_sin_nombre">No name</string>
+    <string name="puntualidad_fila_detalle">%1$d services · %2$d late · %3$d outside the zone</string>
 </resources>
