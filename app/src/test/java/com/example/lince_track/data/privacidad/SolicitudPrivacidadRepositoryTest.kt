@@ -62,12 +62,14 @@ class SolicitudPrivacidadRepositoryTest {
         every { solicitudes.document("u1") } returns documentoU1
         repo.firestoreReemplazable.reemplazar(firestore)
         repo.apiReemplazable.reemplazar(api)
+        repo.fotoPerfilReemplazable.reemplazar { uid -> if (uid == "u1") "https://foto/u1.jpg" else null }
     }
 
     @After
     fun limpiar() {
         repo.firestoreReemplazable.reemplazar(null)
         repo.apiReemplazable.reemplazar(null)
+        repo.fotoPerfilReemplazable.reemplazar(null)
     }
 
     private fun campos(estado: String = "pendiente") = mapOf(
@@ -205,6 +207,7 @@ class SolicitudPrivacidadRepositoryTest {
         val firestoreJson = json["firestore"]!!.jsonObject
         assertEquals("Patricio", firestoreJson["cuenta"]!!.jsonObject["nombre"]!!.jsonPrimitive.content)
         assertEquals(JsonNull, firestoreJson["solicitudPrivacidad"])
+        assertEquals("https://foto/u1.jpg", firestoreJson["fotoPerfil"]!!.jsonPrimitive.content)
         val checkin = firestoreJson["checkins"]!!.jsonArray.single().jsonObject
         assertEquals("1970-01-01T00:00:00Z", checkin["checkInEn"]!!.jsonPrimitive.content)
         assertEquals("u1", json["backend"]!!.jsonObject["uid"]!!.jsonPrimitive.content)

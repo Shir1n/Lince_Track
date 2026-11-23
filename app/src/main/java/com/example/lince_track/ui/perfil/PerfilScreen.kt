@@ -1,16 +1,9 @@
 package com.example.lince_track.ui.perfil
 
-import android.Manifest
-import android.graphics.Bitmap
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -32,22 +25,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.rememberAsyncImagePainter
 import com.example.lince_track.BuildConfig
 import com.example.lince_track.R
+import com.example.lince_track.ui.components.AvatarPerfil
 import com.example.lince_track.ui.components.SoporteDialog
 import com.example.lince_track.ui.theme.BarraSuperior
 
@@ -230,63 +220,6 @@ private fun PerfilTopBar() {
 
 @Composable
 private fun ResumenPerfil() {
-    val context = LocalContext.current
-    var fotoUri by rememberSaveable { mutableStateOf<String?>(null) }
-    var fotoBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var mostrarSelector by remember { mutableStateOf(false) }
-
-    val camaraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        if (bitmap != null) {
-            fotoBitmap = bitmap
-            fotoUri = null
-        }
-    }
-
-    val permisoCamaraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { autorizado ->
-        if (autorizado) {
-            camaraLauncher.launch(null)
-        }
-    }
-
-    val galeriaLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            fotoUri = uri.toString()
-            fotoBitmap = null
-        }
-    }
-
-    if (mostrarSelector) {
-        AlertDialog(
-            onDismissRequest = { mostrarSelector = false },
-            title = { Text(stringResource(R.string.perfil_cambiar_foto)) },
-            text = { Text(stringResource(R.string.perfil_elige_opcion)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    mostrarSelector = false
-                    permisoCamaraLauncher.launch(Manifest.permission.CAMERA)
-                }) {
-                    Text(stringResource(R.string.perfil_tomar_foto))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    mostrarSelector = false
-                    galeriaLauncher.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                    )
-                }) {
-                    Text(stringResource(R.string.perfil_elegir_galeria))
-                }
-            }
-        )
-    }
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -299,37 +232,8 @@ private fun ResumenPerfil() {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(contentAlignment = Alignment.BottomEnd) {
-                val painter = when {
-                    fotoBitmap != null -> BitmapPainter(fotoBitmap!!.asImageBitmap())
-                    !fotoUri.isNullOrEmpty() -> rememberAsyncImagePainter(model = fotoUri)
-                    else -> painterResource(R.drawable.perfil1)
-                }
-                Image(
-                    painter = painter,
-                    contentDescription = stringResource(R.string.perfil_cd_foto_conductor),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(76.dp)
-                        .clip(CircleShape)
-                        .border(3.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                        .clickable { mostrarSelector = true }
-                )
-                Surface(
-                    color = MaterialTheme.colorScheme.secondary,
-                    shape = CircleShape,
-                    modifier = Modifier
-                        .size(22.dp)
-                        .clickable { mostrarSelector = true }
-                ) {
-                    Icon(
-                        Icons.Outlined.PhotoCamera,
-                        contentDescription = stringResource(R.string.perfil_cambiar_foto),
-                        tint = MaterialTheme.colorScheme.onSecondary,
-                        modifier = Modifier.padding(4.dp)
-                    )
-                }
-            }
+            // Foto guardada en Firebase Storage (sin foto, ícono de persona).
+            AvatarPerfil()
 
             Spacer(Modifier.height(10.dp))
 

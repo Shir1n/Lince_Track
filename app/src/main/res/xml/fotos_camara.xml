@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Carpeta temporal donde la cámara deja la foto de perfil a resolución completa (FileProvider). -->
+<paths>
+    <cache-path name="fotos" path="fotos/" />
+</paths>

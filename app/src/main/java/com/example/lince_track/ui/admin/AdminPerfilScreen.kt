@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.lince_track.BuildConfig
 import com.example.lince_track.R
+import com.example.lince_track.ui.components.AvatarPerfil
 import com.example.lince_track.data.AuthRepository
 import com.example.lince_track.data.CheckinServicio
 import com.example.lince_track.data.IncidenciaServicio
@@ -172,11 +173,7 @@ internal fun AdminPerfilContenido(
         ) {
             TarjetaAdmin {
                 Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Outlined.Person, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(76.dp)
-                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-                            .padding(18.dp))
+                    AvatarPerfil()
                     Spacer(Modifier.height(8.dp))
                     Text(nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)

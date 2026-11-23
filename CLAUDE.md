@@ -82,7 +82,7 @@ la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`)
      por versión. Las respuestas de 8941/8942 ya se borraron (03-11-2026) y el administrador se llama "Admin 1"
      (mejor un nombre real o "Coordinación Southbound"). Tras cada ensayo, limpiar de nuevo lo aceptado y los check-ins
      hechos fuera de hora: la puntualidad del perfil y del resumen es real.
-  3. Decidir la foto de `PerfilScreen` (`res/drawable/perfil1`): parece de una persona real.
+  3. ~~Decidir la foto de `PerfilScreen`~~: se quitó; cada cuenta sube la suya (ver "Foto de perfil").
 - **Resumen para los dueños** (`ui/admin/AdminResumenScreen`): sin clave de la API, "Últimos 7 días" suma el historial
   inventado de `ResumenDemostracion`, siempre con un aviso visible; "Hoy" y las cifras con clave son solo datos reales.
   Los márgenes (15 minutos de puntualidad, 500 m de distancia) son provisionales: falta confirmarlos con Southbound.
@@ -247,8 +247,14 @@ la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`)
   después el servidor, y esa diferencia repetía avisos antiguos cada vez que se abría la app.
 - Tests de reglas en `firestore-tests/` con el emulador y un proyecto demo (`npm install`, `npm test`;
   necesita Java en el PATH). Tras cambiar `firestore.rules`, hay que publicarlas en Firebase.
-- `storage.rules` está en el repo pero **sin uso** (las fotos aún no se implementan). El proyecto ya está en Blaze:
-  revisar que exista una alerta de presupuesto de $5 en Google Cloud.
+- **Foto de perfil (desde el 23-11-2026):** Firebase Storage, bucket `lince-track-66c55.firebasestorage.app`
+  (southamerica-west1), archivo `perfil/{uid}/foto.jpg` (`FotoPerfilRepository`). `AvatarPerfil` se usa en los tres
+  perfiles: cámara (foto completa vía `FileProvider`, enderezada por EXIF) o galería → `EditorFotoPerfil` (círculo,
+  arrastrar y pellizcar, se adapta a horizontal) → se guarda solo el cuadrado del círculo, a 512 px en JPEG. Sin foto,
+  ícono de persona (`perfil1.png` se borró). `storage.rules` publicadas (firebase.json las incluye): la ve cualquier
+  cuenta con rol y solo el dueño la sube o borra; leen el rol desde Firestore, para eso la cuenta de Storage tiene el
+  rol `firebaserules.firestoreServiceAgent`. `VERSION_AVISO` = 3 (el aviso menciona la foto). El proyecto está en
+  Blaze: revisar que exista una alerta de presupuesto de $5 en Google Cloud.
 - Plan detallado de datos: `Lince_Track_plan_base_de_datos.txt` (v2). Desactualizado en parte:
   con la API ya no se crean `servicios` en Firestore, y `asignaciones` ahora guarda solo los reemplazos. Firestore solo
   guarda lo que la app escribe.
@@ -361,7 +367,7 @@ la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`)
 - **Credenciales de prueba públicas:** el repositorio es público, y `USUARIOS_TEST.md` y los botones de `LoginScreen` traen
   correos y contraseña de cuentas reales de Firebase, incluida la de administrador. Se mantienen a propósito para trabajar
   más rápido. Antes de usar datos reales o publicar la app: quitar ambos y cambiar las contraseñas (quedan en el historial).
-- `PerfilScreen` tiene datos fijos ("Carlos Morales", fechas de 2026) y su foto no se guarda: se mantiene a propósito
+- `PerfilScreen` tiene datos fijos ("Carlos Morales", fechas de 2026; la foto ya es la real de la cuenta): se mantiene a propósito
   como placeholder. Conductores con `usuarios/{uid}.perfilNuevo: true` (booleano) y guías usan `PerfilRealScreen`,
   que muestra próximo servicio, puntualidad, terminados y por realizar reales. Son fijos a propósito, para que se vea
   completo en el video: "Verificado", la certificación "Nivel Oro" (solo conductores), el interruptor de notificaciones

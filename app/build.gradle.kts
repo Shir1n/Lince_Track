@@ -139,6 +139,7 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.messaging)
+    implementation(libs.firebase.storage)
     // Base local (cola de check-ins sin conexión y caché del backend) y sincronización en segundo plano.
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
