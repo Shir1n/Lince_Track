@@ -72,6 +72,7 @@ import com.example.lince_track.data.Servicio
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.formatFechaCorta
 import com.example.lince_track.data.formatHora
+import com.example.lince_track.ui.components.SolicitudesPrivacidadAdmin
 import com.example.lince_track.ui.components.AvisoServiciosCard
 import com.example.lince_track.ui.components.EstadoServicioBadge
 import com.example.lince_track.ui.components.IncidenciaCard
@@ -192,6 +193,9 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
                 TotalCard(stringResource(R.string.admin_total_terminados), totales.terminados, MaterialTheme.colorScheme.primary, Modifier.weight(1f))
                 TotalCard(stringResource(R.string.admin_total_rechazados), totales.rechazados, MaterialTheme.colorScheme.error, Modifier.weight(1f))
             }
+
+            // Solicitudes de eliminación de datos (Ley 21.719): solo si hay pendientes.
+            SolicitudesPrivacidadAdmin()
 
             if (incidenciasAbiertas.isNotEmpty()) {
                 Text(

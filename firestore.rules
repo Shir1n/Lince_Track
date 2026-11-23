@@ -252,6 +252,45 @@ service cloud.firestore {
       allow delete: if signedIn() && request.auth.uid == uid;
     }
 
+    // solicitudesPrivacidad/{uid}: { uid, nombre, rol, motivo, estado, creadaEn,
+    //                               respuesta, atendidaEn, atendidaPor (al responder) }
+    // Solicitud de eliminación de datos (Ley 21.719). La crea su dueño (conductor o guía) y la puede cancelar
+    // (borrar) mientras siga pendiente, o volver a pedir si se rechazó. Solo el administrador la aprueba o rechaza;
+    // al aprobarla, una Cloud Function borra los datos y la deja como "completada" (eso lo escribe el Admin SDK).
+    function solicitudPrivacidadValida(uid) {
+      let d = request.resource.data;
+      return tieneAcceso()
+        && request.auth.uid == uid
+        && d.uid == uid
+        && d.rol == perfil().rol
+        && d.rol in ['conductor', 'guia']
+        && d.nombre == perfil().get('nombre', '')
+        && d.motivo is string
+        && d.motivo.size() <= 500
+        && d.estado == 'pendiente'
+        && d.creadaEn == request.time
+        && d.keys().hasOnly(['uid', 'nombre', 'rol', 'motivo', 'estado', 'creadaEn']);
+    }
+    function respuestaPrivacidadValida() {
+      let d = request.resource.data;
+      return esAdmin()
+        && resource.data.estado == 'pendiente'
+        && d.diff(resource.data).affectedKeys().hasOnly(['estado', 'respuesta', 'atendidaEn', 'atendidaPor'])
+        && d.estado in ['aprobada', 'rechazada']
+        && d.respuesta is string
+        && d.respuesta.size() <= 500
+        && (d.estado == 'aprobada' || d.respuesta.trim().size() > 0)
+        && d.atendidaEn == request.time
+        && d.atendidaPor == request.auth.uid;
+    }
+    match /solicitudesPrivacidad/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || esAdmin());
+      allow create: if solicitudPrivacidadValida(uid);
+      allow update: if respuestaPrivacidadValida()
+        || (resource.data.estado == 'rechazada' && solicitudPrivacidadValida(uid));
+      allow delete: if signedIn() && request.auth.uid == uid && resource.data.estado == 'pendiente';
+    }
+
     // Todo lo demás queda DENEGADO por defecto.
     // Cada colección nueva (respuestas, checkins, incidencias, alertas...) se agrega
     // aquí con su propio bloque "match" y sus reglas. No usar comodines {document=**}.

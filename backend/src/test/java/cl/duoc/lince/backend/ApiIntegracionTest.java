@@ -2,6 +2,10 @@ package cl.duoc.lince.backend;
 
 import cl.duoc.lince.backend.asignacion.AsignacionesClient;
 import cl.duoc.lince.backend.asignacion.Reemplazo;
+import cl.duoc.lince.backend.bloqueo.Bloqueo;
+import cl.duoc.lince.backend.bloqueo.BloqueoRepository;
+import cl.duoc.lince.backend.hito.Hito;
+import cl.duoc.lince.backend.hito.HitoRepository;
 import cl.duoc.lince.backend.comun.ErrorFirestore;
 import cl.duoc.lince.backend.comun.ErrorLince;
 import cl.duoc.lince.backend.lince.LinceClient;
@@ -22,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -570,5 +575,52 @@ class ApiIntegracionTest {
                 .andExpect(jsonPath("$[?(@.id == " + id + ")]").isEmpty());
         mvc.perform(delete("/api/bloqueos/" + id).with(admin())).andExpect(status().isNoContent());
         mvc.perform(delete("/api/bloqueos/" + id).with(admin())).andExpect(status().isNotFound());
+    }
+
+    // ---------- Privacidad (Ley 21.719) ----------
+
+    @Autowired
+    HitoRepository hitosRepo;
+
+    @Autowired
+    BloqueoRepository bloqueosRepo;
+
+    /** Cuenta propia de esta prueba: las demás también registran hitos como "uid-conductor". */
+    static RequestPostProcessor personaPrivacidad() {
+        return jwt().jwt(j -> j.subject("uid-privacidad").claim("rol", "conductor").claim("transportistaId", 37))
+                .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_CONDUCTOR"));
+    }
+
+    static Hito hitoGuardado(String clave, String uid, Instant registradoEn) {
+        return cl.duoc.lince.backend.hito.HitosDePrueba.verificado(clave, uid, 2001, LAT_HOTEL, LON_HOTEL, registradoEn);
+    }
+
+    @Test
+    void cadaPersonaDescargaSoloSusDatosYElAdministradorLosBorra() throws Exception {
+        Instant ahora = Instant.parse("2026-11-20T11:00:00Z");
+        hitosRepo.save(hitoGuardado("priv-1", "uid-privacidad", ahora));
+        hitosRepo.save(hitoGuardado("priv-2", "uid-otro", ahora));
+        bloqueosRepo.save(new Bloqueo("uid-privacidad", LocalDate.of(2026, 12, 10), "Trámite", ahora));
+
+        mvc.perform(get("/api/privacidad/mis-datos").with(personaPrivacidad()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.uid").value("uid-privacidad"))
+                .andExpect(jsonPath("$.hitos", hasSize(1)))
+                .andExpect(jsonPath("$.hitos[0].claveIdempotencia").value("priv-1"))
+                .andExpect(jsonPath("$.bloqueos", hasSize(1)));
+
+        // Solo el administrador borra, y solo lo de esa persona.
+        mvc.perform(delete("/api/privacidad/uid-privacidad").with(personaPrivacidad()))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/privacidad/uid-privacidad").with(admin()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hitos").value(1))
+                .andExpect(jsonPath("$.bloqueos").value(1));
+
+        mvc.perform(get("/api/privacidad/mis-datos").with(personaPrivacidad()))
+                .andExpect(jsonPath("$.hitos", hasSize(0)))
+                .andExpect(jsonPath("$.bloqueos", hasSize(0)));
+        org.assertj.core.api.Assertions.assertThat(hitosRepo.findByClaveIdempotencia("priv-2")).isPresent();
+        hitosRepo.deleteByUid("uid-otro");
     }
 }

@@ -20,7 +20,7 @@ private val Context.privacidadDataStore by preferencesDataStore(name = "privacid
 object PrivacidadRepository {
 
     /** Súbela cuando cambie lo que dice el aviso (qué datos, para qué o quién los ve). */
-    const val VERSION_AVISO = 1
+    const val VERSION_AVISO = 2
 
     private val VERSION_VISTA = intPreferencesKey("aviso_privacidad_visto")
 
