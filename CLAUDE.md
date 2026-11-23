@@ -7,11 +7,12 @@ Responde y escribe la interfaz en **español de Chile**.
 ## Equipo
 | Persona | Rol | Foco actual |
 |---|---|---|
-| Shir1n (dueño del repo) | Coordina | Firebase completo (reglas, Auth, datos) y vincular usuario ↔ API |
+| Ignacio Salazar (Shir1n, dueño del repo) | Scrum Master y coordinación técnica | Firebase, backend, nube, Trello, README y comunicación con Southbound |
 | Benjamin Agüero | Frontend | Detalle, calendario, colores, alertas |
 | Raúl Ferrini | Frontend | Pantalla de mapa (`ui/ruta/`) |
-| Luciano Garrido | Backend → frontend | Panel del administrador (`ui/admin/`, nuevo). **No tiene acceso a Firebase** |
-| Ignacio Salazar | Scrum Master | Trello, README, comunicación con Southbound |
+| Luciano Garrido | Backend → frontend | Panel del administrador (`ui/admin/`). **No tiene acceso a Firebase** |
+
+Son **4 integrantes**: Shir1n e Ignacio Salazar son la misma persona.
 
 Estos focos son sugerencias: cada quien trabaja en todo, así que no hace falta frenar ni coordinar antes de tocar el
 área de otra persona.

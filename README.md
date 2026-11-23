@@ -267,8 +267,7 @@ el turismo en Chile y la conexión con la naturaleza.
 
 | Integrante | Rol |
 | --- | --- |
-| Shir1n | Coordinación técnica: Firebase, backend, nube e integración |
+| Ignacio Salazar ([Shir1n](https://github.com/Shir1n)) | Scrum Master y coordinación técnica: Firebase, backend, nube e integración |
 | Benjamin Agüero | Frontend |
 | Luciano Garrido | Backend y panel de Coordinación |
 | Raúl Ferrini | Frontend (mapa) |
-| Ignacio Salazar | Scrum Master |
