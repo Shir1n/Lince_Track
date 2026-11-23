@@ -40,8 +40,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.lince_track.R
+import com.example.lince_track.data.PuntualidadPersona
 import com.example.lince_track.data.ReglasCheckin
 import com.example.lince_track.data.ResumenSouthboundRepository
+import com.example.lince_track.data.Rol
 import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.remote.LinceApiClient
 import com.example.lince_track.ui.components.AvisoServiciosCard
@@ -65,6 +67,11 @@ fun AdminResumenScreen() {
     val southbound: ResumenSouthboundViewModel = viewModel()
     val estadoSouthbound by southbound.estado.collectAsState()
     LaunchedEffect(periodo) { southbound.cargar(periodo) }
+
+    // Puntualidad por persona del backend propio (/api/hitos/resumen) para el mismo periodo.
+    val equipo: PuntualidadEquipoViewModel = viewModel()
+    val estadoEquipo by equipo.estado.collectAsState()
+    LaunchedEffect(periodo) { equipo.cargar(periodo) }
 
     val hoy = LocalDate.now()
     val conDemostracion = !LinceApiClient.estaConfigurada && periodo == PeriodoResumen.SIETE_DIAS
@@ -131,6 +138,7 @@ fun AdminResumenScreen() {
             }
 
             Puntualidad(resumen)
+            TarjetaPuntualidadEquipo(estadoEquipo, onReintentar = equipo::reintentar)
             Terminados(resumen)
             Rechazos(resumen)
             Distancia(resumen)
@@ -189,6 +197,65 @@ private fun TarjetaSouthbound(estado: EstadoResumenSouthbound, onReintentar: () 
             }
         }
     }
+}
+
+/** Puntualidad por persona según el backend: la menos puntual primero, con sus llegadas tarde y fuera de zona. */
+@Composable
+private fun TarjetaPuntualidadEquipo(estado: EstadoPuntualidadEquipo, onReintentar: () -> Unit) {
+    TarjetaResumen(stringResource(R.string.puntualidad_titulo)) {
+        val equipo = estado.equipo
+        when {
+            estado.cargando -> Detalle(stringResource(R.string.puntualidad_cargando))
+            estado.error != null -> {
+                Detalle(estado.error.asString())
+                TextButton(onClick = onReintentar) { Text(stringResource(R.string.ruta_reintentar)) }
+            }
+            equipo == null || equipo.personas.isEmpty() -> Detalle(stringResource(R.string.puntualidad_sin_datos))
+            else -> {
+                equipo.puntualidad?.let { CifraPrincipal(stringResource(R.string.admin_resumen_a_tiempo, it)) }
+                Detalle(stringResource(R.string.puntualidad_total_detalle, equipo.servicios))
+                equipo.personas.forEach { FilaPuntualidad(it) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilaPuntualidad(persona: PuntualidadPersona) {
+    val nombre = persona.nombre ?: stringResource(R.string.puntualidad_sin_nombre)
+    val rol = when (persona.rol) {
+        Rol.CONDUCTOR -> stringResource(R.string.rol_conductor)
+        Rol.GUIA -> stringResource(R.string.rol_guia)
+        else -> null
+    }
+    val porcentaje = persona.puntualidad
+    Spacer(modifier = Modifier.height(4.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = if (rol != null) "$nombre · $rol" else nombre,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        if (porcentaje != null) {
+            Text(
+                text = stringResource(R.string.admin_resumen_a_tiempo, porcentaje),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+    if (porcentaje != null) {
+        // Bajo 50 % en rojo, para que lo que hay que revisar se vea primero.
+        Barra(
+            porcentaje / 100f,
+            if (porcentaje < 50) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary
+        )
+    }
+    Detalle(stringResource(R.string.puntualidad_fila_detalle, persona.servicios, persona.tarde, persona.fueraDeZona))
 }
 
 /** Nombre del statusPL en el idioma de la app; un código nuevo de la API se muestra tal cual. */
