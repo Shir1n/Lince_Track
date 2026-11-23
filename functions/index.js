@@ -2,11 +2,14 @@
 // Cada función escucha una colección de Firestore, decide el aviso con reglas.js y lo envía con
 // Firebase Cloud Messaging al teléfono guardado en tokensFcm/{uid}. Requiere el plan Blaze.
 import { initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 import { getMessaging } from 'firebase-admin/messaging';
 import { logger, setGlobalOptions } from 'firebase-functions';
 import { onDocumentCreated, onDocumentUpdated, onDocumentWritten } from 'firebase-functions/firestore';
 import * as reglas from './reglas.js';
+import { borrarDatosDe } from './privacidad.js';
 
 initializeApp();
 // Misma región que la base de datos (Santiago). Pocas instancias: el uso es bajo y así se limita el costo.
@@ -69,4 +72,26 @@ export const avisarRechazo = onDocumentWritten('respuestas/{id}', async (evento)
   if (!reglas.esRechazoNuevo(evento.data?.before?.data(), despues)) return;
   const persona = await db.doc(`usuarios/${despues.uid}`).get();
   await enviar(await administradores(), reglas.avisoRechazo(despues, persona.get('nombre')));
+});
+
+/**
+ * Solicitudes de eliminación de datos (Ley 21.719): avisa a Coordinación de una nueva, a la persona si se rechaza
+ * y, al aprobarse, borra todo lo suyo en Firestore, Storage y Auth. Los hitos y bloqueos del backend los borra la app
+ * de Coordinación antes de aprobar (DELETE /api/privacidad/{uid}).
+ */
+export const atenderSolicitudPrivacidad = onDocumentWritten('solicitudesPrivacidad/{uid}', async (evento) => {
+  const antes = evento.data?.before?.data();
+  const despues = evento.data?.after?.data();
+
+  const nueva = reglas.avisoSolicitudPrivacidad(antes, despues);
+  if (nueva) await enviar(await administradores(), nueva);
+
+  const rechazo = reglas.avisoRechazoPrivacidad(antes, despues);
+  if (rechazo) await enviar([despues.uid], rechazo);
+
+  if (reglas.esAprobacionPrivacidad(antes, despues)) {
+    const borrados = await borrarDatosDe(despues.uid, { db, auth: getAuth(), bucket: getStorage().bucket() });
+    await evento.data.after.ref.set(reglas.registroCompletado(despues, borrados, FieldValue.serverTimestamp()));
+    logger.info('Datos borrados por solicitud de privacidad', { borrados });
+  }
 });

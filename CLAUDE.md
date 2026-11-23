@@ -314,6 +314,14 @@ la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`)
 - El mapa lee el GPS cada 2-3 s solo mientras está abierto (velocímetro y distancia) y eso **no se envía**; solo se
   guardan las coordenadas de check-in, check-out e incidencias. **Nunca** poner coordenadas en `LinceLogger` (la
   consola se puede compartir). A Open-Meteo se envía la zona con 2 decimales, no la posición exacta.
+- **Derechos (desde el 22-11-2026):** en Ajustes → Privacidad, conductores y guías descargan sus datos (JSON con lo
+  suyo de Firestore y del backend, `GET /api/privacidad/mis-datos`) y piden la eliminación (`solicitudesPrivacidad/{uid}`,
+  cancelable mientras esté pendiente). Coordinación la ve en el **Panel**, sobre las incidencias, y la aprueba o rechaza
+  (con motivo). Al aprobar, la app borra hitos y bloqueos (`DELETE /api/privacidad/{uid}`, solo administrador) y la
+  Cloud Function `atenderSolicitudPrivacidad` borra lo de Firestore, Storage y la cuenta de Auth, y deja un registro
+  "completada" solo con fechas y cantidades. Probado el 22-11-2026 con una cuenta desechable. `VERSION_AVISO` = 2.
+- Firebase Auth permite registrarse con la clave web pública: el 21-11-2026 apareció una cuenta sin rol (borrada).
+  Conviene desactivar "Habilitar creación (registro)" en Authentication → Configuración.
 - Sin Firebase Analytics (se quitó el 20-11-2026: no se usaba). Pendiente antes de datos reales: contraseñas de
   prueba fuera del repo, teléfono visible solo para el compañero del tour, plazos de borrado, `allowBackup`.
 

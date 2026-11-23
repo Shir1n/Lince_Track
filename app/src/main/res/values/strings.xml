@@ -427,7 +427,7 @@
     <string name="privacidad_sec5_titulo">Dónde se guardan</string>
     <string name="privacidad_sec5_texto">En Firebase (Google), cuyos servidores pueden estar fuera de Chile, y en el servidor del proyecto. Se guardan mientras dure el proyecto. Para mostrar el clima del mapa se consulta a Open-Meteo solo la zona aproximada (unos 1 km), no tu posición exacta.</string>
     <string name="privacidad_sec6_titulo">Tus derechos</string>
-    <string name="privacidad_sec6_texto">Puedes pedir a Coordinación ver, corregir o eliminar tus datos, u oponerte a su uso.</string>
+    <string name="privacidad_sec6_texto">En Ajustes → Privacidad puedes descargar todo lo que guardamos de ti y pedir que se elimine; Coordinación revisa la solicitud y, al aprobarla, se borran tus datos y tu cuenta. También puedes pedirle a Coordinación corregir tus datos u oponerte a su uso.</string>
     <string name="privacidad_sec7_titulo">Proyecto académico</string>
     <string name="privacidad_sec7_texto">Lince Track es un prototipo académico (Duoc UC, DSY1105). Los servicios, pasajeros y agencias que muestra son ficticios.</string>
     <string name="privacidad_ubicacion_titulo">Permiso de ubicación</string>
@@ -722,4 +722,30 @@
     <string name="southbound_dl">Rechazados</string>
     <string name="southbound_cx">Cancelados</string>
     <string name="southbound_sin_asignar">Sin asignar</string>
+    <!-- Derechos sobre los datos (Ley 21.719) -->
+    <string name="mis_datos_titulo">Tus derechos sobre tus datos</string>
+    <string name="mis_datos_desc">Puedes descargar todo lo que Lince Track guarda de ti o pedir que se elimine (Ley 21.719).</string>
+    <string name="mis_datos_descargar">Descargar mis datos</string>
+    <string name="mis_datos_descargados">Tus datos quedaron guardados en el archivo.</string>
+    <string name="mis_datos_solicitar">Solicitar eliminación de mis datos</string>
+    <string name="mis_datos_pendiente">Solicitud de eliminación enviada el %1$s. Coordinación la revisará.</string>
+    <string name="mis_datos_cancelar">Cancelar solicitud</string>
+    <string name="mis_datos_cancelada">Solicitud cancelada.</string>
+    <string name="mis_datos_enviada">Solicitud enviada a Coordinación.</string>
+    <string name="mis_datos_aprobada">Solicitud aprobada: tus datos se están eliminando y tu cuenta se cerrará.</string>
+    <string name="mis_datos_rechazada">Tu solicitud anterior fue rechazada: %1$s</string>
+    <string name="mis_datos_dialogo_titulo">Eliminar mis datos</string>
+    <string name="mis_datos_dialogo_texto">Se borrarán tus respuestas, check-ins, incidencias, ubicaciones registradas, días bloqueados, tu foto y tu cuenta. Los servicios vienen de Southbound y no se borran. Coordinación revisará la solicitud y puedes cancelarla mientras esté pendiente.</string>
+    <string name="mis_datos_motivo">Motivo (opcional)</string>
+    <string name="mis_datos_enviar">ENVIAR SOLICITUD</string>
+    <string name="admin_privacidad_titulo">Solicitudes de datos (%1$d)</string>
+    <string name="admin_privacidad_tarjeta">Eliminación de datos • Pendiente</string>
+    <string name="admin_privacidad_fecha">Enviada el %1$s</string>
+    <string name="admin_privacidad_aprobar">Aprobar y eliminar</string>
+    <string name="admin_privacidad_rechazar">Rechazar</string>
+    <string name="admin_privacidad_confirmar_titulo">¿Eliminar los datos?</string>
+    <string name="admin_privacidad_confirmar_texto">Se borrarán todos los datos de %1$s y su cuenta. No se puede deshacer.</string>
+    <string name="admin_privacidad_aprobada">Solicitud aprobada: los datos se están eliminando.</string>
+    <string name="admin_privacidad_rechazar_titulo">Rechazar la solicitud de %1$s</string>
+    <string name="admin_privacidad_rechazada">Solicitud rechazada; se le avisó a la persona.</string>
 </resources>

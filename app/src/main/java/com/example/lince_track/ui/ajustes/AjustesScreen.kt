@@ -44,6 +44,7 @@ import com.example.lince_track.R
 import com.example.lince_track.data.version.ControlVersionRepository
 import com.example.lince_track.data.version.InfoVersion
 import com.example.lince_track.ui.components.AvisoPrivacidadDialog
+import com.example.lince_track.ui.components.SeccionMisDatos
 import com.example.lince_track.ui.components.LanguageSwitcherButton
 import com.example.lince_track.ui.components.VersionActualizadaDialog
 import com.example.lince_track.ui.components.VersionDesactualizadaDialog
@@ -187,6 +188,8 @@ fun AjustesScreen(onBack: () -> Unit = {}) {
                     ) {
                         Text(text = stringResource(R.string.privacidad_ver_aviso), fontWeight = FontWeight.Bold)
                     }
+                    // Descargar los datos y pedir su eliminación (solo conductores y guías).
+                    SeccionMisDatos()
                 }
             }
 

@@ -106,16 +106,72 @@ export function avisoRechazo(respuesta, nombre) {
  * Al tocarlo, la app recibe `servicioId` y abre ese servicio.
  */
 export function mensaje(token, aviso) {
+  // Los avisos de privacidad no son de un servicio: van sin servicioId y con su propia etiqueta.
+  const data = aviso.servicioId ? { servicioId: aviso.servicioId, tipo: aviso.tipo } : { tipo: aviso.tipo };
   return {
     token,
     notification: { title: aviso.titulo, body: aviso.texto },
-    data: { servicioId: aviso.servicioId, tipo: aviso.tipo },
+    data,
     android: {
       priority: 'high',
-      notification: { channelId: 'servicios', tag: `servicio|${aviso.servicioId}` },
+      notification: { channelId: 'servicios', tag: aviso.etiqueta ?? `servicio|${aviso.servicioId}` },
     },
   };
 }
+
+// ---------- Privacidad (Ley 21.719) ----------
+
+/** solicitudesPrivacidad/{uid}: avisa a Coordinación cuando alguien pide (o vuelve a pedir) la eliminación. */
+export function avisoSolicitudPrivacidad(antes, despues) {
+  if (despues?.estado !== 'pendiente' || antes?.estado === 'pendiente' || !despues.uid) return null;
+  const quien = (despues.nombre ?? '').trim() || (despues.rol === 'guia' ? 'Un guía' : 'Un conductor');
+  const motivo = (despues.motivo ?? '').trim();
+  return {
+    tipo: 'privacidad_solicitud',
+    servicioId: '',
+    etiqueta: `privacidad|${despues.uid}`,
+    titulo: 'Solicitud de eliminación de datos',
+    texto: recortar(motivo ? `${quien} pidió eliminar sus datos: ${motivo}` : `${quien} pidió eliminar sus datos personales.`),
+  };
+}
+
+/** Avisa a la persona si Coordinación rechazó su solicitud (si se aprueba, su cuenta se borra). */
+export function avisoRechazoPrivacidad(antes, despues) {
+  if (antes?.estado !== 'pendiente' || despues?.estado !== 'rechazada' || !despues.uid) return null;
+  return {
+    tipo: 'privacidad_rechazo',
+    servicioId: '',
+    etiqueta: `privacidad|${despues.uid}`,
+    titulo: 'Solicitud de eliminación rechazada',
+    texto: recortar(`Coordinación: ${(despues.respuesta ?? '').trim()}`),
+  };
+}
+
+/** true cuando Coordinación acaba de aprobar la solicitud: hay que borrar los datos. */
+export function esAprobacionPrivacidad(antes, despues) {
+  return antes?.estado === 'pendiente' && despues?.estado === 'aprobada' && Boolean(despues.uid);
+}
+
+/**
+ * Lo que queda de la solicitud tras borrar los datos: fechas y cantidades, sin nombre, motivo ni respuesta.
+ * Sirve como respaldo de que se cumplió.
+ */
+export function registroCompletado(solicitud, borrados, ahora) {
+  return {
+    uid: solicitud.uid,
+    estado: 'completada',
+    creadaEn: solicitud.creadaEn ?? null,
+    atendidaEn: solicitud.atendidaEn ?? null,
+    completadaEn: ahora,
+    borrados,
+  };
+}
+
+/** Colecciones de Firestore donde una persona tiene documentos con su campo "uid". */
+export const COLECCIONES_CON_UID = ['checkins', 'incidencias', 'respuestas', 'estadosServicio', 'asignaciones'];
+
+/** Carpetas de Storage con fotos de la persona (perfil y check-in). */
+export const CARPETAS_STORAGE = (uid) => [`perfil/${uid}/`, `checkin/${uid}/`];
 
 /** Códigos de FCM que indican que el teléfono ya no usa ese token (desinstaló o cerró sesión). */
 export function tokenInvalido(codigo) {
