@@ -170,6 +170,40 @@ data class TransportistaDto(
     val totalServicios: Int? = null
 )
 
+// ---------- Catálogos ----------
+
+/** Valores posibles de la API (`/api/v1/catalogos`). Los códigos quedan como String para tolerar valores nuevos. */
+@Serializable
+data class CatalogosDto(
+    val oficinas: List<OficinaDto> = emptyList(),
+    val idiomas: List<IdiomaDto> = emptyList(),
+    val tiposServicio: List<TipoServicioDto> = emptyList(),
+    val estadosServicio: List<CodigoDescripcionDto> = emptyList(),
+    val statusPL: List<CodigoDescripcionDto> = emptyList(),
+    val tiposVehiculo: List<TipoVehiculoDto> = emptyList()
+)
+
+@Serializable
+data class TipoServicioDto(
+    /** TRANSFER, GUIDED_SERVICE o EXCURSION. */
+    val tipo: String = "",
+    /** TR, GS o EX. */
+    val srv: String = ""
+)
+
+@Serializable
+data class CodigoDescripcionDto(
+    val codigo: String = "",
+    val descripcion: String = ""
+)
+
+@Serializable
+data class TipoVehiculoDto(
+    /** SEDAN, VAN, MINIBUS o BUS. */
+    val tipo: String = "",
+    val capacidad: Int = 0
+)
+
 // ---------- Resumen ----------
 
 /**

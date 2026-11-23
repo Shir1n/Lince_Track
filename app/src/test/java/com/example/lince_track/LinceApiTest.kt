@@ -2,6 +2,8 @@ package com.example.lince_track
 
 import com.example.lince_track.data.EstadoServicio
 import com.example.lince_track.data.remote.dto.ConteoPorClaveDto
+import com.example.lince_track.data.remote.dto.CatalogosDto
+import com.example.lince_track.data.remote.dto.TransportistaDto
 import com.example.lince_track.data.remote.dto.ErrorRespuestaDto
 import com.example.lince_track.data.remote.dto.LinceJson
 import com.example.lince_track.data.remote.dto.PaginaDto
@@ -101,6 +103,35 @@ class LinceApiTest {
         assertEquals(ConteoPorClaveDto("SIN_ASIGNAR", 62, 288), resumen.porStatusPL.last())
         assertEquals(listOf("CF", "XX"), resumen.porEstadoServicio.map { it.clave })
         assertEquals("PUX", resumen.porOficina.single().clave)
+    }
+
+    @Test
+    fun leeLosCatalogosYElEquipoDeLaApi() {
+        // Recortes de las respuestas reales de /catalogos y /transportistas (oficina PUX).
+        val catalogos = LinceJson.decodeFromString<RespuestaDto<CatalogosDto>>(
+            """
+            {"data":{"oficinas":[{"codigo":"PUX","nombre":"Puerto Varas"}],
+             "idiomas":[{"codigo":"ES","nombre":"Español"},{"codigo":"EN","nombre":"Inglés"}],
+             "tiposServicio":[{"tipo":"TRANSFER","srv":"TR"},{"tipo":"GUIDED_SERVICE","srv":"GS"},{"tipo":"EXCURSION","srv":"EX"}],
+             "estadosServicio":[{"codigo":"CF","descripcion":"Confirmado"}],
+             "statusPL":[{"codigo":"DL","descripcion":"Eliminado"}],
+             "tiposVehiculo":[{"tipo":"VAN","capacidad":8}],"nuevo":[]}}
+            """.trimIndent()
+        ).data
+        assertEquals(listOf("TRANSFER", "GUIDED_SERVICE", "EXCURSION"), catalogos.tiposServicio.map { it.tipo })
+        assertEquals("EN", catalogos.idiomas[1].codigo)
+        assertEquals(8, catalogos.tiposVehiculo.single().capacidad)
+
+        val pagina = LinceJson.decodeFromString<PaginaDto<TransportistaDto>>(
+            """
+            {"data":[{"id":37,"codigo":"TRA-037","nombre":"Andrés Valdés Ibáñez","oficina":{"codigo":"PUX","nombre":"Puerto Varas"},
+              "vehiculos":[{"id":44,"patente":"ZZ-1044","tipo":"VAN","capacidad":8}],"evaluacionPromedio":4.99,
+              "fechaIngreso":"2021-01-18","activo":true}],
+             "meta":{"page":1,"pageSize":100,"total":20,"totalPages":1}}
+            """.trimIndent()
+        )
+        assertEquals("ZZ-1044", pagina.data.single().vehiculos.single().patente)
+        assertEquals(20, pagina.meta.total)
     }
 
     @Test

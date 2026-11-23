@@ -86,6 +86,8 @@ import kotlinx.coroutines.launch
 import com.example.lince_track.ui.theme.BarraSuperior
 import com.example.lince_track.util.textoUi
 import com.example.lince_track.ui.components.tituloVisible
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.lince_track.data.EquipoSouthboundRepository
 
 /**
  * Panel del administrador: estado de los servicios del día elegido y respuestas de conductores
@@ -111,11 +113,20 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // Equipo y tipos de servicio de Southbound (/guias, /transportistas y /catalogos).
+    val equipoVm: EquipoSouthboundViewModel = viewModel()
+    val estadoEquipo by equipoVm.estado.collectAsState()
+    val tiposServicio by equipoVm.tiposServicio.collectAsState()
+    var tipoFiltro by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { equipoVm.cargarTipos() }
+
     val hoy = LocalDate.now()
     // Sin un día elegido se sigue a hoy, aunque la app quede abierta de un día para otro.
     var diaElegido by rememberSaveable { mutableStateOf<Long?>(null) }
     val fecha = diaElegido?.let { LocalDate.ofEpochDay(it) } ?: hoy
-    val serviciosDelDia = remember(servicios, fecha) { servicios.filter { it.fecha == fecha } }
+    val serviciosDelDia = remember(servicios, fecha, tipoFiltro) {
+        EquipoSouthboundRepository.filtrarPorTipo(servicios.filter { it.fecha == fecha }, tipoFiltro)
+    }
     val totales = remember(serviciosDelDia, checkins) { PanelAdmin.totales(serviciosDelDia, checkins) }
     val filas = remember(serviciosDelDia, respuestas, checkins, filtro, incidencias, hoy) {
         PanelAdmin.filas(serviciosDelDia, respuestas, filtro, checkins, incidencias, hoy)
@@ -289,6 +300,8 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
                 }
             }
 
+            FiltroTipoServicio(tiposServicio, tipoFiltro) { tipoFiltro = it }
+
             error?.let { AvisoServiciosCard(it) }
 
             if (filas.isEmpty() && error == null) {
@@ -326,6 +339,11 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
                         fecha = formatFechaCorta(fila.servicio.fecha, LocalConfiguration.current.locales[0])
                     )
                 }
+            }
+
+            // Sin clave de la API no hay equipo que mostrar.
+            if (equipoVm.disponible) {
+                SeccionEquipo(estadoEquipo, onAbrir = equipoVm::cargarEquipo, onReintentar = equipoVm::reintentar)
             }
         }
     }

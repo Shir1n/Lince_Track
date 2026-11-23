@@ -6,12 +6,14 @@ import com.example.lince_track.data.remote.dto.GeocercaDto
 import com.example.lince_track.data.remote.dto.HitoDto
 import com.example.lince_track.data.remote.dto.HitoSolicitudDto
 import com.example.lince_track.data.remote.dto.ParametrosDto
+import com.example.lince_track.data.remote.dto.ResumenHitosDto
 import kotlinx.serialization.json.JsonElement
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 /**
  * Endpoints del backend propio de Lince: bloqueos de disponibilidad, parámetros, geocercas e hitos.
@@ -44,4 +46,13 @@ interface BloqueoApi {
     /** Solo el administrador, al aprobar una solicitud de eliminación. */
     @DELETE("api/privacidad/{uid}")
     suspend fun borrarDatos(@Path("uid") uid: String): JsonElement
+
+    /**
+     * Puntualidad por persona (solo administrador). Fechas AAAA-MM-DD, ambas incluidas; sin fechas, los últimos 30 días.
+     */
+    @GET("api/hitos/resumen")
+    suspend fun resumenHitos(
+        @Query("desde") desde: String? = null,
+        @Query("hasta") hasta: String? = null
+    ): ResumenHitosDto
 }
