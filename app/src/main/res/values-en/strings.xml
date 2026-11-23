@@ -741,4 +741,12 @@
     <string name="equipo_vehiculo">%1$s %2$s · %3$d passengers</string>
     <string name="equipo_sin_vehiculo">No vehicle</string>
     <string name="equipo_vacio">There is no one in this list.</string>
+    <string name="puntualidad_error">Team punctuality could not be loaded.</string>
+    <string name="puntualidad_sin_permiso">Only the administrator can see team punctuality.</string>
+    <string name="puntualidad_titulo">Team punctuality</string>
+    <string name="puntualidad_cargando">Loading team punctuality…</string>
+    <string name="puntualidad_sin_datos">No one has checked in during this period.</string>
+    <string name="puntualidad_total_detalle">%1$d services with check-in. Least punctual first.</string>
+    <string name="puntualidad_sin_nombre">No name</string>
+    <string name="puntualidad_fila_detalle">%1$d services · %2$d late · %3$d outside the zone</string>
 </resources>
