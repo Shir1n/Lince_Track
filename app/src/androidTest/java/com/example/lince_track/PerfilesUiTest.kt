@@ -13,6 +13,7 @@ import com.example.lince_track.ui.perfil.PerfilScreen
 import com.example.lince_track.ui.theme.Lince_TrackTheme
 import java.time.LocalDate
 import org.junit.Assert.assertTrue
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Rule
 import org.junit.Test
 
@@ -20,6 +21,9 @@ class PerfilesUiTest {
 
     @get:Rule
     val composeRule = createComposeRule()
+
+    // Los textos se leen de los recursos: así el test pasa con el celular en español o en inglés.
+    private fun texto(id: Int): String = InstrumentationRegistry.getInstrumentation().targetContext.getString(id)
 
     @Test
     fun perfilCarlos() {
@@ -30,8 +34,8 @@ class PerfilesUiTest {
         }
 
         composeRule.onNodeWithText("Carlos Morales R.").assertExists()
-        composeRule.onNodeWithText("Vehículo Asignado").assertExists()
-        composeRule.onNodeWithText("Resumen Operacional").assertExists()
+        composeRule.onNodeWithText(texto(R.string.perfil_vehiculo_asignado)).assertExists()
+        composeRule.onNodeWithText(texto(R.string.perfil_resumen_operacional)).assertExists()
     }
 
     @Test
@@ -55,7 +59,7 @@ class PerfilesUiTest {
 
         composeRule.onAllNodesWithText("Patricio Lagos", substring = false).assertCountEquals(2)
         composeRule.onNodeWithText("JAC S5").assertExists()
-        composeRule.onNodeWithText("Año modelo 2015").assertExists()
+        composeRule.onNodeWithText(texto(R.string.perfil_anio_2015)).assertExists()
     }
 
     @Test
@@ -79,7 +83,7 @@ class PerfilesUiTest {
 
         composeRule.onAllNodesWithText("Raúl Soto", substring = false).assertCountEquals(2)
         composeRule.onNodeWithText("Guía Southbound").assertExists()
-        composeRule.onNodeWithText("Vehículo Asignado").assertDoesNotExist()
+        composeRule.onNodeWithText(texto(R.string.perfil_vehiculo_asignado)).assertDoesNotExist()
     }
 
     @Test
@@ -102,9 +106,9 @@ class PerfilesUiTest {
         }
 
         composeRule.onAllNodesWithText("Nacho", substring = false).assertCountEquals(2)
-        composeRule.onNodeWithText("ADMINISTRADOR").assertExists()
-        composeRule.onNodeWithText("Operación de Hoy").assertExists()
-        composeRule.onNodeWithText("Incidencias").assertExists()
+        composeRule.onNodeWithText(texto(R.string.admin_perfil_badge)).assertExists()
+        composeRule.onNodeWithText(texto(R.string.admin_perfil_operacion_hoy)).assertExists()
+        composeRule.onNodeWithText(texto(R.string.admin_perfil_incidencias)).assertExists()
     }
 
     @Test
@@ -116,7 +120,7 @@ class PerfilesUiTest {
             }
         }
 
-        composeRule.onNodeWithText("Cerrar Sesión").performScrollTo().performClick()
+        composeRule.onNodeWithText(texto(R.string.perfil_cerrar_sesion)).performScrollTo().performClick()
         composeRule.runOnIdle { assertTrue(cerroSesion) }
     }
 }
