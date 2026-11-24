@@ -417,7 +417,7 @@
     <string name="privacidad_ajustes_desc">What data the app uses, why, who sees it, and how to request corrections or deletion.</string>
     <string name="privacidad_ver_aviso">VIEW PRIVACY NOTICE</string>
     <string name="privacidad_sec1_titulo">What data we use</string>
-    <string name="privacidad_sec1_texto">Your account name, email, and phone number; services assigned by Southbound; your responses (accept or reject, with reason), your incidents, and the location of your check-in, check-out, and incidents.</string>
+    <string name="privacidad_sec1_texto">Your account name, email, and phone number; services assigned by Southbound; your responses (accept or reject, with reason), your incidents, the location of your check-in, check-out, and incidents, and your profile photo if you upload one (other app accounts can see it).</string>
     <string name="privacidad_sec2_titulo">Why we use it</string>
     <string name="privacidad_sec2_texto">To coordinate services, verify arrival at the meeting point and punctuality, and handle incidents.</string>
     <string name="privacidad_sec3_titulo">Who sees it</string>
@@ -775,4 +775,10 @@
     <string name="puntualidad_total_detalle">%1$d services with check-in. Least punctual first.</string>
     <string name="puntualidad_sin_nombre">No name</string>
     <string name="puntualidad_fila_detalle">%1$d services · %2$d late · %3$d outside the zone</string>
+    <string name="perfil_foto_error">The photo could not be saved. Check your connection and try again.</string>
+    <string name="perfil_vista_previa_titulo">This is how your photo will look</string>
+    <string name="perfil_vista_previa_texto">Your profile shows it cropped into a circle, centered.</string>
+    <string name="perfil_vista_previa_usar">Use this photo</string>
+    <string name="perfil_vista_previa_otra">Choose another</string>
+    <string name="perfil_editor_ayuda">Drag to move the photo and pinch to zoom in or out.</string>
 </resources>

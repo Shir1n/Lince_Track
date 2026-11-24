@@ -417,7 +417,7 @@
     <string name="privacidad_ajustes_desc">Qué datos usa la app, para qué, quién los ve y cómo pedir que se corrijan o eliminen.</string>
     <string name="privacidad_ver_aviso">VER AVISO DE PRIVACIDAD</string>
     <string name="privacidad_sec1_titulo">Qué datos usamos</string>
-    <string name="privacidad_sec1_texto">Tu nombre, correo y teléfono de la cuenta; los servicios que te asigna Southbound; tus respuestas (aceptar o rechazar, con su motivo), tus incidencias y la ubicación de tu check-in, check-out e incidencias.</string>
+    <string name="privacidad_sec1_texto">Tu nombre, correo y teléfono de la cuenta; los servicios que te asigna Southbound; tus respuestas (aceptar o rechazar, con su motivo), tus incidencias, la ubicación de tu check-in, check-out e incidencias y tu foto de perfil, si la subes (la ven las demás cuentas de la app).</string>
     <string name="privacidad_sec2_titulo">Para qué</string>
     <string name="privacidad_sec2_texto">Para coordinar los servicios, comprobar la llegada al punto de encuentro y la puntualidad, y atender las incidencias.</string>
     <string name="privacidad_sec3_titulo">Quién los ve</string>
@@ -775,4 +775,10 @@
     <string name="puntualidad_total_detalle">%1$d servicios con check-in. La menos puntual, primero.</string>
     <string name="puntualidad_sin_nombre">Sin nombre</string>
     <string name="puntualidad_fila_detalle">%1$d servicios · %2$d tarde · %3$d fuera de zona</string>
+    <string name="perfil_foto_error">No se pudo guardar la foto. Revisa tu conexión e inténtalo de nuevo.</string>
+    <string name="perfil_vista_previa_titulo">Así se verá tu foto</string>
+    <string name="perfil_vista_previa_texto">En tu perfil se muestra recortada en un círculo, centrada.</string>
+    <string name="perfil_vista_previa_usar">Usar esta foto</string>
+    <string name="perfil_vista_previa_otra">Elegir otra</string>
+    <string name="perfil_editor_ayuda">Arrastra para mover la foto y pellizca para acercarla o alejarla.</string>
 </resources>

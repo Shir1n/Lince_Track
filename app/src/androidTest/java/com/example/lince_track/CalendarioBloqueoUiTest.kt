@@ -1,5 +1,7 @@
 package com.example.lince_track
 
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -66,6 +68,8 @@ class CalendarioBloqueoUiTest {
         override suspend fun geocercas(): List<GeocercaDto> = emptyList()
         override suspend fun registrarHito(solicitud: HitoSolicitudDto): HitoDto = error("No se usa en este test")
         override suspend fun resumenHitos(desde: String?, hasta: String?): ResumenHitosDto = ResumenHitosDto()
+        override suspend fun misDatos(): JsonElement = JsonObject(emptyMap())
+        override suspend fun borrarDatos(uid: String): JsonElement = error("No se usa en este test")
     }
 
     private fun servicioEl(fecha: LocalDate) = ServicioMapper.aDominio(

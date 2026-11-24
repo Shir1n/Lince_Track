@@ -21,10 +21,12 @@ service firebase.storage {
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
     }
 
-    // Foto de perfil: cualquier usuario con rol la ve; solo el dueño la sube.
+    // Foto de perfil: cualquier usuario con rol la ve; solo el dueño la sube, la cambia o la borra.
+    // (Al borrar no hay request.resource, por eso el borrado va aparte.)
     match /perfil/{uid}/{archivo} {
       allow read: if signedIn() && rol() in ['administrador', 'conductor', 'guia'];
-      allow write: if signedIn() && request.auth.uid == uid && imagenValida();
+      allow create, update: if signedIn() && request.auth.uid == uid && imagenValida();
+      allow delete: if signedIn() && request.auth.uid == uid;
     }
 
     // Foto de check-in: la ve el dueño o el admin; solo el dueño la crea; no se modifica ni se borra.

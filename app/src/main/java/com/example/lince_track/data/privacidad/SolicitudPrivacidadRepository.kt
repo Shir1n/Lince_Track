@@ -1,5 +1,6 @@
 package com.example.lince_track.data.privacidad
 
+import com.example.lince_track.data.FotoPerfilRepository
 import com.example.lince_track.data.PerfilUsuario
 import com.example.lince_track.data.Reemplazable
 import com.example.lince_track.data.await
@@ -63,6 +64,10 @@ object SolicitudPrivacidadRepository {
     /** Firestore real; los tests lo reemplazan por uno simulado con MockK. */
     internal val firestoreReemplazable = Reemplazable { FirebaseFirestore.getInstance() }
     private val firestore get() = firestoreReemplazable.valor
+
+    /** Enlace de la foto de perfil (null si no hay); los tests lo reemplazan. */
+    internal val fotoPerfilReemplazable = Reemplazable<suspend (String) -> String?> { { FotoPerfilRepository.url(it) } }
+    private val fotoPerfil get() = fotoPerfilReemplazable.valor
 
     /** Backend propio; los tests lo reemplazan. */
     internal val apiReemplazable = Reemplazable<BloqueoApi> { BloqueoApiClient.api }
@@ -153,6 +158,7 @@ object SolicitudPrivacidadRepository {
         val propios = buildJsonObject {
             put("cuenta", documento("usuarios", uid))
             put("solicitudPrivacidad", documento(COLECCION, uid))
+            put("fotoPerfil", fotoPerfil(uid)?.let { JsonPrimitive(it) } ?: JsonNull)
             for (coleccion in listOf("respuestas", "checkins", "incidencias")) {
                 val consulta = firestore.collection(coleccion).whereEqualTo("uid", uid).get().await()
                 put(coleccion, JsonArray(consulta.documents.map { aJson(it.data) }))

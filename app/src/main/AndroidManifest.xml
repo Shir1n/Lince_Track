@@ -62,6 +62,16 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+        <!-- Archivo temporal donde la cámara deja la foto de perfil a resolución completa. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fotos"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/fotos_camara" />
+        </provider>
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="servicios" />
