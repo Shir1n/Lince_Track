@@ -1,11 +1,13 @@
 {
-  "versionCode": 4,
-  "versionName": "1.4",
-  "autorUltimoCambio": "Luciano",
+  "versionCode": 5,
+  "versionName": "1.5",
+  "autorUltimoCambio": "Ignacio",
   "apkUrl": "https://github.com/Shir1n/Lince_Track/releases/latest/download/lince-track.apk",
   "novedades": [
-    "El idioma elegido ahora se aplica en toda la app: perfil, alertas, clima, avisos, errores y notificaciones",
-    "El idioma cambia solo en la app, sin tocar el del teléfono (en Android 13 o más nuevo, también desde Ajustes del teléfono)",
-    "Al bloquear un día, el motivo ahora es obligatorio"
+    "Check-in con geocerca: se bloquea fuera de la zona, con GPS impreciso o pasada la hora, y el servidor lo vuelve a validar",
+    "Sin señal, el check-in queda guardado y se envía solo al volver la conexión",
+    "Notificaciones con la app cerrada: reemplazos, incidencias, respuestas y rechazos",
+    "Foto de perfil con cámara o galería, para ajustarla en el círculo",
+    "Privacidad: descarga tus datos o pide su eliminación desde Ajustes"
   ]
 }

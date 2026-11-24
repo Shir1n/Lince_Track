@@ -205,10 +205,10 @@ distinta): hay que desinstalar primero. Para que la APK use datos reales, `local
 
 ##  Pruebas
 
-| Suite | Qué prueba | Cómo se corre | Resultado (23-11-2026) |
+| Suite | Qué prueba | Cómo se corre | Resultado (24-11-2026) |
 | --- | --- | --- | --- |
-| **App — unitarias** | Reglas (geocerca, check-in, compañero de tour, reemplazos, incidencias), repositorios y ViewModel con Firebase, el backend y la API simulados (JUnit + MockK) | `.\gradlew.bat testDebugUnitTest` | **327 tests**, todos pasan |
-| **App — cobertura** | Líneas de las clases `*Repository` y `*ViewModel` (la pauta pide más de 90 %) | `.\gradlew.bat jacocoPautaReport` | **93,9 %** de líneas |
+| **App — unitarias** | Reglas (geocerca, check-in, compañero de tour, reemplazos, incidencias), repositorios y ViewModel con Firebase, el backend y la API simulados (JUnit + MockK) | `.\gradlew.bat testDebugUnitTest` | **336 tests**, todos pasan |
+| **App — cobertura** | Líneas de las clases `*Repository` y `*ViewModel` (la pauta pide más de 90 %) | `.\gradlew.bat jacocoPautaReport` | **93,7 %** de líneas |
 | **App — Compose UI** | Bloqueo de días en el calendario y perfiles (en un celular conectado) | `.\gradlew.bat connectedDebugAndroidTest` | `CalendarioBloqueoUiTest`, `PerfilesUiTest` |
 | **Backend** | Reglas de hitos y bloqueos, endpoints con H2, API de Southbound y Firestore simulados, seguridad por rol, privacidad | `cd backend; .\gradlew.bat test` | **89 tests**, **96 %** de líneas y 83 % de ramas |
 | **Reglas de Firestore** | Qué puede leer y escribir cada rol en cada colección, con el emulador | `cd firestore-tests; npm install; npm test` | **128 tests**, todos pasan |
