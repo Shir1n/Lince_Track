@@ -36,27 +36,31 @@ la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`)
   - ~~Room + WorkManager~~ **Hecho (PR 58, 22-11-2026):** cola de check-ins sin conexión, caché de geocercas y reglas,
     sincronización con reintentos e idempotencia (ver "Check-in sin conexión").
   - ~~Español e inglés con selector de idioma persistente~~ **Hecho (PR 52 y 54).**
-  - JUnit + MockK con cobertura > 90 % en ViewModel/Repository y al menos un Compose UI Test.
-  - ~~APK release firmada~~ **Hecha el 20-11-2026** (ver "Comandos"); falta instalarla en el celular de la defensa.
-  - Usar también `/guias`, `/transportistas`, `/clientes`, `/catalogos` y `/resumen`; mostrar `requestId` en errores.
-  - Coordinación: última posición puntual del transportista durante un servicio activo (sin rastreo 24/7).
+  - ~~JUnit + MockK > 90 % y al menos un Compose UI Test~~ **Hecho:** 343 tests de la app (93,4 % de líneas en
+    ViewModel/Repository) y 10 Compose UI Tests que pasan en el celular de la defensa (24-11-2026).
+  - ~~APK release firmada~~ **Publicada en GitHub Releases** (v1.5 el 24-11-2026; ver "Comandos"). Falta instalarla en el
+    celular de la defensa (Infinix X6837, el mismo que se usa por USB).
+  - ~~Usar `/guias`, `/transportistas`, `/clientes`, `/catalogos` y `/resumen`~~ **Hecho** (PR 60, 62 y 68); los errores
+    muestran el `requestId`.
+  - ~~Última posición del transportista durante un servicio activo~~ **Hecho (PR 68):** ver "Última posición".
 - **Pedidos de Southbound en la reunión (11-09-2026) que aún no están:** datos de la agencia (vehículo, polera, letrero),
   qué incluye la excursión, reporte mensual con servicios y dinero acumulado, y que los servicios cancelados igual se
   paguen al transportista. Un guía puede hacer un tour de medio día y un transfer el mismo día, pero no otro servicio
   si tiene un tour de día completo.
 
-## Estado actual (21-11-2026)
+## Estado actual (24-11-2026)
 - **Objetivo cercano:** la presentación del viernes 27-11 (08:30-08:50, grupo Patagonia-Dev) es para "vender" la app.
-  Diferenciadores ya hechos: check-in con geocerca validado por el backend y notificaciones con la app cerrada
-  (Cloud Functions). Para mostrar las notificaciones hacen falta dos dispositivos (conductor y administrador).
-- **Ramas recientes:** PR 53 (check-in con geocerca), PR 55 (panel del mapa plegable, clima y aviso sobre el panel) y
-  PR 54 (arreglo del idioma) ya están en `master`. `feature/notificaciones-push` está subida y sin merge; sus reglas y
-  funciones **ya están publicadas** en Firebase.
-- **Clave de la API disponible** (vence el 31-12-2026). Los datos de la API llegan hasta el 15-12-2026. Con la clave
-  en `local.properties` la app usa los datos reales (probado en celular el 21-11-2026). Pasan los 262 tests de la app
-  (92,9 % de líneas en ViewModel y repositorios), los 118 de reglas y los 9 de las funciones.
-- **Reglas:** la versión publicada el 21-11-2026 es la de `feature/notificaciones-push` (agrega `tokensFcm`). Si alguien
-  cambia `firestore.rules`, publicarla antes de probar: si falta, aceptar, rechazar o reportar da error.
+  Diferenciadores: check-in con geocerca validado por el backend en la nube, modo sin conexión, notificaciones con la
+  app cerrada, última posición del conductor y derechos de privacidad. Para mostrar las notificaciones hacen falta dos
+  dispositivos (conductor y administrador). Guía de la demo y scripts (`mover-geocerca.mjs`, `limpiar-pruebas.mjs`) en
+  `contexto/demo/` (fuera de Git).
+- **Todo está en `master`** hasta el PR 68 (última posición y agencias). Versión 1.6 en `release/1.6`.
+- **Datos limpios el 24-11-2026:** Firestore sin respuestas, check-ins, estados, reemplazos, incidencias ni solicitudes
+  (se conservan `usuarios` y `tokensFcm`), backend sin hitos ni bloqueos, Storage sin fotos y geocercas en su lugar.
+- **Clave de la API disponible** (vence el 31-12-2026). Los datos de la API llegan hasta el 15-12-2026. Pasan los 343
+  tests de la app (93,4 %), 10 Compose UI Tests, 128 de reglas, 15 de las funciones y 89 del backend (96 %).
+- **Reglas:** las publicadas son las de `master` (incluye `tokensFcm` y `solicitudesPrivacidad`; Storage, `perfil/`).
+  Si alguien cambia `firestore.rules`, publicarla antes de probar: si falta, aceptar, rechazar o reportar da error.
 - **Cuentas de prueba** en `usuarios/{uid}`:
   - Carlos Morales R.: `conductor`, `transportistaId: 37`, sin `perfilNuevo` (se muestra el perfil completo de ejemplo).
   - Patricio Lagos: `conductor`, `transportistaId: 43`, `perfilNuevo: true`. Es el reemplazo en el video.
@@ -253,7 +257,7 @@ la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`)
   arrastrar y pellizcar, se adapta a horizontal) → se guarda solo el cuadrado del círculo, a 512 px en JPEG. Sin foto,
   ícono de persona (`perfil1.png` se borró). `storage.rules` publicadas (firebase.json las incluye): la ve cualquier
   cuenta con rol y solo el dueño la sube o borra; leen el rol desde Firestore, para eso la cuenta de Storage tiene el
-  rol `firebaserules.firestoreServiceAgent`. `VERSION_AVISO` = 3 (el aviso menciona la foto). El proyecto está en
+  rol `firebaserules.firestoreServiceAgent`. `VERSION_AVISO` = 4 (menciona la foto y la posición cada 5 minutos). El proyecto está en
   Blaze: revisar que exista una alerta de presupuesto de $5 en Google Cloud.
 - Plan detallado de datos: `Lince_Track_plan_base_de_datos.txt` (v2). Desactualizado en parte:
   con la API ya no se crean `servicios` en Firestore, y `asignaciones` ahora guarda solo los reemplazos. Firestore solo
@@ -312,6 +316,14 @@ la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`)
   lo saca de la cola. Al terminar avisa con una notificación. `MainActivity` lo reprograma si quedó algo en la cola.
 - Probado el 22-11-2026 cortando el `adb reverse`: el check-in del 3166 (Patricio) se sincronizó solo en unos 20 s.
   Ese servicio quedó aceptado y con check-in de prueba. Con el backend en Cloud Run, la demo se hace con modo avión.
+
+### Última posición (PR 68)
+- `PosicionRepository` envía un hito `POSICION` cada 5 minutos (`ReglasPosicion`) solo con el servicio en curso
+  (check-in confirmado y sin check-out), el mapa abierto y GPS real. Sin señal se omite (no va a la cola). No hay rastreo
+  24/7.
+- Coordinación la ve en el detalle del servicio (`UltimaPosicionCard`, con "Ver en el mapa"):
+  `GET /api/hitos/ultima-posicion` (solo administrador, 404 `SIN_POSICION` si nadie informó).
+- Agencias: `Servicio.agencia` sale de `dto.cliente`; se ve en el detalle y en Panel → Equipo → Agencias (`/clientes`).
 
 ## Privacidad (Ley 21.719, vigente desde el 01-12-2026)
 - Aviso "Tus datos en Lince Track" (`ui/components/Privacidad.kt`): se muestra al abrir la app hasta pulsar
