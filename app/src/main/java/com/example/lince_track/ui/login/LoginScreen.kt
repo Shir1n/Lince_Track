@@ -32,9 +32,9 @@ import com.example.lince_track.ui.components.LanguageSwitcherButton
 @Composable
 fun LoginScreen(
     onLoginSuccess: (Rol) -> Unit = {},
-    onForgotPasswordClick: () -> Unit = {}
+    onForgotPasswordClick: () -> Unit = {},
+    viewModel: LoginViewModel = viewModel()
 ) {
-    val viewModel: LoginViewModel = viewModel()
     val estado by viewModel.estado.collectAsState()
 
     var email by remember { mutableStateOf("") }
@@ -172,49 +172,6 @@ fun LoginScreen(
             )
 
             Spacer(modifier = Modifier.height(14.dp))
-
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                SuggestionChip(
-                    onClick = {
-                        email = "admintest@southbound.cl"
-                        password = "123456"
-                        viewModel.limpiarError()
-                    },
-                    enabled = !estado.cargando,
-                    label = { Text(stringResource(R.string.login_chip_admin), style = MaterialTheme.typography.labelMedium) }
-                )
-                SuggestionChip(
-                    onClick = {
-                        email = "guiatest@southbound.cl"
-                        password = "123456"
-                        viewModel.limpiarError()
-                    },
-                    enabled = !estado.cargando,
-                    label = { Text(stringResource(R.string.login_chip_guia), style = MaterialTheme.typography.labelMedium) }
-                )
-                SuggestionChip(
-                    onClick = {
-                        email = "pilototest@southbound.cl"
-                        password = "123456"
-                        viewModel.limpiarError()
-                    },
-                    enabled = !estado.cargando,
-                    label = { Text(stringResource(R.string.login_chip_conductor), style = MaterialTheme.typography.labelMedium) }
-                )
-                SuggestionChip(
-                    onClick = {
-                        email = "piloto1@southbound.cl"
-                        password = "123456"
-                        viewModel.limpiarError()
-                    },
-                    enabled = !estado.cargando,
-                    label = { Text(stringResource(R.string.login_chip_piloto1), style = MaterialTheme.typography.labelMedium) }
-                )
-            }
 
             Spacer(modifier = Modifier.height(18.dp))
 

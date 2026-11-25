@@ -25,6 +25,8 @@ data class LoginEstado(
  * Estado del inicio de sesión. Las dependencias llegan por el constructor (con AuthRepository como valor por defecto)
  * para que los tests las reemplacen; Compose lo crea con `viewModel()`, que usa el constructor sin argumentos.
  */
+private val FORMATO_CORREO = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
+
 class LoginViewModel(
     private val uidActual: () -> String? = { AuthRepository.usuarioActual?.uid },
     private val cargarRol: suspend (String) -> Rol? = AuthRepository::cargarRolActual,
@@ -51,6 +53,10 @@ class LoginViewModel(
             _estado.value = LoginEstado(error = UiText.StringResource(R.string.login_error_campos_vacios))
             return
         }
+        if (!esCorreoValido(email)) {
+            _estado.value = LoginEstado(error = UiText.StringResource(R.string.login_error_correo_invalido))
+            return
+        }
         viewModelScope.launch {
             _estado.value = LoginEstado(cargando = true)
             val resultado = iniciar(email, password)
@@ -60,6 +66,9 @@ class LoginViewModel(
             )
         }
     }
+
+    /** Formato básico (algo@dominio.tld); Firebase revisa el resto. */
+    private fun esCorreoValido(email: String): Boolean = FORMATO_CORREO.matches(email.trim())
 
     fun limpiarError() {
         _estado.value = _estado.value.copy(error = null)

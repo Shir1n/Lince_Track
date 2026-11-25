@@ -183,6 +183,16 @@ class ViewModelsTest {
     }
 
     @Test
+    fun correoConFormatoInvalidoNoLlamaAFirebase() {
+        val vm = login()
+        for (correo in listOf("carlos", "carlos@", "carlos@southbound", "car los@southbound.cl")) {
+            vm.iniciarSesion(correo, "clave")
+            assertEquals(correo, UiText.StringResource(R.string.login_error_correo_invalido), vm.estado.value.error)
+        }
+        assertTrue(intentos.isEmpty())
+    }
+
+    @Test
     fun iniciarSesionEntregaElRolYNoSeRepiteMientrasCarga() = runTest(dispatcher) {
         val resultado = CompletableDeferred<Result<Rol>>()
         respuestaLogin = { resultado.await() }

@@ -41,13 +41,10 @@
     <string name="login_password_placeholder">Password</string>
     <string name="login_ocultar_password">Hide password</string>
     <string name="login_mostrar_password">Show password</string>
-    <string name="login_chip_admin">Admin</string>
-    <string name="login_chip_guia">Guide</string>
-    <string name="login_chip_conductor">Driver</string>
-    <string name="login_chip_piloto1">Driver 1</string>
     <string name="login_iniciar_sesion">Sign In</string>
     <string name="login_problemas">Trouble signing in?</string>
     <string name="login_error_campos_vacios">Enter your email and password</string>
+    <string name="login_error_correo_invalido">The email format is not valid</string>
     <string name="login_error_sin_rol">No role assigned</string>
     <string name="login_error_usuario_no_existe">No account exists with that email.</string>
     <string name="login_error_credenciales">Incorrect email or password.</string>

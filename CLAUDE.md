@@ -36,8 +36,8 @@ la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`)
   - ~~Room + WorkManager~~ **Hecho (PR 58, 22-11-2026):** cola de check-ins sin conexión, caché de geocercas y reglas,
     sincronización con reintentos e idempotencia (ver "Check-in sin conexión").
   - ~~Español e inglés con selector de idioma persistente~~ **Hecho (PR 52 y 54).**
-  - ~~JUnit + MockK > 90 % y al menos un Compose UI Test~~ **Hecho:** 343 tests de la app (93,4 % de líneas en
-    ViewModel/Repository) y 10 Compose UI Tests que pasan en el celular de la defensa (24-11-2026).
+  - ~~JUnit + MockK > 90 % y al menos un Compose UI Test~~ **Hecho:** 344 tests de la app (93,4 % de líneas en
+    ViewModel/Repository) y 13 Compose UI Tests que pasan en el celular de la defensa (25-11-2026).
   - ~~APK release firmada~~ **Publicada en GitHub Releases** (v1.5 el 24-11-2026; ver "Comandos"). Falta instalarla en el
     celular de la defensa (Infinix X6837, el mismo que se usa por USB).
   - ~~Usar `/guias`, `/transportistas`, `/clientes`, `/catalogos` y `/resumen`~~ **Hecho** (PR 60, 62 y 68); los errores
@@ -57,8 +57,8 @@ la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`)
 - **Todo está en `master`** hasta el PR 68 (última posición y agencias). Versión 1.6 en `release/1.6`.
 - **Datos limpios el 24-11-2026:** Firestore sin respuestas, check-ins, estados, reemplazos, incidencias ni solicitudes
   (se conservan `usuarios` y `tokensFcm`), backend sin hitos ni bloqueos, Storage sin fotos y geocercas en su lugar.
-- **Clave de la API disponible** (vence el 31-12-2026). Los datos de la API llegan hasta el 15-12-2026. Pasan los 343
-  tests de la app (93,4 %), 10 Compose UI Tests, 128 de reglas, 15 de las funciones y 89 del backend (96 %).
+- **Clave de la API disponible** (vence el 31-12-2026). Los datos de la API llegan hasta el 15-12-2026. Pasan los 344
+  tests de la app (93,4 %), 13 Compose UI Tests, 128 de reglas, 15 de las funciones y 89 del backend (96 %).
 - **Reglas:** las publicadas son las de `master` (incluye `tokensFcm` y `solicitudesPrivacidad`; Storage, `perfil/`).
   Si alguien cambia `firestore.rules`, publicarla antes de probar: si falta, aceptar, rechazar o reportar da error.
 - **Cuentas de prueba** en `usuarios/{uid}`:
@@ -69,7 +69,8 @@ la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`)
   - IDs de PUX desde el 16-11-2026, con custom claims aplicados (`rol` y el ID). Carlos y Alfredo comparten el tour real
     3008/3009 del 20-11 a las 08:30. Tras cambiar un rol o un ID en `usuarios/{uid}`, volver a correr
     `backend/scripts/sincronizar-claims.mjs --aplicar` y cerrar sesión en la app.
-  - Los correos y la contraseña están en `USUARIOS_TEST.md`, y `LoginScreen` tiene botones que rellenan esas cuentas.
+  - Los correos y la contraseña están en `contexto/USUARIOS_TEST.md` (fuera de Git desde el 24-11-2026: la pauta pide
+    el repositorio sin credenciales). El login ya no tiene botones que rellenen cuentas.
 - **Recorrido del video:** guía y conductor aceptan "Saltos del Petrohué" (8941/8942) → el conductor hace check-in y
   reporta "Falla mecánica" → el administrador responde y envía reemplazo → Patricio acepta y hace check-in y check-out →
   el administrador la marca resuelta. Tour de mañana para otra prueba: "Lago Todos los Santos" (8960/8961). Otro tour de
@@ -91,7 +92,7 @@ la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`)
   inventado de `ResumenDemostracion`, siempre con un aviso visible; "Hoy" y las cifras con clave son solo datos reales.
   Los márgenes (15 minutos de puntualidad, 500 m de distancia) son provisionales: falta confirmarlos con Southbound.
 - **Fuera por ahora:** fotos (ya se pueden, con Blaze y Storage), ubicación en vivo y chat (ya está WhatsApp).
-- **No mostrar en el video:** botones del líder del grupo (sin teléfono) y botones de cuentas de prueba en el login.
+- **No mostrar en el video:** botones del líder del grupo (sin teléfono).
 - **Limitaciones conocidas:**
   - Historial solo alcanza a los últimos 7 días cargados.
   - Quien es reemplazado deja su check-in sin cerrar, ya no puede abrir el servicio, y si se le devuelve aparece aceptado
@@ -376,9 +377,8 @@ la cuenta de servicio de Firebase (`lince-track-66c55-firebase-adminsdk-*.json`)
    reemplazar por el real o deshabilitar.
 
 ## Problemas conocidos (revisión del 02-11-2026)
-- **Credenciales de prueba públicas:** el repositorio es público, y `USUARIOS_TEST.md` y los botones de `LoginScreen` traen
-  correos y contraseña de cuentas reales de Firebase, incluida la de administrador. Se mantienen a propósito para trabajar
-  más rápido. Antes de usar datos reales o publicar la app: quitar ambos y cambiar las contraseñas (quedan en el historial).
+- **Credenciales de prueba:** se sacaron del repositorio el 24-11-2026 (`USUARIOS_TEST.md` y los botones del login),
+  pero la contraseña sigue en el historial público: hay que cambiarla en Firebase Auth.
 - `PerfilScreen` tiene datos fijos ("Carlos Morales", fechas de 2026; la foto ya es la real de la cuenta): se mantiene a propósito
   como placeholder. Conductores con `usuarios/{uid}.perfilNuevo: true` (booleano) y guías usan `PerfilRealScreen`,
   que muestra próximo servicio, puntualidad, terminados y por realizar reales. Son fijos a propósito, para que se vea
