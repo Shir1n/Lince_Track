@@ -41,13 +41,10 @@
     <string name="login_password_placeholder">Contraseña</string>
     <string name="login_ocultar_password">Ocultar contraseña</string>
     <string name="login_mostrar_password">Mostrar contraseña</string>
-    <string name="login_chip_admin">Admin</string>
-    <string name="login_chip_guia">Guía</string>
-    <string name="login_chip_conductor">Conductor</string>
-    <string name="login_chip_piloto1">Piloto 1</string>
     <string name="login_iniciar_sesion">Iniciar Sesión</string>
     <string name="login_problemas">¿Problemas para ingresar?</string>
     <string name="login_error_campos_vacios">Ingresa tu correo y contraseña</string>
+    <string name="login_error_correo_invalido">El correo no tiene un formato válido</string>
     <string name="login_error_sin_rol">Sin rol asignado</string>
     <string name="login_error_usuario_no_existe">No existe una cuenta con ese correo.</string>
     <string name="login_error_credenciales">Correo o contraseña incorrectos.</string>

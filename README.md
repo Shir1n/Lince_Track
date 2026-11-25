@@ -94,6 +94,31 @@ flowchart LR
 - **Seguridad:** el backend no tiene login propio; valida el token de Firebase Auth y toma el rol de sus *custom
   claims*. Las reglas de Firestore niegan todo lo que no está permitido explícitamente.
 
+### Endpoints del backend propio
+
+Todos piden `Authorization: Bearer <token de Firebase>`, salvo `/health`. Los errores responden
+`{ error: { code, message, requestId } }`.
+
+| Método | Ruta | Quién | Qué hace |
+| --- | --- | --- | --- |
+| GET | `/health` | Cualquiera | Estado del servicio |
+| GET | `/api/geocercas` · `/api/geocercas/{id}` | Con rol | Geocercas de recogida y destino (nombre, coordenadas, radio) |
+| POST · PUT · DELETE | `/api/geocercas` · `/api/geocercas/{id}` | Administrador | Crea, mueve o cambia el radio de una geocerca, o la borra |
+| GET | `/api/parametros` | Con rol | Reglas del check-in: anticipación (15 min), precisión máxima (50 m), radio por defecto (150 m), días para bloquear (7) |
+| PUT | `/api/parametros` | Administrador | Cambia esas reglas sin publicar otra versión de la app |
+| POST | `/api/hitos` | Conductor, guía | Check-in, check-out o posición. El servidor vuelve a validar distancia, precisión, hora y que el servicio sea de esa persona. `claveIdempotencia` evita duplicados |
+| GET | `/api/hitos?servicioId=` | Con rol | Hitos de un servicio (cada uno ve los suyos; el administrador, todos) |
+| GET | `/api/hitos/resumen` | Administrador | Puntualidad por persona entre dos fechas |
+| GET | `/api/hitos/ultima-posicion?servicioId=` | Administrador | Última posición informada durante un servicio en curso |
+| GET · POST | `/api/bloqueos` | Conductor, guía | Días bloqueados (7 días de anticipación y nunca sobre un servicio asignado) |
+| DELETE | `/api/bloqueos/{id}` | Dueño o administrador | Quita un bloqueo |
+| GET | `/api/privacidad/mis-datos` | Con rol | Descarga lo que el backend guarda de la persona (Ley 21.719) |
+| DELETE | `/api/privacidad/{uid}` | Administrador | Borra los hitos y bloqueos de una persona al aprobar su solicitud |
+
+**API externa de Southbound** (solo lectura, header `X-API-Key`): `GET /api/v1/servicios` (filtros por fecha, oficina,
+tipo, estados y persona; paginado), `/servicios/{id}`, `/guias`, `/transportistas`, `/clientes`, `/catalogos` y
+`/resumen`.
+
 ##  Tecnologías utilizadas
 
 | Área | Tecnología |
@@ -152,8 +177,8 @@ En macOS o Linux se usa `./gradlew` en vez de `.\gradlew.bat`.
 
 ### Cuentas de prueba
 
-Las cuentas de cada rol (conductor, guía y administrador) están en [`USUARIOS_TEST.md`](USUARIOS_TEST.md), y la pantalla
-de login tiene botones que las rellenan.
+Hay una cuenta por rol (conductor, guía y administrador) con datos ficticios. Sus correos y contraseñas **no están en
+el repositorio**: se entregan al docente junto con la APK en AVA.
 
 ### Backend (opcional, para desarrollo)
 
@@ -205,11 +230,11 @@ distinta): hay que desinstalar primero. Para que la APK use datos reales, `local
 
 ##  Pruebas
 
-| Suite | Qué prueba | Cómo se corre | Resultado (24-11-2026) |
+| Suite | Qué prueba | Cómo se corre | Resultado (25-11-2026) |
 | --- | --- | --- | --- |
-| **App — unitarias** | Reglas (geocerca, check-in, compañero de tour, reemplazos, incidencias), repositorios y ViewModel con Firebase, el backend y la API simulados (JUnit + MockK) | `.\gradlew.bat testDebugUnitTest` | **336 tests**, todos pasan |
-| **App — cobertura** | Líneas de las clases `*Repository` y `*ViewModel` (la pauta pide más de 90 %) | `.\gradlew.bat jacocoPautaReport` | **93,7 %** de líneas |
-| **App — Compose UI** | Bloqueo de días en el calendario y perfiles (en un celular conectado) | `.\gradlew.bat connectedDebugAndroidTest` | **10 tests** en un Infinix X6837 (Android 13), todos pasan |
+| **App — unitarias** | Reglas (geocerca, check-in, compañero de tour, reemplazos, incidencias), repositorios y ViewModel con Firebase, el backend y la API simulados (JUnit + MockK) | `.\gradlew.bat testDebugUnitTest` | **344 tests**, todos pasan |
+| **App — cobertura** | Líneas de las clases `*Repository` y `*ViewModel` (la pauta pide más de 90 %) | `.\gradlew.bat jacocoPautaReport` | **93,4 %** de líneas |
+| **App — Compose UI** | Login con datos inválidos, bloqueo de días en el calendario y perfiles (en un celular conectado) | `.\gradlew.bat connectedDebugAndroidTest` | **13 tests** en un Infinix X6837 (Android 13), todos pasan |
 | **Backend** | Reglas de hitos y bloqueos, endpoints con H2, API de Southbound y Firestore simulados, seguridad por rol, privacidad | `cd backend; .\gradlew.bat test` | **89 tests**, **96 %** de líneas y 83 % de ramas |
 | **Reglas de Firestore** | Qué puede leer y escribir cada rol en cada colección, con el emulador | `cd firestore-tests; npm install; npm test` | **128 tests**, todos pasan |
 | **Cloud Functions** | Qué notificación se envía y a quién, y el borrado de datos aprobado | `cd functions; npm install; npm test` | **15 tests**, todos pasan |
@@ -218,6 +243,21 @@ Los reportes quedan en:
 - `app/build/reports/tests/testDebugUnitTest/index.html` (tests de la app)
 - `app/build/reports/jacoco/jacocoPautaReport/html/index.html` (cobertura de la app)
 - `backend/build/reports/tests/test/index.html` y `backend/build/reports/jacoco/test/html/index.html` (backend)
+
+### Evidencia
+
+Capturas de los reportes en [`docs/evidencia/`](docs/evidencia):
+
+| Qué | Captura |
+| --- | --- |
+| Tests unitarios de la app (344, todos pasan) | [app-tests-unitarios.png](docs/evidencia/app-tests-unitarios.png) |
+| Cobertura JaCoCo de ViewModel y Repository (93,4 % de líneas) | [app-cobertura-jacoco.png](docs/evidencia/app-cobertura-jacoco.png) |
+| Compose UI Tests en el Infinix X6837 (13, todos pasan) | [app-compose-ui-tests.png](docs/evidencia/app-compose-ui-tests.png) |
+| Tests del backend (89, todos pasan) | [backend-tests.png](docs/evidencia/backend-tests.png) |
+| Cobertura JaCoCo del backend (96 % de líneas) | [backend-cobertura-jacoco.png](docs/evidencia/backend-cobertura-jacoco.png) |
+| Swagger del backend publicado en Cloud Run | [backend-swagger.png](docs/evidencia/backend-swagger.png) |
+
+![Cobertura de la app](docs/evidencia/app-cobertura-jacoco.png)
 
 Además se probó en celulares reales: check-in bloqueado por radio, check-in en modo avión sincronizado al volver la
 señal, notificación con el celular bloqueado y eliminación de datos de punta a punta.
