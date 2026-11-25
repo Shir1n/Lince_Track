@@ -69,6 +69,7 @@ import com.example.lince_track.data.ServicioRepository
 import com.example.lince_track.data.formatHora
 import com.example.lince_track.data.formatPrecioCLP
 import com.example.lince_track.ui.components.EstadoServicioBadge
+import com.example.lince_track.ui.components.UltimaPosicionCard
 import com.example.lince_track.ui.components.IncidenciaCard
 import com.example.lince_track.ui.components.RejectServicioDialog
 import com.example.lince_track.ui.components.ReportarIncidenciaDialog
@@ -170,6 +171,10 @@ fun DetalleServicioScreen(
                 RouteScheduleCard(servicio)
                 PassengersCard(servicio)
                 GuideCard(servicio)
+                // Coordinación: última posición informada mientras el servicio está en curso.
+                if (rolActual == Rol.ADMINISTRADOR && checkins[servicio.id] != null) {
+                    UltimaPosicionCard(servicio.id)
+                }
                 IncidenciasSeccion(
                     servicio = servicio,
                     incidencias = ReglasIncidencia.deServicio(incidencias, servicio.id),
@@ -276,6 +281,19 @@ private fun ServiceHeaderCard(servicio: Servicio) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp)
             )
+            // Agencia que vendió el servicio (cliente de Southbound), si la API la trae.
+            if (servicio.agencia.isNotBlank()) {
+                Text(
+                    text = if (servicio.agenciaPais.isNotBlank()) {
+                        stringResource(R.string.detalle_agencia_pais, servicio.agencia, servicio.agenciaPais)
+                    } else {
+                        stringResource(R.string.detalle_agencia, servicio.agencia)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(12.dp))
             EstadoServicioBadge(servicio.estado)
             // La API aún no trae tarifa: sin ella no se muestra.

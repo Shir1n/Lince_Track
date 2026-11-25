@@ -49,7 +49,11 @@ data class Servicio(
     /** Teléfono que publicó quien aceptó este servicio (vacío si no hay). */
     val telefonoResponsable: String = "",
     /** Teléfono de la otra persona del tour, una vez que aceptó (vacío si no hay). */
-    val telefonoCompanero: String = ""
+    val telefonoCompanero: String = "",
+    /** Agencia (cliente de Southbound) que vendió el servicio; vacío si la API no la trae. */
+    val agencia: String = "",
+    val agenciaPais: String = "",
+    val agenciaId: Long? = null
 )
 
 data class VehiculoServicio(

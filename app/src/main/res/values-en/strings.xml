@@ -423,7 +423,7 @@
     <string name="privacidad_sec3_titulo">Who sees it</string>
     <string name="privacidad_sec3_texto">Coordination (administration) sees all of the above. The other person on your tour sees your name, phone number, and whether you accepted. Only Coordination sees your location, rejection reasons, and incidents.</string>
     <string name="privacidad_sec4_titulo">Your location</string>
-    <string name="privacidad_sec4_texto">While you have a service map open, GPS is read every few seconds to show your position, distance to the meeting point, and speed. That stays only on your phone and is neither stored nor sent. Only the location at the moment of check-in, check-out, or an incident is sent. Leaving the map stops GPS: we do not track you in the background or outside a service.</string>
+    <string name="privacidad_sec4_texto">While you have a service map open, GPS is read every few seconds to show your position, distance to the meeting point, and speed; that stays on your phone. Your location is sent at check-in, check-out, or an incident and, only while the service is in progress (after check-in and before check-out) with the map open, your position every 5 minutes so Coordination knows where you are. Leaving the map or finishing the service stops sending: we do not track you in the background or outside a service.</string>
     <string name="privacidad_sec5_titulo">Where it is stored</string>
     <string name="privacidad_sec5_texto">In Firebase (Google), whose servers may be located outside Chile, and on the project server. It is kept for the duration of the project. To display map weather, Open-Meteo is queried using only an approximate area (~1 km), not your exact position.</string>
     <string name="privacidad_sec6_titulo">Your rights</string>
@@ -431,7 +431,9 @@
     <string name="privacidad_sec7_titulo">Academic project</string>
     <string name="privacidad_sec7_texto">Lince Track is an academic prototype (Duoc UC, DSY1105). The services, passengers, and agencies shown are fictional.</string>
     <string name="privacidad_ubicacion_titulo">Location permission</string>
-    <string name="privacidad_ubicacion_cuerpo">%1$s\n\nOnly while the app is open: we do not track you in the background. What is sent (check-in, check-out, and incidents) is only visible to Coordination.</string>
+    <string name="privacidad_ubicacion_cuerpo">%1$s
+
+Only while the app is open: we do not track you in the background. What is sent (check-in, check-out, incidents, and your position every 5 minutes during a service in progress) is only visible to Coordination.</string>
     <string name="accion_continuar">Continue</string>
     <string name="accion_ahora_no">Not now</string>
 
@@ -492,7 +494,7 @@
     <string name="error_sin_conexion_servidor">No connection to the server. Check your network.</string>
     <string name="error_con_id">%1$s (ID: %2$s)</string>
     <string name="agenda_operacion_fallida">The operation could not be completed</string>
-    <string name="ruta_motivo_ubicacion">While the map is open, GPS shows your position, the distance to the meeting point and your speed (this is not sent). Your location is recorded at check-in and check-out.</string>
+    <string name="ruta_motivo_ubicacion">While the map is open, GPS shows your position, the distance to the meeting point and your speed (this is not sent). Your location is recorded at check-in and check-out and, while the service is in progress, every 5 minutes for Coordination.</string>
     <string name="ruta_objetivo_guia">Lobby %1$s (Meeting Point)</string>
     <string name="ruta_objetivo_pickup">%1$s (Pickup)</string>
     <string name="ruta_marcador_pickup">Pickup: %1$s</string>
@@ -781,4 +783,16 @@
     <string name="perfil_vista_previa_usar">Use this photo</string>
     <string name="perfil_vista_previa_otra">Choose another</string>
     <string name="perfil_editor_ayuda">Drag to move the photo and pinch to zoom in or out.</string>
+    <string name="equipo_agencias">Agencies</string>
+    <string name="equipo_agencia_detalle">%1$s · %2$s · %3$d services in the loaded days</string>
+    <string name="detalle_agencia">Agency: %1$s</string>
+    <string name="detalle_agencia_pais">Agency: %1$s · %2$s</string>
+    <string name="posicion_titulo">Last position</string>
+    <string name="posicion_cargando">Looking for the last position…</string>
+    <string name="posicion_sin_datos">No position has been reported for this service yet.</string>
+    <string name="posicion_sin_hora">Position reported · GPS ± %1$d m</string>
+    <string name="posicion_hace">%1$d min ago (%2$s) · GPS ± %3$d m</string>
+    <string name="posicion_nota">It is reported every 5 minutes while the service is in progress and the person has the map open.</string>
+    <string name="posicion_ver_mapa">View on map</string>
+    <string name="posicion_actualizar">Refresh</string>
 </resources>

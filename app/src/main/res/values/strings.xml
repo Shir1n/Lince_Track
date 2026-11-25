@@ -423,7 +423,7 @@
     <string name="privacidad_sec3_titulo">Quién los ve</string>
     <string name="privacidad_sec3_texto">Coordinación (administración) ve todo lo anterior. La otra persona de tu tour ve tu nombre, tu teléfono y si aceptaste. Tu ubicación, tus motivos de rechazo y tus incidencias solo los ve Coordinación.</string>
     <string name="privacidad_sec4_titulo">Tu ubicación</string>
-    <string name="privacidad_sec4_texto">Mientras tienes abierto el mapa de un servicio, el GPS se lee cada pocos segundos para mostrarte tu posición, la distancia al punto de encuentro y tu velocidad. Eso queda solo en tu teléfono y no se guarda ni se envía. Solo se envía la ubicación del momento del check-in, el check-out o una incidencia. Al salir del mapa el GPS se detiene: no te seguimos en segundo plano ni fuera de un servicio.</string>
+    <string name="privacidad_sec4_texto">Mientras tienes abierto el mapa de un servicio, el GPS se lee cada pocos segundos para mostrarte tu posición, la distancia al punto de encuentro y tu velocidad; eso queda en tu teléfono. Se envía la ubicación del momento del check-in, el check-out o una incidencia y, solo con el servicio en curso (después del check-in y antes del check-out) y el mapa abierto, tu posición cada 5 minutos, para que Coordinación sepa dónde estás. Al salir del mapa o terminar el servicio no se envía nada: no te seguimos en segundo plano ni fuera de un servicio.</string>
     <string name="privacidad_sec5_titulo">Dónde se guardan</string>
     <string name="privacidad_sec5_texto">En Firebase (Google), cuyos servidores pueden estar fuera de Chile, y en el servidor del proyecto. Se guardan mientras dure el proyecto. Para mostrar el clima del mapa se consulta a Open-Meteo solo la zona aproximada (unos 1 km), no tu posición exacta.</string>
     <string name="privacidad_sec6_titulo">Tus derechos</string>
@@ -431,7 +431,9 @@
     <string name="privacidad_sec7_titulo">Proyecto académico</string>
     <string name="privacidad_sec7_texto">Lince Track es un prototipo académico (Duoc UC, DSY1105). Los servicios, pasajeros y agencias que muestra son ficticios.</string>
     <string name="privacidad_ubicacion_titulo">Permiso de ubicación</string>
-    <string name="privacidad_ubicacion_cuerpo">%1$s\n\nSolo con la app abierta: no te seguimos en segundo plano. Lo que se envía (check-in, check-out e incidencias) solo lo ve Coordinación.</string>
+    <string name="privacidad_ubicacion_cuerpo">%1$s
+
+Solo con la app abierta: no te seguimos en segundo plano. Lo que se envía (check-in, check-out, incidencias y tu posición cada 5 minutos durante un servicio en curso) solo lo ve Coordinación.</string>
     <string name="accion_continuar">Continuar</string>
     <string name="accion_ahora_no">Ahora no</string>
 
@@ -492,7 +494,7 @@
     <string name="error_sin_conexion_servidor">Sin conexión con el servidor. Revisa tu red.</string>
     <string name="error_con_id">%1$s (ID: %2$s)</string>
     <string name="agenda_operacion_fallida">No se pudo completar la operación</string>
-    <string name="ruta_motivo_ubicacion">Mientras el mapa está abierto, el GPS muestra tu posición, la distancia al punto de encuentro y tu velocidad (eso no se envía). En el check-in y el check-out se registra dónde estás.</string>
+    <string name="ruta_motivo_ubicacion">Mientras el mapa está abierto, el GPS muestra tu posición, la distancia al punto de encuentro y tu velocidad (eso no se envía). En el check-in y el check-out se registra dónde estás y, con el servicio en curso, tu posición cada 5 minutos para Coordinación.</string>
     <string name="ruta_objetivo_guia">Lobby %1$s (Punto de Encuentro)</string>
     <string name="ruta_objetivo_pickup">%1$s (Pickup)</string>
     <string name="ruta_marcador_pickup">Pickup: %1$s</string>
@@ -781,4 +783,16 @@
     <string name="perfil_vista_previa_usar">Usar esta foto</string>
     <string name="perfil_vista_previa_otra">Elegir otra</string>
     <string name="perfil_editor_ayuda">Arrastra para mover la foto y pellizca para acercarla o alejarla.</string>
+    <string name="equipo_agencias">Agencias</string>
+    <string name="equipo_agencia_detalle">%1$s · %2$s · %3$d servicios en los días cargados</string>
+    <string name="detalle_agencia">Agencia: %1$s</string>
+    <string name="detalle_agencia_pais">Agencia: %1$s · %2$s</string>
+    <string name="posicion_titulo">Última posición</string>
+    <string name="posicion_cargando">Buscando la última posición…</string>
+    <string name="posicion_sin_datos">Todavía no hay posición informada en este servicio.</string>
+    <string name="posicion_sin_hora">Posición informada · GPS ± %1$d m</string>
+    <string name="posicion_hace">Hace %1$d min (%2$s) · GPS ± %3$d m</string>
+    <string name="posicion_nota">Se informa cada 5 minutos mientras el servicio está en curso y la persona tiene el mapa abierto.</string>
+    <string name="posicion_ver_mapa">Ver en el mapa</string>
+    <string name="posicion_actualizar">Actualizar</string>
 </resources>

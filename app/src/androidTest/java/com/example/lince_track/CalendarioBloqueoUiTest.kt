@@ -69,6 +69,7 @@ class CalendarioBloqueoUiTest {
         override suspend fun registrarHito(solicitud: HitoSolicitudDto): HitoDto = error("No se usa en este test")
         override suspend fun resumenHitos(desde: String?, hasta: String?): ResumenHitosDto = ResumenHitosDto()
         override suspend fun misDatos(): JsonElement = JsonObject(emptyMap())
+        override suspend fun ultimaPosicion(servicioId: Long): HitoDto = error("No se usa en este test")
         override suspend fun borrarDatos(uid: String): JsonElement = error("No se usa en este test")
     }
 

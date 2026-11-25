@@ -1,5 +1,6 @@
 package com.example.lince_track.data.remote
 
+import com.example.lince_track.data.remote.dto.ClienteRefDto
 import com.example.lince_track.data.remote.dto.CatalogosDto
 import com.example.lince_track.data.remote.dto.GuiaDto
 import com.example.lince_track.data.remote.dto.HealthDto
@@ -48,6 +49,13 @@ interface LinceApi {
         @Query("page") page: Int? = null,
         @Query("pageSize") pageSize: Int? = null
     ): PaginaDto<GuiaDto>
+
+    /** Agencias (clientes de Southbound) que venden los servicios (paginado). */
+    @GET("api/v1/clientes")
+    suspend fun clientes(
+        @Query("page") page: Int? = null,
+        @Query("pageSize") pageSize: Int? = null
+    ): PaginaDto<ClienteRefDto>
 
     /** Transportistas de la oficina, con sus vehículos (paginado). [activo] null trae activos e inactivos. */
     @GET("api/v1/transportistas")

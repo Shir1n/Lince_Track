@@ -39,6 +39,10 @@ interface BloqueoApi {
     @POST("api/hitos")
     suspend fun registrarHito(@Body solicitud: HitoSolicitudDto): HitoDto
 
+    /** Último hito informado en el servicio (solo administrador); 404 si nadie ha informado. */
+    @GET("api/hitos/ultima-posicion")
+    suspend fun ultimaPosicion(@Query("servicioId") servicioId: Long): HitoDto
+
     /** Lo que el backend guarda de la persona del token (Ley 21.719: acceso y portabilidad). */
     @GET("api/privacidad/mis-datos")
     suspend fun misDatos(): JsonElement
