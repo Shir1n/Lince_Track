@@ -4,6 +4,7 @@ import com.example.lince_track.R
 import com.example.lince_track.data.remote.LinceApi
 import com.example.lince_track.data.remote.LinceApiException
 import com.example.lince_track.data.remote.dto.CatalogosDto
+import com.example.lince_track.data.remote.dto.ClienteRefDto
 import com.example.lince_track.data.remote.dto.GuiaDto
 import com.example.lince_track.data.remote.dto.IdiomaDto
 import com.example.lince_track.data.remote.dto.PaginaDto
@@ -113,5 +114,22 @@ class EquipoSouthboundRepositoryTest {
         assertEquals(todos, EquipoSouthboundRepository.filtrarPorTipo(todos, null))
         assertEquals(listOf(excursion), EquipoSouthboundRepository.filtrarPorTipo(todos, "EXCURSION"))
         assertTrue(EquipoSouthboundRepository.filtrarPorTipo(todos, "GUIDED_SERVICE").isEmpty())
+    }
+
+    @Test
+    fun lasAgenciasDeClientesVienenOrdenadasYSiFallanElEquipoIgualSeMuestra() = runBlocking {
+        coEvery { api.guias(any(), any(), any(), any()) } returns pagina(emptyList(), 1, 1)
+        coEvery { api.transportistas(any(), any(), any(), any()) } returns pagina(emptyList(), 1, 1)
+        coEvery { api.clientes(1, 100) } returns pagina(
+            listOf(ClienteRefDto(6, "CLI-006", "Ñandú Voyages", "Francia"), ClienteRefDto(2, "CLI-002", "Andino Voyages", "Chile")), 1, 1
+        )
+
+        val agencias = repo.equipo().getOrThrow().agencias
+
+        assertEquals(listOf("Andino Voyages", "Ñandú Voyages"), agencias.map { it.nombre })
+        assertEquals(Agencia(6, "CLI-006", "Ñandú Voyages", "Francia"), agencias.last())
+
+        coEvery { api.clientes(any(), any()) } throws java.io.IOException("sin red")
+        assertEquals(emptyList<Agencia>(), repo.equipo().getOrThrow().agencias)
     }
 }

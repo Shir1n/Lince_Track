@@ -74,7 +74,10 @@ object ServicioMapper {
             horaFinEstimada = true,
             vehiculo = dto.vehiculo?.let { VehiculoServicio(it.patente, it.tipo, it.capacidad) },
             cancelado = dto.estadoServicio == "XX",
-            responsableId = (dto.guia ?: dto.transportista)?.id
+            responsableId = (dto.guia ?: dto.transportista)?.id,
+            agencia = dto.cliente?.nombre.orEmpty(),
+            agenciaPais = dto.cliente?.pais.orEmpty(),
+            agenciaId = dto.cliente?.id
         )
     }
 }

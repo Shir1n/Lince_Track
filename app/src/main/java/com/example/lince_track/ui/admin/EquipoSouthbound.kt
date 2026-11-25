@@ -1,5 +1,6 @@
 package com.example.lince_track.ui.admin
 
+import com.example.lince_track.data.Agencia
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -68,9 +69,16 @@ fun FiltroTipoServicio(tipos: List<String>, elegido: String?, onElegir: (String?
  * gastar solicitudes de la API en cada visita al panel. Sin clave de la API no se muestra.
  */
 @Composable
-fun SeccionEquipo(estado: EstadoEquipo, onAbrir: () -> Unit, onReintentar: () -> Unit) {
+fun SeccionEquipo(
+    estado: EstadoEquipo,
+    onAbrir: () -> Unit,
+    onReintentar: () -> Unit,
+    /** Servicios cargados por agencia (id de `/clientes`), para mostrar cuántos tiene cada una. */
+    serviciosPorAgencia: Map<Long, Int> = emptyMap()
+) {
     var abierta by rememberSaveable { mutableStateOf(false) }
-    var verGuias by rememberSaveable { mutableStateOf(true) }
+    // 0 = guías, 1 = transportistas, 2 = agencias.
+    var vista by rememberSaveable { mutableStateOf(0) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -113,25 +121,41 @@ fun SeccionEquipo(estado: EstadoEquipo, onAbrir: () -> Unit, onReintentar: () ->
                         TextButton(onClick = onReintentar) { Text(stringResource(R.string.ruta_reintentar)) }
                     }
                     equipo != null -> {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             FilterChip(
-                                selected = verGuias,
-                                onClick = { verGuias = true },
+                                selected = vista == 0,
+                                onClick = { vista = 0 },
                                 label = { Text("${stringResource(R.string.equipo_guias)} (${equipo.guias.size})") }
                             )
                             FilterChip(
-                                selected = !verGuias,
-                                onClick = { verGuias = false },
+                                selected = vista == 1,
+                                onClick = { vista = 1 },
                                 label = {
                                     Text("${stringResource(R.string.equipo_transportistas)} (${equipo.transportistas.size})")
                                 }
                             )
+                            FilterChip(
+                                selected = vista == 2,
+                                onClick = { vista = 2 },
+                                label = { Text("${stringResource(R.string.equipo_agencias)} (${equipo.agencias.size})") }
+                            )
                         }
-                        val lista = if (verGuias) equipo.guias else equipo.transportistas
-                        if (lista.isEmpty()) Detalle(stringResource(R.string.equipo_vacio))
-                        lista.forEachIndexed { i, miembro ->
-                            if (i > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                            FilaMiembro(miembro)
+                        if (vista == 2) {
+                            if (equipo.agencias.isEmpty()) Detalle(stringResource(R.string.equipo_vacio))
+                            equipo.agencias.forEachIndexed { i, agencia ->
+                                if (i > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                FilaAgencia(agencia, serviciosPorAgencia[agencia.id] ?: 0)
+                            }
+                        } else {
+                            val lista = if (vista == 0) equipo.guias else equipo.transportistas
+                            if (lista.isEmpty()) Detalle(stringResource(R.string.equipo_vacio))
+                            lista.forEachIndexed { i, miembro ->
+                                if (i > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                FilaMiembro(miembro)
+                            }
                         }
                     }
                 }
@@ -179,6 +203,19 @@ private fun FilaMiembro(miembro: MiembroEquipo) {
                     )
             }
         )
+    }
+}
+
+@Composable
+private fun FilaAgencia(agencia: Agencia, servicios: Int) {
+    Column(modifier = Modifier.padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = agencia.nombre,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Detalle(stringResource(R.string.equipo_agencia_detalle, agencia.codigo, agencia.pais, servicios))
     }
 }
 

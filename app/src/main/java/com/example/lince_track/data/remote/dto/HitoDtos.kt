@@ -36,5 +36,10 @@ data class HitoDto(
     val resultado: String = "",
     val geocercaNombre: String? = null,
     val radioMetros: Int? = null,
-    val distanciaMetros: Double? = null
+    val distanciaMetros: Double? = null,
+    val lat: Double? = null,
+    val lon: Double? = null,
+    val precisionMetros: Double? = null,
+    /** Hora del servidor en ISO 8601 (Instant). */
+    val registradoEn: String? = null
 )

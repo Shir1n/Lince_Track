@@ -1,5 +1,6 @@
 package com.example.lince_track.data
 
+import com.example.lince_track.util.LinceLogger
 import com.example.lince_track.data.remote.LinceApi
 import com.example.lince_track.data.remote.LinceApiClient
 import com.example.lince_track.data.remote.aLinceApiException
@@ -32,7 +33,14 @@ data class MiembroEquipo(
 )
 
 /** Guías y transportistas de la oficina: primero los activos y, dentro de cada grupo, por nombre. */
-data class EquipoSouthbound(val guias: List<MiembroEquipo>, val transportistas: List<MiembroEquipo>)
+/** Agencia que vende servicios de Southbound (`/clientes`). */
+data class Agencia(val id: Long, val codigo: String, val nombre: String, val pais: String)
+
+data class EquipoSouthbound(
+    val guias: List<MiembroEquipo>,
+    val transportistas: List<MiembroEquipo>,
+    val agencias: List<Agencia> = emptyList()
+)
 
 /**
  * Lee de la API de Southbound el equipo de la oficina y los tipos de servicio de `/catalogos`. Recibe la API por el
@@ -48,9 +56,21 @@ class EquipoSouthboundRepository(
         val guias = todasLasPaginas { pagina -> api.guias(oficina = oficina, page = pagina, pageSize = PAGINA) }
         val transportistas =
             todasLasPaginas { pagina -> api.transportistas(oficina = oficina, page = pagina, pageSize = PAGINA) }
+        // Las agencias son un extra: si /clientes falla, el equipo igual se muestra.
+        val agencias = try {
+            todasLasPaginas { pagina -> api.clientes(page = pagina, pageSize = PAGINA) }
+                .map { Agencia(it.id, it.codigo, it.nombre, it.pais) }
+                .sortedBy { it.nombre.lowercase() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LinceLogger.w("EQUIPO", "No se pudieron leer las agencias de /clientes: ${e.message}")
+            emptyList()
+        }
         EquipoSouthbound(
             guias = ordenar(guias.map { aMiembro(it) }),
-            transportistas = ordenar(transportistas.map { aMiembro(it) })
+            transportistas = ordenar(transportistas.map { aMiembro(it) }),
+            agencias = agencias
         )
     }
 

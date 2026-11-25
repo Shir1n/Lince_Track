@@ -1,5 +1,7 @@
 package com.example.lince_track.ui.ruta
 
+import com.example.lince_track.data.ReglasPosicion
+import com.example.lince_track.data.PosicionRepository
 import com.example.lince_track.ui.components.rememberPermisoUbicacion
 import android.Manifest
 import android.annotation.SuppressLint
@@ -396,6 +398,29 @@ private fun RutaMapaContenido(
         )
     }
     val evaluacionVigente by rememberUpdatedState(evaluacion)
+
+    // Última posición para Coordinación: solo con el servicio en curso (check-in confirmado y sin check-out) y el
+    // mapa abierto, cada 5 minutos y con GPS real. Si no hay señal, esa posición se omite (no va a la cola).
+    val posiciones = remember { PosicionRepository() }
+    val enCurso = !esCoordinador && checkin != null && checkin.finalizado.not() && !checkInPendiente && !checkOutPendiente
+    val puntoVigente by rememberUpdatedState(userGeoPoint)
+    val gpsRealVigente by rememberUpdatedState(isUsingRealGps)
+    val precisionVigente by rememberUpdatedState(precisionGps)
+    LaunchedEffect(enCurso) {
+        var ultimoEnvio: Long? = null
+        while (enCurso) {
+            val ahora = System.currentTimeMillis()
+            if (ReglasPosicion.debeEnviar(enCurso, gpsRealVigente, ultimoEnvio, ahora)) {
+                posiciones.enviar(servicio.id, puntoVigente.latitude, puntoVigente.longitude, precisionVigente ?: 0f)
+                    .onSuccess {
+                        ultimoEnvio = ahora
+                        LinceLogger.i("POSICION", "Posición enviada a Coordinación (servicio ${servicio.id})")
+                    }
+                    .onFailure { LinceLogger.w("POSICION", "Posición omitida: ${it.message}") }
+            }
+            delay(30_000L)
+        }
+    }
     // Se cambia solo cuando el backend respondió: si se reintenta tras un corte, no se duplica el check-in.
     var claveCheckin by rememberSaveable { mutableStateOf(UUID.randomUUID().toString()) }
 

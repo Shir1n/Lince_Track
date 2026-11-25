@@ -343,7 +343,12 @@ fun AdminPanelScreen(onServiceClick: (String) -> Unit = {}) {
 
             // Sin clave de la API no hay equipo que mostrar.
             if (equipoVm.disponible) {
-                SeccionEquipo(estadoEquipo, onAbrir = equipoVm::cargarEquipo, onReintentar = equipoVm::reintentar)
+                SeccionEquipo(
+                    estadoEquipo,
+                    onAbrir = equipoVm::cargarEquipo,
+                    onReintentar = equipoVm::reintentar,
+                    serviciosPorAgencia = servicios.mapNotNull { it.agenciaId }.groupingBy { it }.eachCount()
+                )
             }
         }
     }
