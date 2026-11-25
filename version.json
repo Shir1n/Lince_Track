@@ -1,13 +1,12 @@
 {
-  "versionCode": 5,
-  "versionName": "1.5",
+  "versionCode": 6,
+  "versionName": "1.6",
   "autorUltimoCambio": "Ignacio",
   "apkUrl": "https://github.com/Shir1n/Lince_Track/releases/latest/download/lince-track.apk",
   "novedades": [
-    "Check-in con geocerca: se bloquea fuera de la zona, con GPS impreciso o pasada la hora, y el servidor lo vuelve a validar",
-    "Sin señal, el check-in queda guardado y se envía solo al volver la conexión",
-    "Notificaciones con la app cerrada: reemplazos, incidencias, respuestas y rechazos",
-    "Foto de perfil con cámara o galería, para ajustarla en el círculo",
-    "Privacidad: descarga tus datos o pide su eliminación desde Ajustes"
+    "Coordinación ve la última posición del conductor durante un servicio en curso (cada 5 minutos, solo con el mapa abierto)",
+    "La agencia de cada servicio aparece en el detalle y en el Panel (Equipo → Agencias)",
+    "Check-in con geocerca validado por el servidor, también sin señal",
+    "Notificaciones con la app cerrada, foto de perfil y derechos de privacidad desde Ajustes"
   ]
 }
