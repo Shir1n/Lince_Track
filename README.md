@@ -41,16 +41,21 @@ disponibilidad) están en un **backend propio en Spring Boot**, publicado en **G
   duplicarse.
 - **Incidencias** (falla mecánica, atraso, pasajeros, camino o clima) con la ubicación del momento.
 - Clima de la ruta con recomendaciones de conducción (conductor) o de vestimenta (guía).
-- Bloquear días de disponibilidad (con 7 días de anticipación y nunca sobre un servicio asignado).
-- Perfil con próximo servicio, puntualidad y servicios terminados.
+- Bloquear días de disponibilidad (con 7 días de anticipación, motivo obligatorio y nunca sobre un servicio asignado).
+- Detalle del servicio con la **agencia** que lo vendió (`/clientes`).
+- Perfil con **foto** (con editor), próximo servicio, puntualidad y servicios terminados.
 
 ### Coordinación (administrador)
-- **Panel** del día elegido con totales, filtro por estado y por tipo de servicio, incidencias abiertas, rechazos
-  próximos y solicitudes de datos.
+- **Panel** del día elegido con totales, filtro por estado y por tipo de servicio (`/catalogos`), incidencias abiertas,
+  rechazos próximos y solicitudes de datos.
+- **Equipo de Southbound** en el Panel: guías con sus idiomas, transportistas con su vehículo (`/guias`,
+  `/transportistas`) y agencias (`/clientes`).
+- **Última posición del conductor** durante un servicio en curso, en el detalle del servicio (se envía cada 5 minutos y
+  solo mientras el conductor tiene el mapa abierto; no hay rastreo continuo).
 - **Reemplazos:** reasignar un servicio pendiente o, con una incidencia abierta, uno ya aceptado.
 - Responder y resolver incidencias.
-- **Resumen** para los dueños: operación de hoy y de los últimos 7 días, datos de Southbound (`/resumen`),
-  **puntualidad del equipo** (desde el backend) y equipo de Southbound (`/guias`, `/transportistas`).
+- **Resumen** para los dueños: operación de hoy y de los últimos 7 días, datos de Southbound (`/resumen`) y
+  **puntualidad del equipo** (desde el backend).
 
 ### Para todos
 - **Notificaciones con la app cerrada** (Cloud Functions + Firebase Cloud Messaging): reemplazos, incidencias nuevas,
